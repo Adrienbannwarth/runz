@@ -1,6 +1,7 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
+import { db } from './db';
 
 const USER_COOKIE = 'runz_session';
 const ADMIN_COOKIE = 'runz_admin';
@@ -32,7 +33,18 @@ export async function clearUserSession() { (await cookies()).delete(USER_COOKIE)
 export async function setAdminSession() {
   (await cookies()).set(ADMIN_COOKIE, await sign({ admin: true }, 7), opts(7));
 }
-export async function isAdmin(): Promise<boolean> {
+/** Connexion admin par mot de passe (accès de secours). */
+export async function isPasswordAdmin(): Promise<boolean> {
   return (await read(ADMIN_COOKIE))?.admin === true;
+}
+/** Le participant connecté a-t-il le rôle admin ? */
+export async function isParticipantAdmin(): Promise<boolean> {
+  const pid = await getParticipantId();
+  if (!pid) return false;
+  const { data } = await db().from('participants').select('is_admin').eq('id', pid).maybeSingle();
+  return data?.is_admin === true;
+}
+export async function isAdmin(): Promise<boolean> {
+  return (await isParticipantAdmin()) || (await isPasswordAdmin());
 }
 export async function clearAdminSession() { (await cookies()).delete(ADMIN_COOKIE); }

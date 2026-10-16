@@ -110,6 +110,8 @@ footer { max-width: 1180px; margin: 0 auto; padding: 28px 24px; font-size: 13px;
 .tabs a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 99px; border: 1px solid var(--line); }
 .tabs a:hover { border-color: var(--ink); }
 .tabs a.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.admin-block { background: var(--soft); border-radius: var(--radius); padding: 24px; margin: 32px 0 8px;
+  display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
 pre.recap { white-space: pre-wrap; background: var(--soft); border-radius: var(--radius); padding: 18px; font-size: 14px; }
 
 /* Page de connexion : image sur 1/3, formulaire sur 2/3 */

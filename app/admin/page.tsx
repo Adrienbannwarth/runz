@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { isAdmin } from '@/lib/session';
+import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appUrl } from '@/lib/strava';
 import { fmtDate, fmtKm, loadAll } from '@/lib/data';
 import * as A from './actions';
@@ -27,7 +27,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Admin</h1>
-        <form action={A.adminLogout}><button className="btn small">Déconnexion admin</button></form>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link className="btn small" href="/me">← Mon espace</Link>
+          {(await isPasswordAdmin()) && <form action={A.adminLogout}><button className="btn small">Déconnexion admin</button></form>}
+        </div>
       </div>
       <nav className="tabs">
         {TABS.map(([k, label]) => <Link key={k} href={`/admin?tab=${k}`} className={tab === k ? 'on' : ''}>{label}</Link>)}
@@ -39,7 +42,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           <h2>Participants ({d.participants.length})</h2>
           <div className="card" style={{ overflowX: 'auto' }}>
             <table>
-              <thead><tr><th>Nom · équipe</th><th>Strava</th><th className="num">Km comptés</th><th>Lien d’invitation</th><th></th></tr></thead>
+              <thead><tr><th>Nom · équipe</th><th>Strava</th><th>Rôle</th><th className="num">Km comptés</th><th>Lien d’invitation</th><th></th></tr></thead>
               <tbody>
                 {d.participants.map((p) => {
                   const st = d.people.find((x) => x.participant.id === p.id);
@@ -58,6 +61,15 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                       </td>
                       <td>{p.strava_athlete_id ? <span className="pill">✅ connecté</span> : <span className="pill">—</span>}
                         {p.last_sync_at && <div className="small muted">{new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}</div>}
+                      </td>
+                      <td>
+                        <form action={A.toggleAdmin}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <input type="hidden" name="is_admin" value={p.is_admin ? '0' : '1'} />
+                          <button className={`btn small ${p.is_admin ? 'primary' : ''}`} title={p.is_admin ? 'Retirer le rôle admin' : 'Donner le rôle admin'}>
+                            {p.is_admin ? 'Admin' : 'Participant'}
+                          </button>
+                        </form>
                       </td>
                       <td className="num">{fmtKm(st?.countedKm ?? 0)}</td>
                       <td><input readOnly value={`${appUrl()}/join/${p.invite_token}`} style={{ width: 220, fontSize: 12 }} /></td>

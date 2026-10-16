@@ -21,9 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Link href="/me">Je participe</Link>
         </div>
         <header className="top">
-          <nav className="links">
-            <Link href="/admin">Admin</Link>
-          </nav>
+          <span aria-hidden="true" />
           <Link href="/" className="brand">RunZ<sup>®</sup><small>by Colorz</small></Link>
           <Link href="/me" className="top-right" aria-label="Mon espace">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">

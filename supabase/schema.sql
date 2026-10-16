@@ -41,6 +41,7 @@ create table if not exists participants (
   token_expires_at   bigint,          -- epoch seconds
   scope              text,
   last_sync_at       timestamptz,
+  is_admin           boolean not null default false,  -- accès à l'administration via Mon espace
   created_at         timestamptz not null default now()
 );
 

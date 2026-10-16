@@ -41,6 +41,16 @@ export async function updateParticipant(fd: FormData) {
   must(await db().from('participants').update({ display_name: s(fd, 'display_name'), team_id: orNull(s(fd, 'team_id')) }).eq('id', s(fd, 'id')));
   done('participants');
 }
+export async function toggleAdmin(fd: FormData) {
+  await guard();
+  const makeAdmin = s(fd, 'is_admin') === '1';
+  if (!makeAdmin) {
+    const admins = must(await db().from('participants').select('id').eq('is_admin', true)) as { id: string }[];
+    if (admins.length <= 1) done('participants', 'Il faut garder au moins un admin');
+  }
+  must(await db().from('participants').update({ is_admin: makeAdmin }).eq('id', s(fd, 'id')));
+  done('participants', makeAdmin ? 'Rôle admin donné' : 'Rôle admin retiré');
+}
 export async function deleteParticipant(fd: FormData) {
   await guard();
   must(await db().from('participants').delete().eq('id', s(fd, 'id')));
