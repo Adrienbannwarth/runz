@@ -49,7 +49,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
       <p className="eyebrow" id="classement">Classement à la moyenne de km par personne</p>
       <h2 style={{ marginTop: 0 }}>Les équipes</h2>
-      <div className="grid">
+      <div className="teams-row">
         {teams.map((t) => (
           <div className="card team" key={t.team.id}>
             <div className={`visual ${isLight(t.team.color) ? 'light' : ''}`} style={{ background: t.team.color }}>

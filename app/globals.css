@@ -34,6 +34,11 @@ h2 { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; margin: 48px 0 
 .small { font-size: 13px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
 .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+/* Équipes de la home : toutes sur une ligne */
+.teams-row { display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.teams-row .team .score { font-size: 48px; }
+@media (max-width: 1000px) { .teams-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .teams-row { grid-template-columns: 1fr; } }
 
 /* Héro du classement */
 .hero { background: var(--ink); color: #fff; border-radius: var(--radius); padding: 56px 48px; margin-bottom: 40px;

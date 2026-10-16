@@ -26,7 +26,7 @@ select * from (values
   ('Rouges', '#E5484D', '🔴', true),
   ('Bleus',  '#3E63DD', '🔵', true),
   ('Verts',  '#30A46C', '🟢', true),
-  ('Jaunes', '#F5D90A', '🟡', false)
+  ('Jaunes', '#FBBF24', '🟡', false)
 ) as v(name, color, emoji, active)
 where not exists (select 1 from teams);
 
