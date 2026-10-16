@@ -1,0 +1,78 @@
+# RunZ · plateforme du challenge
+
+Plateforme web du RunZ Challenge (CSE Colorz) : chaque participant connecte son compte Strava, ses marches et courses remontent automatiquement, et le classement par équipe se calcule tout seul.
+
+**Stack** : Next.js 16 (App Router, server actions), Supabase (Postgres), déploiement Vercel.
+
+## Ce que fait la V1
+
+| Page | Pour qui | Contenu |
+|---|---|---|
+| `/` | Tout le monde | Classement des équipes (moyenne km/pers., bonus inclus), boost en cours, boosts à venir, bouton « Se connecter avec Strava » |
+| `/join/<jeton>` | Participant invité | Lien personnel qui rattache le compte Strava à la bonne fiche et à la bonne équipe |
+| `/me` | Participant connecté | Ses activités avec les km comptés (plafond, boost), resynchro, déconnexion, effacement de ses données |
+| `/admin` | Organisateurs (mot de passe) | Participants et équipes, saisie manuelle (captures d'écran), bonus, boosts horaires, stats MVP, récap du soir à coller dans `~runz`, réglages |
+| `/confidentialite` | Tout le monde | Données utilisées, qui voit quoi, suppression |
+
+**Synchronisation Strava**
+- Import complet à la connexion (activités de la période du challenge).
+- Webhook Strava : création, modification et suppression d'activité, révocation de l'accès (les données sont alors effacées).
+- Filet de sécurité : cron quotidien (`vercel.json`, 23 h / minuit heure de Paris) et boutons de resynchro.
+- Stocké : type, date/heure locale, distance, durée, dénivelé, nom. **Jamais** de tracé GPS.
+
+**Règles de calcul** (`lib/scoring.ts`, testées dans `tests/scoring.test.ts`)
+1. Types comptés (réglables) : marche, course, trail, randonnée, tapis, fauteuil. Vélo exclu.
+2. Seules les activités entre la date de début et la date de fin (incluses) comptent.
+3. Plafond journalier par personne (15 km par défaut) : au-delà, les activités du jour sont réduites au prorata.
+4. Boosts horaires (Flash HourZ, Lève-tôt…) : une activité qui *démarre* dans la fenêtre est multipliée. Le dernier jour, le Sprint final s'applique. Les multiplicateurs ne se cumulent pas, c'est le plus fort qui compte. Le plafond s'applique avant le multiplicateur.
+5. Bonus en km (photo couleur, sortie commune, ParrainZ…) saisis par l'admin et ajoutés au total de l'équipe.
+6. Score d'équipe = (km comptés des membres + bonus) / nombre de membres.
+
+## Mise en route (≈ 30 min)
+
+### 1. Supabase
+1. Créer un projet sur supabase.com (région Europe).
+2. SQL Editor → coller et exécuter `supabase/schema.sql`. Le script crée les tables, les 4 équipes (Jaunes désactivée) et les réglages : du 02/11 au 06/12/2026, plafond 15 km.
+3. Project Settings → API : noter l'URL et la clé `service_role`.
+
+### 2. Vercel
+1. Pousser ce dossier sur un repo GitHub, puis l'importer dans Vercel.
+2. Renseigner les variables d'environnement listées dans `.env.example`. Pour `SESSION_SECRET`, `CRON_SECRET` et `ADMIN_PASSWORD`, générer des valeurs avec `openssl rand -hex 32`. `APP_URL` est l'URL finale, par exemple `https://runz-colorz.vercel.app`.
+3. Déployer.
+
+### 3. Application Strava (strava.com/settings/api)
+- **Authorization Callback Domain** : le domaine seul, sans https, par exemple `runz-colorz.vercel.app`. En local : `localhost`.
+- Website : l'URL de l'app.
+- Récupérer le Client ID et le Client Secret, les mettre dans Vercel, puis redéployer.
+
+### 4. Webhook Strava (une seule fois, après le déploiement)
+```bash
+curl -X POST https://www.strava.com/api/v3/push_subscriptions \
+  -F client_id=$STRAVA_CLIENT_ID -F client_secret=$STRAVA_CLIENT_SECRET \
+  -F callback_url=https://runz-colorz.vercel.app/api/strava/webhook \
+  -F verify_token=runz-webhook
+# → {"id": 123456}  : mettre cette valeur dans STRAVA_SUBSCRIPTION_ID (facultatif)
+```
+Pour vérifier : `curl -G https://www.strava.com/api/v3/push_subscriptions -d client_id=... -d client_secret=...`
+
+### 5. Préparer le challenge
+1. `/admin` → Participants : coller la liste des noms par équipe (un par ligne).
+2. Envoyer à chacun son lien `/join/…` par DM zlack.
+3. Les participants sans Strava, ou au-delà de la limite d'athlètes Strava, envoient leurs captures d'écran. Les km sont saisis dans l'onglet Saisie manuelle.
+
+## En local
+```bash
+npm install
+cp .env.example .env.local   # remplir
+npm run dev                  # http://localhost:3000
+npm test                     # tests du calcul des points
+```
+
+## À faire avant de soumettre à Strava
+- Remplacer le bouton orange par le bouton officiel « Connect with Strava ». Remplacer aussi le texte « POWERED BY STRAVA » (`app/layout.tsx`) par le logo officiel. Les deux se trouvent sur developers.strava.com/guidelines.
+- Voir `REVIEW-STRAVA.md`.
+
+## Pistes V2
+- Génération automatique de l'image du récap (reprendre `runz-recap-generateur.html`) et post direct dans `~runz`.
+- Boosts calculables automatiquement : « Tous au compteur » (chaque membre ≥ 1 km dans la semaine), Régularité.
+- Validation par l'admin des activités Strava saisies à la main sur Strava (sans GPS).
