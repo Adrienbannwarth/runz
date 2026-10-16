@@ -27,7 +27,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   // Vue : admin = toutes les équipes ; membre = sa propre équipe ; visiteur = invitation à se connecter
   const me = pid ? data.participants.find((p) => p.id === pid) : undefined;
   const myTeam = me ? teams.find((t) => t.team.id === me.team_id) : undefined;
-  const view: 'admin' | 'member' | 'visitor' = admin ? 'admin' : me ? 'member' : 'visitor';
+  // Un admin peut prévisualiser la vue membre avec ?vue=membre
+  const preview = admin && sp.vue === 'membre' && !!me;
+  const view: 'admin' | 'member' | 'visitor' = admin && !preview ? 'admin' : me ? 'member' : 'visitor';
   // Une personne « remonte » côté membres quand elle est connectée à Strava ou a des km saisis
   const withKm = new Set(data.activities.map((a) => a.participant_id));
   const isOn = (p: (typeof data.participants)[number]) => !!p.strava_athlete_id || withKm.has(p.id);
@@ -76,7 +78,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
       {view === 'admin' && (
         <>
-          <p className="eyebrow" id="classement">Vue organisateurs · {isTotal ? 'classement au total des km de l’équipe' : 'classement à la moyenne de km par personne'}</p>
+          <p className="eyebrow" id="classement">Vue organisateurs · {isTotal ? 'classement au total des km de l’équipe' : 'classement à la moyenne de km par personne'}{me && <> · <Link href="/?vue=membre#classement">Voir comme un membre</Link></>}</p>
           <h2 style={{ marginTop: 0 }}>Les équipes</h2>
           <div className="teams-row">{teams.map((t) => card(t))}</div>
           <p className="muted small" style={{ marginTop: 20 }}>
@@ -87,6 +89,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
       {view === 'member' && (
         <>
+          {preview && <div className="banner">👀 Aperçu de la vue membre (ce que voient les participants). <Link href="/#classement">Revenir à la vue organisateurs</Link></div>}
           <p className="eyebrow" id="classement">Ton équipe</p>
           {myTeam ? (
             <div className="my-team">
