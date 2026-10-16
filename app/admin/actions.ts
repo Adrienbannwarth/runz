@@ -40,7 +40,7 @@ export async function updateParticipant(fd: FormData) {
   await guard();
   must(await db().from('participants').update({
     display_name: s(fd, 'display_name'), team_id: orNull(s(fd, 'team_id')),
-    pole: orNull(s(fd, 'pole')), is_captain: fd.get('is_captain') === 'on',
+    pole: orNull(s(fd, 'pole')),
   }).eq('id', s(fd, 'id')));
   done('participants');
 }

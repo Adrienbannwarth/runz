@@ -47,7 +47,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           <p className="muted small">Les fiches sont créées à l’avance (liens d’invitation, saisie manuelle). Côté participants, une personne n’apparaît qu’une fois connectée à Strava ou avec des km saisis.</p>
           <div className="card" style={{ overflowX: 'auto' }}>
             <table>
-              <thead><tr><th>Nom · équipe · pôle</th><th>Strava</th><th>Rôle</th><th className="num">Km réels</th><th>Cette semaine</th><th>Lien d’invitation</th><th></th></tr></thead>
+              <thead><tr><th>Nom · équipe · pôle</th><th>Strava</th><th className="num">Km réels</th><th>Cette semaine</th><th>Lien d’invitation</th><th></th></tr></thead>
               <tbody>
                 {d.participants.map((p) => {
                   const st = d.people.find((x) => x.participant.id === p.id);
@@ -62,22 +62,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                             <option value="">— pôle —</option>
                             {POLES.map((x) => <option key={x} value={x}>{x}</option>)}
                           </select>
-                          <label style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="checkbox" name="is_captain" defaultChecked={p.is_captain} /> cap.</label>
                           <button className="btn small">OK</button>
                         </form>
                       </td>
                       <td>{p.strava_athlete_id
                         ? <span className="check" title={p.last_sync_at ? `Connecté · dernière synchro ${new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}` : 'Connecté à Strava'} aria-label="Connecté à Strava">✓</span>
                         : <span className="muted">—</span>}
-                      </td>
-                      <td>
-                        <form action={A.toggleAdmin}>
-                          <input type="hidden" name="id" value={p.id} />
-                          <input type="hidden" name="is_admin" value={p.is_admin ? '0' : '1'} />
-                          <button className={`btn small ${p.is_admin ? 'primary' : ''}`} title={p.is_admin ? 'Retirer le rôle admin' : 'Donner le rôle admin'}>
-                            {p.is_admin ? 'Admin' : 'Participant'}
-                          </button>
-                        </form>
                       </td>
                       <td className="num">{fmtKm(st?.rawKm ?? 0)}</td>
                       <td>{st?.activeThisWeek ? <span className="pill">✅ au compteur</span> : <span className="pill" style={{ color: 'var(--red)' }}>pas encore</span>}</td>
