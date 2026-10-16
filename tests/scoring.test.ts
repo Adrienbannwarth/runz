@@ -101,3 +101,17 @@ test('classement au total, stats MVP et phrase du récap', () => {
     activities: [act('r1', '2026-11-03T07:00:00', 6), act('b1', '2026-11-03T20:00:00', 9)], bonuses: [] });
   assert.equal(avg.teams[0].team.name, 'Bleus'); // 18 > 6/2 = 3
 });
+
+test('signalement des activités sans tracé (comptent quand même)', async () => {
+  const { flagOf } = await import('../lib/scoring.ts');
+  const base = act('a', '2026-11-03T10:00:00', 5);
+  assert.equal(flagOf({ ...base, strava_manual: true }), 'Saisie manuelle dans Strava (sans tracé)');
+  assert.equal(flagOf({ ...base, has_track: false }), 'Aucun tracé GPS');
+  assert.equal(flagOf({ ...base, has_track: false, trainer: true }), undefined);
+  assert.equal(flagOf({ ...base, sport_type: 'VirtualRun', has_track: false }), undefined);
+  assert.equal(flagOf({ ...base, has_track: true }), undefined);
+  assert.equal(flagOf({ ...base, source: 'manual' }), undefined);
+  const s = scoreActivities([{ ...base, strava_manual: true }], settings, []);
+  assert.equal(s[0].countedKm, 5);
+  assert.ok(s[0].flag);
+});

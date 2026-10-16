@@ -64,6 +64,7 @@ async function api<T>(token: string, path: string): Promise<T> {
 type StravaActivity = {
   id: number; name: string; sport_type: string; type: string; start_date_local: string;
   distance: number; moving_time: number; total_elevation_gain: number;
+  manual?: boolean; trainer?: boolean; map?: { summary_polyline?: string | null; polyline?: string | null } | null;
 };
 
 function toRow(participantId: string, a: StravaActivity) {
@@ -77,6 +78,10 @@ function toRow(participantId: string, a: StravaActivity) {
     distance_m: a.distance,
     moving_time_s: a.moving_time,
     elevation_gain_m: a.total_elevation_gain,
+    // Contrôle anti-triche : on note seulement SI un tracé existe, le tracé lui-même n'est jamais stocké
+    strava_manual: !!a.manual,
+    trainer: !!a.trainer,
+    has_track: !!(a.map?.summary_polyline || a.map?.polyline),
   };
 }
 

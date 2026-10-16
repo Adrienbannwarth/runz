@@ -37,6 +37,9 @@ export type Activity = {
   distance_m: number;
   moving_time_s: number | null;
   elevation_gain_m: number | null;
+  strava_manual?: boolean | null;
+  trainer?: boolean | null;
+  has_track?: boolean | null;
 };
 export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null };
 export type Bonus = { id: number; team_id: number; participant_id: string | null; km: number; reason: string; awarded_on: string };
@@ -53,7 +56,17 @@ export type ScoredActivity = Activity & {
   boostName?: string;
   countedKm: number;
   overCap: boolean;   // la journée de cette personne dépasse le plafond
+  flag?: string;      // à vérifier par les admins (compte quand même)
 };
+
+/** Activité Strava à vérifier : saisie à la main dans Strava, ou sans tracé GPS (hors tapis / home trainer). */
+export function flagOf(a: Activity): string | undefined {
+  if (a.source !== 'strava') return undefined;
+  if (a.strava_manual) return 'Saisie manuelle dans Strava (sans tracé)';
+  const indoor = a.trainer || a.sport_type === 'VirtualRun';
+  if (a.has_track === false && !indoor) return 'Aucun tracé GPS';
+  return undefined;
+}
 
 export type ParticipantStats = {
   participant: Participant;
@@ -153,7 +166,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     }
     return {
       ...a, start_date_local: local, eligible, reason, day, week: weekOf(day, settings.start_date), slot,
-      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, countedKm: 0, overCap: false,
+      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, countedKm: 0, overCap: false, flag: flagOf(a),
     };
   });
 

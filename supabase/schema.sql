@@ -61,6 +61,9 @@ create table if not exists activities (
   moving_time_s       int,
   elevation_gain_m    numeric,
   note                text,
+  strava_manual       boolean not null default false,  -- activité saisie à la main dans Strava
+  trainer             boolean not null default false,  -- tapis / home trainer
+  has_track           boolean,                         -- un tracé GPS existe (le tracé n'est pas stocké)
   created_at          timestamptz not null default now()
 );
 create index if not exists activities_participant_idx on activities(participant_id);

@@ -91,6 +91,31 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
               </tbody>
             </table>
           </div>
+          {(() => {
+            const toCheck = d.scored.filter((a) => a.eligible && a.flag);
+            if (!toCheck.length) return null;
+            return (
+              <>
+                <h2>À vérifier · activités sans tracé ({toCheck.length})</h2>
+                <div className="card" style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead><tr><th>Date</th><th>Participant</th><th>Type</th><th className="num">Km</th><th>Pourquoi</th><th></th></tr></thead>
+                    <tbody>
+                      {toCheck.map((a) => (
+                        <tr key={a.id}>
+                          <td>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td><td>{pName(a.participant_id)}</td>
+                          <td>{SPORT_FR[a.sport_type] ?? a.sport_type}</td><td className="num">{fmtKm(a.rawKm)}</td>
+                          <td><span className="pill" style={{ color: 'var(--red)' }}>{a.flag}</span></td>
+                          <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava</a>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted small">Ces activités comptent dans les scores. En cas de doute, demande une capture au participant ; pour retirer des km, ajoute un bonus négatif à l’équipe.</p>
+              </>
+            );
+          })()}
           {d.people.some((x) => x.overCapDays.length) && (
             <>
               <h2>Alertes plafond ({d.settings.daily_cap_km} km / jour)</h2>
