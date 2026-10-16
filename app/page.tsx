@@ -24,6 +24,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const totalKm = teams.reduce((t, x) => t + x.totalKm, 0);
   const people = teams.reduce((t, x) => t + x.members, 0);
   const upcoming = boosts.filter((b) => b.ends_at.slice(0, 10) >= today).slice(0, 4);
+  const current = boosts.filter((b) => b.starts_at.slice(0, 10) <= today && today <= b.ends_at.slice(0, 10))
+    .sort((a, c) => Number(c.multiplier) - Number(a.multiplier))[0];
   // Vue : admin = toutes les équipes ; membre = sa propre équipe ; visiteur = invitation à se connecter
   const me = pid ? data.participants.find((p) => p.id === pid) : undefined;
   const myTeam = me ? teams.find((t) => t.team.id === me.team_id) : undefined;
@@ -39,7 +41,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const card = (t: TeamStats, big = false) => (
     <div className={`card team${big ? ' big' : ''}`} key={t.team.id}>
       <div className={`visual ${isLight(t.team.color) ? 'light' : ''}`} style={{ background: t.team.color }}>
-        <span className="badge">{t.rank === 1 ? '🏆 1er' : `${t.rank}e`}{big ? ` sur ${teams.length}` : ''}</span>
+        {(view === 'admin' || ended) && (
+          <span className="badge">{view !== 'admin' && t.rank === 1 ? '🏆 Équipe gagnante !' : t.rank === 1 ? '🏆 1er' : `${t.rank}e`}{big && t.rank > 1 ? ` sur ${teams.length}` : ''}</span>
+        )}
         <div className="score">{fmtKm(isTotal ? t.totalKm : t.avgKm)} <small>{isTotal ? 'km' : 'km / pers.'}</small></div>
       </div>
       <div className="name">{t.team.name}</div>
@@ -57,20 +61,38 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       {sp.error && <div className="alert err">{sp.error}</div>}
       {sp.disconnected && <div className="alert ok">Ton compte Strava est déconnecté et tes données Strava ont été effacées.</div>}
 
-      <section className="hero">
-        <div>
-          <p className="eyebrow" style={{ color: '#bdbdbd' }}>
-            {ended ? 'Challenge terminé' : started ? 'Challenge en cours' : 'Bientôt le coup d’envoi'} · du {fmtDate(settings.start_date)} au {fmtDate(settings.end_date)}
-          </p>
-          <h1>{settings.challenge_name} :<br />chaque pas compte</h1>
-          <p>{view === 'admin' ? people : connected.length} participant·es {view === 'admin' ? '' : 'connecté·es '}· {fmtKm(totalKm)} km parcourus ensemble</p>
-        </div>
-        <div className="actions">
-          {pid ? <Link className="btn white" href="/me">Mon espace</Link>
-               : <a className="btn white" href="/api/strava/connect">Se connecter avec Strava</a>}
-          {view !== 'visitor' && <a className="btn ghost" href="#classement">{view === 'admin' ? 'Voir le classement' : 'Mon équipe'}</a>}
-        </div>
-      </section>
+      {view === 'visitor' ? (
+        <section className="hero">
+          <div>
+            <p className="eyebrow" style={{ color: '#bdbdbd' }}>
+              {ended ? 'Challenge terminé' : started ? 'Challenge en cours' : 'Bientôt le coup d’envoi'} · du {fmtDate(settings.start_date)} au {fmtDate(settings.end_date)}
+            </p>
+            <h1>{settings.challenge_name} :<br />chaque pas compte</h1>
+            <p>{connected.length} participant·es connecté·es · {fmtKm(totalKm)} km parcourus ensemble</p>
+          </div>
+          <div className="actions">
+            <a className="btn white" href="/api/strava/connect">Se connecter avec Strava</a>
+          </div>
+        </section>
+      ) : (
+        <section className="hero rules">
+          <div>
+            <p className="eyebrow" style={{ color: '#bdbdbd' }}>
+              {ended ? 'Challenge terminé' : started ? 'Challenge en cours' : 'Bientôt le coup d’envoi'} · du {fmtDate(settings.start_date)} au {fmtDate(settings.end_date)}
+            </p>
+            <h1>Les règles du jeu</h1>
+          </div>
+          <ol>
+            <li><b>Marche, rando, course, trail ou tapis</b> : tout compte, à ton rythme. Le vélo ne compte pas.</li>
+            <li><b>Tes activités Strava remontent toutes seules.</b> Pas de Strava ? Envoie une capture à l’organisation.</li>
+            <li><b>Chaque km compte pour ton équipe</b>, qui est classée au {isTotal ? 'total des km' : 'nombre moyen de km par personne'}.</li>
+            <li><b>Les boosts multiplient tes km</b> sur certains jours ou créneaux : surveille le boost en cours.</li>
+            <li><b>Des bonus d’équipe</b> se gagnent aussi : photo aux couleurs, sortie commune, ParrainZ…</li>
+            <li><b>Au-delà de {settings.daily_cap_km} km par jour</b>, l’organisation vérifie l’activité. Écoute ton corps !</li>
+            <li><b>Le classement reste secret</b> jusqu’au {fmtDate(settings.end_date)} : résultats et prix à la fin du challenge.</li>
+          </ol>
+        </section>
+      )}
 
       {boost && (
         <div className="banner">⚡ {boost.name} en cours : chaque km compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}</div>
@@ -90,7 +112,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       {view === 'member' && (
         <>
           {preview && <div className="banner">👀 Aperçu de la vue membre (ce que voient les participants). <Link href="/#classement">Revenir à la vue organisateurs</Link></div>}
-          <p className="eyebrow" id="classement">Ton équipe</p>
+          <p className="eyebrow" id="classement">Ton équipe{!ended ? ' · le classement sera dévoilé à la fin du challenge' : ''}</p>
           {myTeam ? (
             <div className="my-team">
               {card(myTeam, true)}
@@ -112,31 +134,42 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           ) : (
             <div className="card">Ton équipe n’a pas encore été attribuée : l’organisation s’en occupe.</div>
           )}
-          <p className="muted small" style={{ marginTop: 20 }}>
-            {isTotal ? 'Classement au total des km de l’équipe' : 'Classement à la moyenne de km par personne'}, boosts et bonus inclus. Au-delà de {settings.daily_cap_km} km sur une journée, l’organisation vérifie l’activité.
-          </p>
         </>
       )}
 
-      {upcoming.length > 0 && (
+      {view === 'admin' ? (
+        upcoming.length > 0 && (
+          <>
+            <h2>Boosts du challenge</h2>
+            <div className="card">
+              {upcoming.map((b) => (
+                <div className="kv" key={b.id} style={{ padding: '4px 0' }}>
+                  <span>⚡ {b.name}{b.name.includes('×') ? '' : ` · ×${b.multiplier}`}</span>
+                  <span>{b.starts_at.slice(0, 10) === b.ends_at.slice(0, 10) ? fmtDate(b.starts_at) : `du ${fmtDate(b.starts_at)} au ${fmtDate(b.ends_at)}`} · {slotLabel(b.slot)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )
+      ) : (
         <>
-          <h2>Boosts du challenge</h2>
+          <h2>Boost en cours</h2>
           <div className="card">
-            {upcoming.map((b) => (
-              <div className="kv" key={b.id} style={{ padding: '4px 0' }}>
-                <span>⚡ {b.name}{b.name.includes('×') ? '' : ` · ×${b.multiplier}`}</span>
-                <span>{b.starts_at.slice(0, 10) === b.ends_at.slice(0, 10) ? fmtDate(b.starts_at) : `du ${fmtDate(b.starts_at)} au ${fmtDate(b.ends_at)}`} · {slotLabel(b.slot)}</span>
+            {current ? (
+              <div className="kv" style={{ padding: '4px 0' }}>
+                <span style={{ color: 'var(--ink)' }}>⚡ <b>{current.name}</b>{current.name.includes('×') ? '' : ` · ×${current.multiplier}`}</span>
+                <span>{current.starts_at.slice(0, 10) === current.ends_at.slice(0, 10) ? `aujourd’hui` : `jusqu’au ${fmtDate(current.ends_at)}`} · {slotLabel(current.slot)}</span>
               </div>
-            ))}
+            ) : (
+              <p className="muted" style={{ margin: 0 }}>Pas de boost en ce moment. Le prochain sera annoncé sur zlack, ouvre l’œil !</p>
+            )}
           </div>
         </>
       )}
 
-      <h2>Participer</h2>
-      <div className="card">
-        {pid ? (
-          <p style={{ margin: 0 }}>Tu es connecté·e. <Link href="/me">Voir mes activités →</Link></p>
-        ) : (
+      {!pid && <h2>Participer</h2>}
+      {!pid && <div className="card">
+        {(
           <>
             <p style={{ marginTop: 0 }}>
               Connecte ton compte Strava : tes marches et courses sont importées automatiquement. Seules la distance, la durée,
@@ -146,7 +179,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             <p className="muted small">Pas de Strava ? Envoie une capture d’écran de ton appli à l’organisation, tes km seront saisis à la main.</p>
           </>
         )}
-      </div>
+      </div>}
     </>
   );
 }

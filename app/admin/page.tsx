@@ -5,6 +5,7 @@ import { appUrl } from '@/lib/strava';
 import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, slotLabel } from '@/lib/data';
 import { leadSentence } from '@/lib/scoring';
 import * as A from './actions';
+import TeamSelect from './TeamSelect';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,10 +57,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                         <form action={A.updateParticipant} className="inline">
                           <input type="hidden" name="id" value={p.id} />
                           <input name="display_name" defaultValue={p.display_name} style={{ width: 170 }} />
-                          <select name="team_id" defaultValue={p.team_id ?? ''}>
-                            <option value="">— sans équipe —</option>
-                            {teamsAll.map((t) => <option key={t.id} value={t.id}>{t.emoji} {t.name}{t.active ? '' : ' (inactive)'}</option>)}
-                          </select>
+                          <TeamSelect teams={teamsAll} defaultValue={p.team_id} />
                           <select name="pole" defaultValue={p.pole ?? ''}>
                             <option value="">— pôle —</option>
                             {POLES.map((x) => <option key={x} value={x}>{x}</option>)}
@@ -68,8 +66,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                           <button className="btn small">OK</button>
                         </form>
                       </td>
-                      <td>{p.strava_athlete_id ? <span className="pill">✅ connecté</span> : <span className="pill">—</span>}
-                        {p.last_sync_at && <div className="small muted">{new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}</div>}
+                      <td>{p.strava_athlete_id
+                        ? <span className="check" title={p.last_sync_at ? `Connecté · dernière synchro ${new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}` : 'Connecté à Strava'} aria-label="Connecté à Strava">✓</span>
+                        : <span className="muted">—</span>}
                       </td>
                       <td>
                         <form action={A.toggleAdmin}>
@@ -109,7 +108,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           <form action={A.createParticipant} className="card inline">
             <label>Noms (un par ligne)<textarea name="names" rows={4} cols={32} placeholder={'Adrien Bannwarth\nAnne Denis'} /></label>
             <label>Équipe
-              <select name="team_id"><option value="">— sans équipe —</option>{allTeams.map((t) => <option key={t.id} value={t.id}>{t.emoji} {t.name}</option>)}</select>
+              <TeamSelect teams={allTeams} />
             </label>
             <button className="btn primary">Ajouter</button>
           </form>
