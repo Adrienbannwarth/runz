@@ -28,6 +28,25 @@ Plateforme web du RunZ Challenge (CSE Colorz) : chaque participant connecte son 
 5. Bonus en km (photo couleur, sortie commune, ParrainZ…) saisis par l'admin et ajoutés au total de l'équipe.
 6. Score d'équipe = (km comptés des membres + bonus) / nombre de membres.
 
+## Déploiement en place (16/10/2026)
+
+| Élément | Valeur |
+|---|---|
+| Repo | github.com/Adrienbannwarth/runz (branche `main`, déploiement auto à chaque push) |
+| Vercel | projet `runz-colorz` → https://runz-colorz.vercel.app |
+| Supabase | org « Runz », projet `dpzanzllzbcjzrbcckpq` (eu-west-1), schéma appliqué |
+| Strava | app « Colorz », Client ID 256066, callback domain `runz-colorz.vercel.app` (localhost reste autorisé par Strava pour le dev) |
+| Capacité Strava | 10 athlètes (1 connecté) → review à demander, voir REVIEW-STRAVA.md |
+
+Les variables d'environnement sont préparées dans `.env.vercel.local`, ignoré par git. Les secrets de session, de cron et du webhook, ainsi que le mot de passe admin, y sont déjà générés.
+
+**Étapes restantes**
+1. Compléter `SUPABASE_SERVICE_ROLE_KEY` et `STRAVA_CLIENT_SECRET` dans `.env.vercel.local`.
+2. Vercel → runz-colorz → Settings → Environment Variables : coller le contenu du fichier (Production + Preview).
+3. Deployments → dernier déploiement → « Redeploy ».
+4. Créer le webhook : `./scripts/strava-webhook.sh`, puis `./scripts/strava-webhook.sh status` pour vérifier.
+5. Ouvrir https://runz-colorz.vercel.app/admin avec `ADMIN_PASSWORD` et ajouter les participants.
+
 ## Mise en route (≈ 30 min)
 
 ### 1. Supabase
@@ -46,6 +65,7 @@ Plateforme web du RunZ Challenge (CSE Colorz) : chaque participant connecte son 
 - Récupérer le Client ID et le Client Secret, les mettre dans Vercel, puis redéployer.
 
 ### 4. Webhook Strava (une seule fois, après le déploiement)
+Le plus simple : `./scripts/strava-webhook.sh`. Il lit les valeurs dans `.env.vercel.local`. Équivalent manuel :
 ```bash
 curl -X POST https://www.strava.com/api/v3/push_subscriptions \
   -F client_id=$STRAVA_CLIENT_ID -F client_secret=$STRAVA_CLIENT_SECRET \
