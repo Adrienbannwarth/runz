@@ -4,6 +4,13 @@ import { getParticipantId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
+/** Texte sombre sur les couleurs claires (ex. Jaunes). */
+function isLight(hex: string) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 170;
+}
+
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams;
   const [data, pid] = await Promise.all([loadAll(), getParticipantId()]);
@@ -18,38 +25,47 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
   return (
     <>
-      {sp.error && <div className="alert">{sp.error}</div>}
+      {sp.error && <div className="alert err">{sp.error}</div>}
       {sp.disconnected && <div className="alert ok">Ton compte Strava est déconnecté et tes données Strava ont été effacées.</div>}
 
-      <h1>{settings.challenge_name} · Chaque pas compte</h1>
-      <p className="muted">
-        Du {fmtDate(settings.start_date)} au {fmtDate(settings.end_date)} ·{' '}
-        {ended ? 'Challenge terminé' : started ? 'En cours' : 'Bientôt le coup d’envoi'} · {people} participant·es ·{' '}
-        {fmtKm(totalKm)} km au compteur
-      </p>
+      <section className="hero">
+        <div>
+          <p className="eyebrow" style={{ color: '#bdbdbd' }}>
+            {ended ? 'Challenge terminé' : started ? 'Challenge en cours' : 'Bientôt le coup d’envoi'} · du {fmtDate(settings.start_date)} au {fmtDate(settings.end_date)}
+          </p>
+          <h1>{settings.challenge_name} :<br />chaque pas compte</h1>
+          <p>{people} participant·es · {fmtKm(totalKm)} km parcourus ensemble</p>
+        </div>
+        <div className="actions">
+          {pid ? <Link className="btn white" href="/me">Mon espace</Link>
+               : <a className="btn white" href="/api/strava/connect">Se connecter avec Strava</a>}
+          <a className="btn ghost" href="#classement">Voir le classement</a>
+        </div>
+      </section>
 
       {boost && (
-        <div className="banner">⚡ <span><b>{boost.name}</b> en cours : chaque km compte ×{boost.multiplier}</span></div>
+        <div className="banner">⚡ {boost.name} en cours : chaque km compte ×{boost.multiplier}</div>
       )}
 
+      <p className="eyebrow" id="classement">Classement à la moyenne de km par personne</p>
+      <h2 style={{ marginTop: 0 }}>Les équipes</h2>
       <div className="grid">
         {teams.map((t) => (
           <div className="card team" key={t.team.id}>
-            <div className="bar" style={{ background: t.team.color }} />
-            <div className="rank">{t.rank === 1 ? '🏆 1er' : `${t.rank}e`}</div>
-            <div className="name">{t.team.emoji} {t.team.name}</div>
-            <div className="score">{fmtKm(t.avgKm)} <small>km / pers.</small></div>
-            <div className="progress"><div style={{ width: `${(t.avgKm / leader) * 100}%`, background: t.team.color }} /></div>
+            <div className={`visual ${isLight(t.team.color) ? 'light' : ''}`} style={{ background: t.team.color }}>
+              <span className="badge">{t.rank === 1 ? '🏆 1er' : `${t.rank}e`}</span>
+              <div className="score">{fmtKm(t.avgKm)} <small>km / pers.</small></div>
+            </div>
+            <div className="name">{t.team.name}</div>
+            <div className="rank">{t.members} membre{t.members > 1 ? 's' : ''} · +{fmtKm(t.todayKm)} km aujourd’hui</div>
+            <div className="progress"><div style={{ width: `${(t.avgKm / leader) * 100}%` }} /></div>
             <div className="kv"><span>Total équipe</span><span>{fmtKm(t.totalKm)} km</span></div>
             <div className="kv"><span>Dont bonus</span><span>{fmtKm(t.bonusKm)} km</span></div>
-            <div className="kv"><span>Aujourd’hui</span><span>+{fmtKm(t.todayKm)} km</span></div>
-            <div className="kv"><span>Membres</span><span>{t.members}</span></div>
           </div>
         ))}
       </div>
-      <p className="muted small">
-        Classement à la moyenne de km par participant (bonus inclus). Marche, rando, course, trail et tapis comptent ;
-        plafond {settings.daily_cap_km} km / jour / personne.
+      <p className="muted small" style={{ marginTop: 20 }}>
+        Bonus inclus. Marche, rando, course, trail et tapis comptent ; plafond {settings.daily_cap_km} km / jour / personne.
       </p>
 
       {upcoming.length > 0 && (
