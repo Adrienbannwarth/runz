@@ -20,13 +20,14 @@ Plateforme web du RunZ Challenge (CSE Colorz) : chaque participant connecte son 
 - Filet de sécurité : cron quotidien (`vercel.json`, 23 h / minuit heure de Paris) et boutons de resynchro.
 - Stocké : type, date/heure locale, distance, durée, dénivelé, nom. **Jamais** de tracé GPS.
 
-**Règles de calcul** (`lib/scoring.ts`, testées dans `tests/scoring.test.ts`)
-1. Types comptés (réglables) : marche, course, trail, randonnée, tapis, fauteuil. Vélo exclu.
-2. Seules les activités entre la date de début et la date de fin (incluses) comptent.
-3. Plafond journalier par personne (15 km par défaut) : au-delà, les activités du jour sont réduites au prorata.
-4. Boosts horaires (Flash HourZ, Lève-tôt…) : une activité qui *démarre* dans la fenêtre est multipliée. Le dernier jour, le Sprint final s'applique. Les multiplicateurs ne se cumulent pas, c'est le plus fort qui compte. Le plafond s'applique avant le multiplicateur.
-5. Bonus en km (photo couleur, sortie commune, ParrainZ…) saisis par l'admin et ajoutés au total de l'équipe.
-6. Score d'équipe = (km comptés des membres + bonus) / nombre de membres.
+**Règles de calcul** (`lib/scoring.ts`, testées dans `tests/scoring.test.ts`), alignées sur `RunZ-Suivi.xlsx` (SharePoint BOF › Général) :
+1. Activités comptées (réglables) : marche, course, trail, randonnée, tapis. Vélo exclu.
+2. Période : du 27/10 au 27/11/2026, dates incluses.
+3. Créneau déduit de l'heure de départ : Avant 8h, 12h-14h, 19h-22h ou Autre.
+4. Boosts multiplicateurs, par période et par créneau, comme l'onglet Boost : Flash HourZ ×2 (02 au 06/11, 19h-22h), On vient à pied Days ×3 (09 au 11/11), Tracé GPS ×5 (16 au 20/11), Sprint final ×2 (27/11). S'il y a plusieurs boosts, le plus fort s'applique.
+5. Plafond de 10 km/jour/personne en mode **alerte**, comme l'Excel : les km comptent, la journée est signalée dans l'admin et dans Mon espace. Un mode « coupe automatique » existe dans les réglages.
+6. Équipe : total = km réels + km gagnés via multiplicateurs + km bonus. Classement au **total** (réglable : moyenne par personne).
+7. Prix MVP : Machine à KilomètreZ (km réels), Métronome (jours actifs), Lève-tôt d'or (km avant 8 h), Pause Déj' (km 12h-14h), Mollets d'acier (D+). Les prix votés se règlent sur zlack : Paparazzi RunZ, Capitaine Courage, Picasso du GPS.
 
 ## Déploiement en place (16/10/2026)
 
@@ -51,7 +52,7 @@ Les variables d'environnement sont préparées dans `.env.vercel.local`, ignoré
 
 ### 1. Supabase
 1. Créer un projet sur supabase.com (région Europe).
-2. SQL Editor → coller et exécuter `supabase/schema.sql`. Le script crée les tables, les 4 équipes (Jaunes désactivée) et les réglages : du 02/11 au 06/12/2026, plafond 15 km.
+2. SQL Editor → coller et exécuter `supabase/schema.sql`. Le script crée les tables, les 4 équipes et les réglages : du 27/10 au 27/11/2026, plafond 10 km. Sur une base existante, exécuter plutôt les scripts de `supabase/migrations/` dans l'ordre.
 3. Project Settings → API : noter l'URL et la clé `service_role`.
 
 ### 2. Vercel

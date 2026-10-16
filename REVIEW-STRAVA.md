@@ -3,7 +3,7 @@
 ## Ce qu'il faut savoir avant de soumettre
 - Une nouvelle app Strava démarre à 1 athlète. Elle passe à **10 sans review**. Au-delà, il faut une review via le formulaire de Strava.
 - **Délai non garanti.** Selon les retours sur le forum développeurs, la réponse arrive entre quelques jours et plusieurs mois. Il est impossible de suivre l'avancement.
-- Avec 14 inscrits et un coup d'envoi le 02/11, il ne faut **pas dépendre de la review**. Les 10 premiers connectent Strava. Les autres passent par la saisie manuelle (captures d'écran) jusqu'à l'approbation. La plateforme gère les deux cas.
+- Avec 18 inscrits et un coup d'envoi le 27/10, il ne faut **pas dépendre de la review**. Les 10 premiers connectent Strava. Les autres passent par la saisie manuelle (captures d'écran) jusqu'à l'approbation. La plateforme gère les deux cas.
 - **Point sensible.** Les conditions de l'API Strava, dans leur version de fin 2024, limitent l'affichage des données d'un athlète à d'autres utilisateurs. La plateforme a été conçue pour rester du bon côté de cette règle :
   - le classement public n'affiche que des agrégats par équipe ;
   - chacun ne voit en détail que ses propres activités ;
@@ -26,7 +26,7 @@ strava.com/settings/api → lien vers le formulaire de review / developer progra
 ## Texte proposé pour le formulaire (EN)
 
 > **App name:** RunZ Challenge
-> **Description:** RunZ is a non-commercial, internal wellness challenge organised by the works council (CSE) of Colorz, a French digital agency. About 15–20 employees, split into 3 colour teams, walk or run as much as they can over 5 weeks (2 Nov – 6 Dec 2026). Participation is voluntary.
+> **Description:** RunZ is a non-commercial, internal wellness challenge organised by the works council (CSE) of Colorz, a French digital agency. About 18–25 employees, split into colour teams, walk or run as much as they can over one month (27 Oct – 27 Nov 2026). Participation is voluntary.
 >
 > **How Strava data is used:** After OAuth (scope `activity:read_all`), we import only the activities within the challenge dates and store only sport type, local start time, distance, moving time, elevation gain and activity name. No GPS streams, polylines, locations or health data are requested or stored. Activities are kept in sync through the webhook API, and a daily sync covers missed events.
 >

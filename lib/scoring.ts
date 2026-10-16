@@ -1,20 +1,28 @@
-// Calcul des points RunZ. Fonctions pures (aucun accès base), testées dans tests/scoring.test.ts.
+// Calcul des points RunZ, aligné sur le fichier de suivi RunZ-Suivi.xlsx (onglets Saisie km, Boost, Classement, MVP).
+// Fonctions pures (aucun accès base), testées dans tests/scoring.test.ts.
 //
-// Règles appliquées :
-// 1. Seules les activités dont le sport_type est autorisé et dont la date locale est
-//    comprise entre start_date et end_date (incluses) comptent.
-// 2. Plafond journalier : si une personne dépasse daily_cap_km sur une journée, chaque
-//    activité du jour est réduite au prorata pour que le total brut = plafond.
-// 3. Multiplicateurs : une activité reçoit le plus grand multiplicateur qui s'applique
-//    à son heure de départ (boosts horaires, sprint final le dernier jour). Ils ne se cumulent pas.
-// 4. Score d'équipe = (km comptés des membres + bonus de l'équipe) / nombre de membres.
+// Règles :
+// 1. Comptent les activités dont le sport_type est autorisé et dont la date locale est
+//    entre start_date et end_date (incluses).
+// 2. Créneau déduit de l'heure de départ : « Avant 8h » (< 8 h), « 12h-14h », « 19h-22h », sinon « Autre ».
+// 3. Boost multiplicateur : s'applique si la date de l'activité est dans la période du boost et que le
+//    créneau correspond (ou boost « Tous »). Plusieurs boosts : le plus fort s'applique (MAX, comme l'Excel).
+// 4. Plafond journalier : en mode « alert » (Excel), les km comptent tous et la journée est signalée
+//    « Plafond dépassé » ; en mode « cap », les km du jour sont réduits au prorata.
+// 5. Équipe : total = km réels + km gagnés via multiplicateurs + km bonus. Classement au « total »
+//    ou à la « moyenne » par personne (réglage).
+
+export type Slot = 'Avant 8h' | '12h-14h' | '19h-22h' | 'Autre';
+export type BoostSlot = Slot | 'Tous';
 
 export type Settings = {
   start_date: string; // YYYY-MM-DD
   end_date: string;
   daily_cap_km: number;
-  sprint_multiplier: number;
+  sprint_multiplier: number;           // ancien réglage, 1 = désactivé (le Sprint final est un boost)
   sport_types: string[];
+  ranking_mode?: 'total' | 'average';  // défaut : total
+  cap_mode?: 'alert' | 'cap';          // défaut : alert
 };
 export type Team = { id: number; name: string; color: string; emoji: string; active: boolean };
 export type Participant = { id: string; display_name: string; team_id: number | null };
@@ -30,43 +38,59 @@ export type Activity = {
   moving_time_s: number | null;
   elevation_gain_m: number | null;
 };
-export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number };
+export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null };
 export type Bonus = { id: number; team_id: number; participant_id: string | null; km: number; reason: string; awarded_on: string };
 
 export type ScoredActivity = Activity & {
   eligible: boolean;
   reason?: string;
   day: string;
+  week: number;
+  slot: Slot;
   rawKm: number;
   cappedKm: number;
   multiplier: number;
   boostName?: string;
   countedKm: number;
+  overCap: boolean;   // la journée de cette personne dépasse le plafond
 };
 
 export type ParticipantStats = {
   participant: Participant;
   activities: number;
-  rawKm: number;      // km éligibles avant plafond
-  countedKm: number;  // km après plafond et multiplicateurs
+  rawKm: number;       // km réels éligibles
+  countedKm: number;   // km comptés (multiplicateurs, plafond si mode cap)
   activeDays: number;
+  longestKm: number;   // plus longue sortie
   elevationM: number;
-  earlyKm: number;    // km démarrés avant 8 h
+  earlyKm: number;     // km « Avant 8h »
+  lunchKm: number;     // km « 12h-14h »
+  flashKm: number;     // km « 19h-22h » sous multiplicateur
+  week1Km: number;
+  currentWeekKm: number;
+  progressKm: number;  // semaine en cours − semaine 1
+  activeThisWeek: boolean; // ≥ 1 km cette semaine
   todayKm: number;
+  overCapDays: string[];
 };
 
 export type TeamStats = {
   team: Team;
   members: number;
-  countedKm: number;
+  realKm: number;
+  multiplierKm: number; // km gagnés via multiplicateurs
+  countedKm: number;    // réels + multiplicateurs
   bonusKm: number;
   totalKm: number;
-  avgKm: number;      // score de classement
+  avgKm: number;
+  score: number;        // valeur de tri selon ranking_mode
   todayKm: number;
+  notYetThisWeek: number;
   rank: number;
 };
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
+const dayMs = 86400000;
 
 /** Normalise un timestamp local ("2026-11-02 18:30:00", "2026-11-02T18:30:00Z"...) en "YYYY-MM-DDTHH:MM:SS". */
 export function normLocal(ts: string): string {
@@ -76,11 +100,41 @@ export function normLocal(ts: string): string {
   return `${date}T${t.length === 5 ? t + ':00' : t.length === 2 ? t + ':00:00' : t}`.slice(0, 19);
 }
 
+export function slotOf(local: string): Slot {
+  const h = Number(local.slice(11, 13));
+  if (h < 8) return 'Avant 8h';
+  if (h >= 12 && h < 14) return '12h-14h';
+  if (h >= 19 && h < 22) return '19h-22h';
+  return 'Autre';
+}
+
+/** Numéro de semaine du challenge (1 = première semaine), comme Paramètres!B7. */
+export function weekOf(day: string, startDate: string): number {
+  const d = (Date.parse(`${day}T12:00:00Z`) - Date.parse(`${startDate}T12:00:00Z`)) / dayMs;
+  return Math.max(1, Math.floor(d / 7) + 1);
+}
+
+function boostApplies(b: Boost, local: string, slot: Slot) {
+  const day = local.slice(0, 10);
+  const from = normLocal(b.starts_at).slice(0, 10);
+  const to = normLocal(b.ends_at).slice(0, 10);
+  if (day < from || day > to) return false;
+  const bs = b.slot || 'Tous';
+  if (bs === 'Tous') {
+    // compatibilité : un boost « Tous » limité à une fenêtre horaire le même jour (ex. ancien Flash HourZ)
+    const s = normLocal(b.starts_at), e = normLocal(b.ends_at);
+    const hasHours = s.slice(11) !== '00:00:00' || !['00:00:00', '23:59:59'].includes(e.slice(11));
+    return hasHours ? local >= s && local < e : true;
+  }
+  return bs === slot;
+}
+
 export function scoreActivities(acts: Activity[], settings: Settings, boosts: Boost[]): ScoredActivity[] {
   const allowed = new Set(settings.sport_types);
   const scored: ScoredActivity[] = acts.map((a) => {
     const local = normLocal(a.start_date_local);
     const day = local.slice(0, 10);
+    const slot = slotOf(local);
     const rawKm = Number(a.distance_m) / 1000;
     let eligible = true;
     let reason: string | undefined;
@@ -91,15 +145,16 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     let boostName: string | undefined;
     if (eligible) {
       for (const b of boosts) {
-        if (local >= normLocal(b.starts_at) && local < normLocal(b.ends_at) && Number(b.multiplier) > multiplier) {
-          multiplier = Number(b.multiplier); boostName = b.name;
-        }
+        if (Number(b.multiplier) > multiplier && boostApplies(b, local, slot)) { multiplier = Number(b.multiplier); boostName = b.name; }
       }
       if (day === settings.end_date && Number(settings.sprint_multiplier) > multiplier) {
         multiplier = Number(settings.sprint_multiplier); boostName = 'Sprint final';
       }
     }
-    return { ...a, start_date_local: local, eligible, reason, day, rawKm, cappedKm: 0, multiplier, boostName, countedKm: 0 };
+    return {
+      ...a, start_date_local: local, eligible, reason, day, week: weekOf(day, settings.start_date), slot,
+      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, countedKm: 0, overCap: false,
+    };
   });
 
   // Plafond journalier par personne
@@ -111,10 +166,13 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     byDay.get(k)!.push(s);
   }
   const cap = Number(settings.daily_cap_km);
+  const capMode = settings.cap_mode ?? 'alert';
   for (const list of byDay.values()) {
     const total = list.reduce((t, s) => t + s.rawKm, 0);
-    const factor = cap > 0 && total > cap ? cap / total : 1;
+    const over = cap > 0 && total > cap;
+    const factor = over && capMode === 'cap' ? cap / total : 1;
     for (const s of list) {
+      s.overCap = over;
       s.cappedKm = s.rawKm * factor;
       s.countedKm = s.cappedKm * s.multiplier;
     }
@@ -128,37 +186,61 @@ export function computeStandings(input: {
 }) {
   const { settings, teams, participants, activities, boosts, bonuses, today } = input;
   const scored = scoreActivities(activities, settings, boosts);
+  const currentWeek = weekOf(today, settings.start_date);
+  const sum = (l: ScoredActivity[], f: (s: ScoredActivity) => number) => r2(l.reduce((t, s) => t + f(s), 0));
 
   const people: ParticipantStats[] = participants.map((p) => {
     const mine = scored.filter((s) => s.participant_id === p.id && s.eligible);
+    const week1Km = sum(mine.filter((s) => s.week === 1), (s) => s.rawKm);
+    const currentWeekKm = sum(mine.filter((s) => s.week === currentWeek), (s) => s.rawKm);
     return {
       participant: p,
       activities: mine.length,
-      rawKm: r2(mine.reduce((t, s) => t + s.rawKm, 0)),
-      countedKm: r2(mine.reduce((t, s) => t + s.countedKm, 0)),
+      rawKm: sum(mine, (s) => s.rawKm),
+      countedKm: sum(mine, (s) => s.countedKm),
       activeDays: new Set(mine.map((s) => s.day)).size,
+      longestKm: r2(Math.max(0, ...mine.map((s) => s.rawKm))),
       elevationM: Math.round(mine.reduce((t, s) => t + Number(s.elevation_gain_m ?? 0), 0)),
-      earlyKm: r2(mine.filter((s) => s.start_date_local.slice(11, 13) < '08').reduce((t, s) => t + s.cappedKm, 0)),
-      todayKm: r2(mine.filter((s) => s.day === today).reduce((t, s) => t + s.countedKm, 0)),
+      earlyKm: sum(mine.filter((s) => s.slot === 'Avant 8h'), (s) => s.rawKm),
+      lunchKm: sum(mine.filter((s) => s.slot === '12h-14h'), (s) => s.rawKm),
+      flashKm: sum(mine.filter((s) => s.slot === '19h-22h' && s.multiplier > 1), (s) => s.rawKm),
+      week1Km, currentWeekKm, progressKm: r2(currentWeekKm - week1Km),
+      activeThisWeek: currentWeekKm >= 1,
+      todayKm: sum(mine.filter((s) => s.day === today), (s) => s.countedKm),
+      overCapDays: [...new Set(mine.filter((s) => s.overCap).map((s) => s.day))].sort(),
     };
   });
 
+  const mode = settings.ranking_mode ?? 'total';
   const teamStats: TeamStats[] = teams.filter((t) => t.active).map((team) => {
     const members = people.filter((p) => p.participant.team_id === team.id);
+    const realKm = members.reduce((t, p) => t + p.rawKm, 0);
     const countedKm = members.reduce((t, p) => t + p.countedKm, 0);
     const bonusKm = bonuses.filter((b) => b.team_id === team.id).reduce((t, b) => t + Number(b.km), 0);
     const totalKm = countedKm + bonusKm;
+    const avgKm = members.length ? totalKm / members.length : 0;
     const todayBonus = bonuses.filter((b) => b.team_id === team.id && b.awarded_on === today).reduce((t, b) => t + Number(b.km), 0);
     return {
       team, members: members.length,
-      countedKm: r2(countedKm), bonusKm: r2(bonusKm), totalKm: r2(totalKm),
-      avgKm: members.length ? r2(totalKm / members.length) : 0,
+      realKm: r2(realKm), multiplierKm: r2(countedKm - realKm), countedKm: r2(countedKm),
+      bonusKm: r2(bonusKm), totalKm: r2(totalKm), avgKm: r2(avgKm),
+      score: r2(mode === 'average' ? avgKm : totalKm),
       todayKm: r2(members.reduce((t, p) => t + p.todayKm, 0) + todayBonus),
+      notYetThisWeek: members.filter((p) => !p.activeThisWeek).length,
       rank: 0,
     };
   });
-  teamStats.sort((a, b) => b.avgKm - a.avgKm);
-  teamStats.forEach((t, i) => { t.rank = i > 0 && t.avgKm === teamStats[i - 1].avgKm ? teamStats[i - 1].rank : i + 1; });
+  teamStats.sort((a, b) => b.score - a.score);
+  teamStats.forEach((t, i) => { t.rank = i > 0 && t.score === teamStats[i - 1].score ? teamStats[i - 1].rank : i + 1; });
 
-  return { scored, people, teams: teamStats };
+  return { scored, people, teams: teamStats, currentWeek, mode };
+}
+
+/** Phrase du titre du récap (Classement!B22). */
+export function leadSentence(teams: TeamStats[], mode: 'total' | 'average') {
+  if (teams.length < 2) return '';
+  const gap = teams[0].score - teams[1].score;
+  if (gap < 0.05) return 'Égalité parfaite en tête !';
+  const km = gap.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return `Les ${teams[0].team.name} mènent de ${km} km${mode === 'total' ? '' : ' par personne'}.`;
 }

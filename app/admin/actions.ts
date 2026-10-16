@@ -38,7 +38,10 @@ export async function createParticipant(fd: FormData) {
 }
 export async function updateParticipant(fd: FormData) {
   await guard();
-  must(await db().from('participants').update({ display_name: s(fd, 'display_name'), team_id: orNull(s(fd, 'team_id')) }).eq('id', s(fd, 'id')));
+  must(await db().from('participants').update({
+    display_name: s(fd, 'display_name'), team_id: orNull(s(fd, 'team_id')),
+    pole: orNull(s(fd, 'pole')), is_captain: fd.get('is_captain') === 'on',
+  }).eq('id', s(fd, 'id')));
   done('participants');
 }
 export async function toggleAdmin(fd: FormData) {
@@ -103,11 +106,11 @@ export async function deleteBonus(fd: FormData) {
 // Boosts horaires
 export async function addBoost(fd: FormData) {
   await guard();
-  const date = s(fd, 'date');
-  const endDate = s(fd, 'end_date') || date;
+  const from = s(fd, 'date');
+  const to = s(fd, 'end_date') || from;
   must(await db().from('boosts').insert({
-    name: s(fd, 'name'), multiplier: n(fd, 'multiplier') || 2,
-    starts_at: `${date}T${s(fd, 'start')}:00`, ends_at: `${endDate}T${s(fd, 'end')}:00`,
+    name: s(fd, 'name'), multiplier: n(fd, 'multiplier') || 2, slot: s(fd, 'slot') || 'Tous',
+    starts_at: `${from}T00:00:00`, ends_at: `${to}T23:59:59`,
   }));
   done('boosts', 'Boost programmé');
 }
@@ -123,6 +126,8 @@ export async function saveSettings(fd: FormData) {
   must(await db().from('settings').update({
     challenge_name: s(fd, 'challenge_name'), start_date: s(fd, 'start_date'), end_date: s(fd, 'end_date'),
     daily_cap_km: n(fd, 'daily_cap_km'), sprint_multiplier: n(fd, 'sprint_multiplier') || 1,
+    ranking_mode: s(fd, 'ranking_mode') === 'average' ? 'average' : 'total',
+    cap_mode: s(fd, 'cap_mode') === 'cap' ? 'cap' : 'alert',
     sport_types: fd.getAll('sport_types').map(String),
   }).eq('id', 1));
   done('reglages');

@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appUrl } from '@/lib/strava';
-import { fmtDate, fmtKm, loadAll } from '@/lib/data';
+import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, slotLabel } from '@/lib/data';
+import { leadSentence } from '@/lib/scoring';
 import * as A from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,9 @@ const TABS = [
   ['participants', 'Participants'], ['saisie', 'Saisie manuelle'], ['bonus', 'Bonus'],
   ['boosts', 'Boosts'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
 ] as const;
-const SPORTS = ['Walk', 'Run', 'TrailRun', 'Hike', 'VirtualRun', 'Wheelchair'];
+const SPORTS = ['Walk', 'Run', 'TrailRun', 'Hike', 'VirtualRun'];
+const POLES = ['Projet', 'Développement', 'Design', 'Commercial', 'Autre'];
+const SLOTS = ['Tous', 'Avant 8h', '12h-14h', '19h-22h'];
 const SPORT_FR: Record<string, string> = { Walk: 'Marche', Run: 'Course', TrailRun: 'Trail', Hike: 'Randonnée', VirtualRun: 'Tapis', Wheelchair: 'Fauteuil' };
 
 export default async function Admin({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -39,10 +42,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
 
       {tab === 'participants' && (
         <>
-          <h2>Participants ({d.participants.length})</h2>
+          <h2>Participants · {d.participants.filter((p) => p.strava_athlete_id).length} connecté·es à Strava sur {d.participants.length} fiches</h2>
+          <p className="muted small">Les fiches sont créées à l’avance (liens d’invitation, saisie manuelle). Côté participants, une personne n’apparaît qu’une fois connectée à Strava ou avec des km saisis.</p>
           <div className="card" style={{ overflowX: 'auto' }}>
             <table>
-              <thead><tr><th>Nom · équipe</th><th>Strava</th><th>Rôle</th><th className="num">Km comptés</th><th>Lien d’invitation</th><th></th></tr></thead>
+              <thead><tr><th>Nom · équipe · pôle</th><th>Strava</th><th>Rôle</th><th className="num">Km réels</th><th>Cette semaine</th><th>Lien d’invitation</th><th></th></tr></thead>
               <tbody>
                 {d.participants.map((p) => {
                   const st = d.people.find((x) => x.participant.id === p.id);
@@ -56,6 +60,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                             <option value="">— sans équipe —</option>
                             {teamsAll.map((t) => <option key={t.id} value={t.id}>{t.emoji} {t.name}{t.active ? '' : ' (inactive)'}</option>)}
                           </select>
+                          <select name="pole" defaultValue={p.pole ?? ''}>
+                            <option value="">— pôle —</option>
+                            {POLES.map((x) => <option key={x} value={x}>{x}</option>)}
+                          </select>
+                          <label style={{ display: 'flex', gap: 4, alignItems: 'center' }}><input type="checkbox" name="is_captain" defaultChecked={p.is_captain} /> cap.</label>
                           <button className="btn small">OK</button>
                         </form>
                       </td>
@@ -71,7 +80,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                           </button>
                         </form>
                       </td>
-                      <td className="num">{fmtKm(st?.countedKm ?? 0)}</td>
+                      <td className="num">{fmtKm(st?.rawKm ?? 0)}</td>
+                      <td>{st?.activeThisWeek ? <span className="pill">✅ au compteur</span> : <span className="pill" style={{ color: 'var(--red)' }}>pas encore</span>}</td>
                       <td><input readOnly value={`${appUrl()}/join/${p.invite_token}`} style={{ width: 220, fontSize: 12 }} /></td>
                       <td>
                         <form action={A.deleteParticipant}><input type="hidden" name="id" value={p.id} /><button className="btn small danger">Suppr.</button></form>
@@ -82,6 +92,16 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
               </tbody>
             </table>
           </div>
+          {d.people.some((x) => x.overCapDays.length) && (
+            <>
+              <h2>Alertes plafond ({d.settings.daily_cap_km} km / jour)</h2>
+              <div className="card">
+                {d.people.filter((x) => x.overCapDays.length).map((x) => (
+                  <div className="kv" key={x.participant.id}><span>{x.participant.display_name}</span><span>{x.overCapDays.map(fmtDate).join(', ')}</span></div>
+                ))}
+              </div>
+            </>
+          )}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <form action={A.syncAll}><button className="btn primary">↻ Resynchroniser tous les comptes Strava</button></form>
           </div>
@@ -112,7 +132,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <label>Note<input name="note" placeholder="Capture Garmin" /></label>
             <button className="btn primary">Ajouter</button>
           </form>
-          <p className="muted small">L’heure compte pour les boosts horaires (Flash HourZ…). Le plafond journalier s’applique aussi.</p>
+          <p className="muted small">L’heure donne le créneau (Avant 8h, 12h-14h, 19h-22h) utilisé par les boosts et les prix MVP.</p>
           <h2>Saisies manuelles</h2>
           <div className="card" style={{ overflowX: 'auto' }}>
             <table>
@@ -148,7 +168,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <label>Date<input type="date" name="awarded_on" defaultValue={d.today} /></label>
             <button className="btn primary">Ajouter</button>
           </form>
-          <p className="muted small">Repères du kit : Photo couleur +10 km/membre · Tous au compteur +30 km · Sortie commune +20 km · ParrainZ +10 km · Z Strava Art +25 km. Les bonus s’ajoutent au total de l’équipe, puis sont divisés par le nombre de membres.</p>
+          <p className="muted small">Repères du kit : Photo couleur +10 km/membre · Tous au compteur +30 km · Sortie commune +20 km · ParrainZ +10 km · Z Strava Art +25 km. Les bonus s’ajoutent au total de l’équipe.</p>
           <h2>Bonus attribués</h2>
           <div className="card" style={{ overflowX: 'auto' }}>
             <table>
@@ -169,24 +189,23 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
 
       {tab === 'boosts' && (
         <>
-          <h2>Programmer un boost horaire</h2>
+          <h2>Programmer un boost multiplicateur</h2>
           <form action={A.addBoost} className="card inline">
-            <label>Nom<input name="name" required defaultValue="Flash HourZ" /></label>
-            <label>Jour<input type="date" name="date" required defaultValue={d.today} /></label>
-            <label>De<input type="time" name="start" required defaultValue="19:00" /></label>
-            <label>À<input type="time" name="end" required defaultValue="22:00" /></label>
-            <label>Jusqu’au (si plusieurs jours)<input type="date" name="end_date" /></label>
+            <label>Nom<input name="name" required defaultValue="Flash HourZ ×2" /></label>
+            <label>Du<input type="date" name="date" required defaultValue={d.today} /></label>
+            <label>Au<input type="date" name="end_date" /></label>
+            <label>Créneau<select name="slot">{SLOTS.map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
             <label>Multiplicateur<input name="multiplier" defaultValue="2" style={{ width: 60 }} /></label>
             <button className="btn primary">Programmer</button>
           </form>
-          <p className="muted small">Une activité est boostée si elle démarre dans la fenêtre. Les multiplicateurs ne se cumulent pas (le plus fort s’applique). Le Sprint final (dernier jour) se règle dans Réglages.</p>
+          <p className="muted small">Comme dans l’onglet Boost de l’Excel : une activité est boostée si son jour est dans la période et que son heure de départ tombe dans le créneau. Plusieurs boosts : le plus fort s’applique.</p>
           <div className="card" style={{ marginTop: 12 }}>
             <table>
-              <thead><tr><th>Boost</th><th>Début</th><th>Fin</th><th className="num">×</th><th></th></tr></thead>
+              <thead><tr><th>Boost</th><th>Début</th><th>Fin</th><th>Créneau</th><th className="num">×</th><th></th></tr></thead>
               <tbody>
                 {d.boosts.map((b) => (
                   <tr key={b.id}>
-                    <td>{b.name}</td><td>{fmtDate(b.starts_at)} {b.starts_at.slice(11, 16)}</td><td>{fmtDate(b.ends_at)} {b.ends_at.slice(11, 16)}</td>
+                    <td>{b.name}</td><td>{fmtDate(b.starts_at)}</td><td>{fmtDate(b.ends_at)}</td><td>{slotLabel(b.slot)}</td>
                     <td className="num">{b.multiplier}</td>
                     <td><form action={A.deleteBoost}><input type="hidden" name="id" value={b.id} /><button className="btn small danger">Suppr.</button></form></td>
                   </tr>
@@ -197,44 +216,85 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         </>
       )}
 
-      {tab === 'mvp' && (
-        <>
-          <h2>Prix MVP (vue organisateurs)</h2>
-          <div className="card" style={{ overflowX: 'auto' }}>
-            <table>
-              <thead><tr><th>Participant</th><th>Équipe</th><th className="num">Km comptés<br />KilomètreZ</th><th className="num">Jours actifs<br />Métronome</th><th className="num">D+<br />Mollets d’acier</th><th className="num">Km avant 8 h<br />Lève-tôt</th><th className="num">Km boostés<br />Flash Hour</th></tr></thead>
-              <tbody>
-                {[...d.people].sort((a, b) => b.countedKm - a.countedKm).map((p) => {
-                  const t = d.teams.find((x) => x.team.id === p.participant.team_id)?.team;
-                  const flash = d.scored.filter((s) => s.participant_id === p.participant.id && s.eligible && s.boostName && s.boostName !== 'Sprint final')
-                    .reduce((acc, s) => acc + s.cappedKm, 0);
-                  return (
-                    <tr key={p.participant.id}>
-                      <td>{p.participant.display_name}</td><td>{t ? `${t.emoji} ${t.name}` : '—'}</td>
-                      <td className="num">{fmtKm(p.countedKm)}</td><td className="num">{p.activeDays}</td>
-                      <td className="num">{p.elevationM} m</td><td className="num">{fmtKm(p.earlyKm)}</td><td className="num">{fmtKm(flash)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="muted small">Réservé aux organisateurs : ces chiffres individuels ne sont pas publiés sur la plateforme.</p>
-        </>
-      )}
+      {tab === 'mvp' && (() => {
+        const prizes: [string, string, (x: (typeof d.people)[number]) => number, string][] = [
+          ['Machine à KilomètreZ', 'Le plus de km réels', (x) => x.rawKm, 'km'],
+          ['Le Métronome', 'Le plus de jours actifs', (x) => x.activeDays, 'jours'],
+          ['Lève-tôt d’or', 'Le plus de km avant 8 h', (x) => x.earlyKm, 'km'],
+          ['Prix Pause Déj’', 'Le plus de km entre 12 h et 14 h', (x) => x.lunchKm, 'km'],
+          ['Mollets d’acier', 'Le plus de dénivelé cumulé', (x) => x.elevationM, 'm'],
+        ];
+        const teamOf = (id: number | null) => d.teamList.find((t) => t.id === id);
+        return (
+          <>
+            <h2>Prix calculés</h2>
+            <div className="card" style={{ overflowX: 'auto' }}>
+              <table>
+                <thead><tr><th>Prix</th><th>Critère</th><th>Gagnant·e</th><th className="num">Valeur</th></tr></thead>
+                <tbody>
+                  {prizes.map(([name, crit, f, unit]) => {
+                    const best = [...d.people].sort((x, y) => f(y) - f(x))[0];
+                    const v = best ? f(best) : 0;
+                    return (
+                      <tr key={name}><td><b>{name}</b></td><td>{crit}</td><td>{v > 0 ? best.participant.display_name : '—'}</td>
+                        <td className="num">{unit === 'km' ? fmtKm(v) : v} {unit}</td></tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted small">En cas d’égalité, une seule personne s’affiche : vérifier dans le détail avant d’annoncer.</p>
+            <h2>Prix votés</h2>
+            <div className="card">
+              {[['Paparazzi RunZ', 'La meilleure photo couleur'], ['Capitaine Courage', 'Le capitaine qui a le mieux motivé'], ['Picasso du GPS', 'Le plus beau tracé']].map(([n, c]) => (
+                <div className="kv" key={n}><span><b style={{ color: 'var(--ink)' }}>{n}</b> · {c}</span><span>vote sur zlack</span></div>
+              ))}
+            </div>
+            <h2>Détail par participant</h2>
+            <div className="card" style={{ overflowX: 'auto' }}>
+              <table>
+                <thead><tr><th>Participant</th><th>Équipe</th><th className="num">Km réels</th><th className="num">Km comptés</th><th className="num">Jours</th><th className="num">Plus longue</th><th className="num">Avant 8 h</th><th className="num">12h-14h</th><th className="num">Flash Hour</th><th className="num">D+</th><th className="num">Sem. 1 → en cours</th></tr></thead>
+                <tbody>
+                  {[...d.people].sort((x, y) => y.rawKm - x.rawKm).map((p) => {
+                    const t = teamOf(p.participant.team_id);
+                    return (
+                      <tr key={p.participant.id}>
+                        <td>{p.participant.display_name}</td><td>{t ? `${t.emoji} ${t.name}` : '—'}</td>
+                        <td className="num">{fmtKm(p.rawKm)}</td><td className="num">{fmtKm(p.countedKm)}</td><td className="num">{p.activeDays}</td>
+                        <td className="num">{fmtKm(p.longestKm)}</td><td className="num">{fmtKm(p.earlyKm)}</td><td className="num">{fmtKm(p.lunchKm)}</td>
+                        <td className="num">{fmtKm(p.flashKm)}</td><td className="num">{p.elevationM} m</td>
+                        <td className="num">{fmtKm(p.week1Km)} → {fmtKm(p.currentWeekKm)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted small">Réservé aux organisateurs : ces chiffres individuels ne sont pas publiés sur la plateforme.</p>
+          </>
+        );
+      })()}
 
       {tab === 'recap' && (
         <>
           <h2>Récap du soir à coller dans ~runz</h2>
           <pre className="recap">{[
-            `🏃 **RunZ · Récap du ${fmtDate(d.today)}**`,
+            `🏃 **RunZ · Récap du ${fmtDate(d.today)}** · semaine ${d.currentWeek} · J-${daysLeft(d.settings.end_date, d.today)}`,
+            leadSentence(d.teams, d.mode),
             '',
-            ...d.teams.map((t) => `${['🥇', '🥈', '🥉'][t.rank - 1] ?? '▫️'} ${t.team.emoji} **${t.team.name}** · ${fmtKm(t.avgKm)} km/pers. (+${fmtKm(t.todayKm)} km aujourd’hui)`),
+            ...d.teams.map((t) => `${['🥇', '🥈', '🥉'][t.rank - 1] ?? '▫️'} ${t.team.emoji} **${t.team.name}** · ${fmtKm(t.totalKm)} km · ${fmtKm(t.avgKm)} km/pers. (+${fmtKm(t.todayKm)} km aujourd’hui)`),
             '',
+            `⚡ Boost du jour : ${boostOfDay(d.boosts, d.today)}`,
             `Au total : ${fmtKm(d.teams.reduce((a, t) => a + t.totalKm, 0))} km parcourus ensemble 💪`,
             `Le classement en direct : ${appUrl()}`,
           ].join('\n')}</pre>
-          <p className="muted small">Pense à resynchroniser avant de copier (onglet Participants) si un webhook a pu être manqué.</p>
+          <h2>Pas encore au compteur cette semaine</h2>
+          <div className="card">
+            {d.teams.map((t) => (
+              <div className="kv" key={t.team.id}><span>{t.team.emoji} {t.team.name}</span><span>{t.notYetThisWeek} / {t.members}</span></div>
+            ))}
+          </div>
+          <p className="muted small">Utile pour le boost « Tous au compteur » et les relances (sans nommer personne). Pense à resynchroniser avant de copier si un webhook a pu être manqué.</p>
         </>
       )}
 
@@ -246,7 +306,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <label>Début<input type="date" name="start_date" defaultValue={d.settings.start_date} /></label>
             <label>Fin<input type="date" name="end_date" defaultValue={d.settings.end_date} /></label>
             <label>Plafond km/jour<input name="daily_cap_km" defaultValue={d.settings.daily_cap_km} style={{ width: 70 }} /></label>
-            <label>Sprint final ×<input name="sprint_multiplier" defaultValue={d.settings.sprint_multiplier} style={{ width: 60 }} /></label>
+            <label>Plafond<select name="cap_mode" defaultValue={d.settings.cap_mode ?? 'alert'}><option value="alert">Alerte (comme l’Excel)</option><option value="cap">Coupe automatique</option></select></label>
+            <label>Classement<select name="ranking_mode" defaultValue={d.settings.ranking_mode ?? 'total'}><option value="total">Total</option><option value="average">Moyenne par personne</option></select></label>
+            <input type="hidden" name="sprint_multiplier" value={d.settings.sprint_multiplier} />
             <fieldset style={{ border: 0, padding: 0, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {SPORTS.map((x) => (
                 <label key={x} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>

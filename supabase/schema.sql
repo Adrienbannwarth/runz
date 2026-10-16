@@ -6,11 +6,13 @@
 create table if not exists settings (
   id                 int primary key default 1 check (id = 1),
   challenge_name     text    not null default 'RunZ Challenge',
-  start_date         date    not null default '2026-11-02',
-  end_date           date    not null default '2026-12-06',
-  daily_cap_km       numeric not null default 15,
-  sprint_multiplier  numeric not null default 2,      -- dernier jour : km x2 (1 = désactivé)
-  sport_types        text[]  not null default array['Walk','Run','TrailRun','Hike','VirtualRun','Wheelchair']
+  start_date         date    not null default '2026-10-27',
+  end_date           date    not null default '2026-11-27',
+  daily_cap_km       numeric not null default 10,
+  cap_mode           text    not null default 'alert' check (cap_mode in ('alert','cap')),      -- alert = comme l'Excel
+  ranking_mode       text    not null default 'total' check (ranking_mode in ('total','average')),
+  sprint_multiplier  numeric not null default 1,      -- obsolète : le Sprint final est un boost
+  sport_types        text[]  not null default array['Walk','Run','TrailRun','Hike','VirtualRun']
 );
 insert into settings (id) values (1) on conflict do nothing;
 
@@ -42,6 +44,8 @@ create table if not exists participants (
   scope              text,
   last_sync_at       timestamptz,
   is_admin           boolean not null default false,  -- accès à l'administration via Mon espace
+  is_captain         boolean not null default false,
+  pole               text,
   created_at         timestamptz not null default now()
 );
 
@@ -61,13 +65,14 @@ create table if not exists activities (
 );
 create index if not exists activities_participant_idx on activities(participant_id);
 
--- Fenêtres de multiplicateur (Flash HourZ, Lève-tôt, ...) en heure locale
+-- Boosts multiplicateurs (onglet Boost de l'Excel) : période du starts_at au ends_at (jours inclus) + créneau
 create table if not exists boosts (
   id          serial primary key,
   name        text not null,
   starts_at   timestamp not null,
   ends_at     timestamp not null,
   multiplier  numeric not null default 2,
+  slot        text not null default 'Tous' check (slot in ('Tous','Avant 8h','12h-14h','19h-22h')),
   created_at  timestamptz not null default now()
 );
 

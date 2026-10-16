@@ -85,7 +85,7 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
                   <td>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
                   <td>{a.name || (a.source === 'manual' ? 'Saisie manuelle' : '—')}
                     {!a.eligible && <div className="small">{a.reason}</div>}
-                    {a.eligible && a.cappedKm < a.rawKm - 0.01 && <div className="small muted">Plafond journalier appliqué</div>}
+                    {a.eligible && a.overCap && <div className="small" style={{ color: 'var(--red)' }}>Plus de {data.settings.daily_cap_km} km ce jour-là : vérification par l’organisation</div>}
                   </td>
                   <td>{a.sport_type}</td>
                   <td className="num">{fmtKm(a.rawKm)} km</td>
