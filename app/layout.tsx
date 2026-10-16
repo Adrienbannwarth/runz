@@ -22,7 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </div>
         <header className="top">
           <span aria-hidden="true" />
-          <Link href="/" className="brand">RunZ<sup>®</sup><small>by Colorz</small></Link>
+          <Link href="/" className="brand" aria-label="RunZ by Colorz, accueil"><img src="/logo.svg" alt="RunZ by Colorz" /></Link>
           <Link href="/me" className="top-right" aria-label="Mon espace">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
               <circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />

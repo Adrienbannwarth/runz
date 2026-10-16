@@ -22,6 +22,7 @@ nav.links { display: flex; gap: 28px; font-size: 14px; letter-spacing: 0.08em; t
 nav.links a { text-decoration: none; }
 nav.links a:hover { text-decoration: underline; text-underline-offset: 6px; }
 .brand { display: inline-block; text-align: center; font-weight: 800; font-size: 34px; letter-spacing: -0.04em; text-decoration: none; line-height: 1; }
+.brand img { display: block; height: 52px; width: auto; }
 .brand sup { font-size: 11px; font-weight: 600; letter-spacing: 0; margin-left: 2px; }
 .brand small { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--muted); text-align: center; margin-top: 4px; }
@@ -147,6 +148,8 @@ pre.recap { white-space: pre-wrap; background: var(--soft); border-radius: var(-
 .split form { display: grid; gap: 16px; margin-top: 24px; }
 .split .btn { width: 100%; }
 @media (max-width: 760px) {
+  .brand img { height: 40px; }
+  header.top > span[aria-hidden] { display: none; }
   header.top { grid-template-columns: 1fr auto; }
   nav.links { display: none; }
   .hero { padding: 36px 24px; } .hero h1, h1 { font-size: 36px; }
