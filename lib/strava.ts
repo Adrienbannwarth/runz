@@ -124,7 +124,14 @@ export async function syncParticipant(participantId: string, startDate: string, 
     .select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
   const token = await validToken(p);
   const after = Math.floor(new Date(`${startDate}T00:00:00Z`).getTime() / 1000) - 86400;
-  const before = Math.floor(new Date(`${endDate}T23:59:59Z`).getTime() / 1000) + 86400;
+  // Strava refuse (400) une fenêtre dans le futur : on borne la fin à maintenant
+  const now = Math.floor(Date.now() / 1000);
+  const before = Math.min(Math.floor(new Date(`${endDate}T23:59:59Z`).getTime() / 1000) + 86400, now);
+  if (after >= before) {
+    // Challenge pas encore commencé : rien à importer (les webhooks continuent d'arriver)
+    must(await db().from('participants').update({ last_sync_at: new Date().toISOString() }).eq('id', participantId));
+    return 0;
+  }
 
   const all: StravaActivity[] = [];
   for (let page = 1; page <= 10; page++) {

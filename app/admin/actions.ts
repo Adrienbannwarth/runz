@@ -109,10 +109,25 @@ export async function addBoost(fd: FormData) {
   const from = s(fd, 'date');
   const to = s(fd, 'end_date') || from;
   must(await db().from('boosts').insert({
-    name: s(fd, 'name'), multiplier: n(fd, 'multiplier') || 2, slot: s(fd, 'slot') || 'Tous',
+    name: s(fd, 'name'), multiplier: n(fd, 'multiplier') || 2, slot: s(fd, 'slot') || 'Tous', manual: fd.get('manual') === 'on',
     starts_at: `${from}T00:00:00`, ends_at: `${to}T23:59:59`,
   }));
   done('boosts', 'Boost programmé');
+}
+export async function setBoostManual(fd: FormData) {
+  await guard();
+  must(await db().from('boosts').update({ manual: s(fd, 'manual') === '1' }).eq('id', Number(s(fd, 'id'))));
+  done('boosts', 'Boost mis à jour');
+}
+/** Accorde (ou retire) un boost « à valider » à une activité. */
+export async function toggleBoostValidation(fd: FormData) {
+  await guard();
+  const id = s(fd, 'activity'); const boost = Number(s(fd, 'boost')); const on = s(fd, 'on') === '1';
+  const row = must(await db().from('activities').select('validated_boosts').eq('id', id).single()) as { validated_boosts: number[] | null };
+  const set = new Set((row.validated_boosts ?? []).map(Number));
+  if (on) set.add(boost); else set.delete(boost);
+  must(await db().from('activities').update({ validated_boosts: [...set] }).eq('id', id));
+  done(`validations&boost=${boost}`, on ? 'Boost validé' : 'Validation retirée');
 }
 export async function deleteBoost(fd: FormData) {
   await guard();

@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const TABS = [
   ['participants', 'Participants'], ['saisie', 'Saisie manuelle'], ['bonus', 'Bonus'],
-  ['boosts', 'Boosts'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
+  ['boosts', 'Boosts'], ['validations', 'Validations'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
 ] as const;
 const SPORTS = ['Walk', 'Run', 'TrailRun', 'Hike', 'VirtualRun'];
 const POLES = ['Projet', 'Développement', 'Design', 'Commercial', 'Autre'];
@@ -216,17 +216,25 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <label>Au<input type="date" name="end_date" /></label>
             <label>Créneau<select name="slot">{SLOTS.map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
             <label>Multiplicateur<input name="multiplier" defaultValue="2" style={{ width: 60 }} /></label>
+            <label className="inline-check"><input type="checkbox" name="manual" /> À valider par un admin</label>
             <button className="btn primary">Programmer</button>
           </form>
-          <p className="muted small">Comme dans l’onglet Boost de l’Excel : une activité est boostée si son jour est dans la période et que son heure de départ tombe dans le créneau. Plusieurs boosts : le plus fort s’applique.</p>
+          <p className="muted small">Comme dans l’onglet Boost de l’Excel : une activité est boostée si son jour est dans la période et que son heure de départ tombe dans le créneau. Plusieurs boosts : le plus fort s’applique. Un boost « à valider » ne s’applique qu’aux activités que vous validez dans l’onglet Validations.</p>
           <div className="card" style={{ marginTop: 12 }}>
             <table>
-              <thead><tr><th>Boost</th><th>Début</th><th>Fin</th><th>Créneau</th><th className="num">×</th><th></th></tr></thead>
+              <thead><tr><th>Boost</th><th>Début</th><th>Fin</th><th>Créneau</th><th className="num">×</th><th>Application</th><th></th></tr></thead>
               <tbody>
                 {d.boosts.map((b) => (
                   <tr key={b.id}>
                     <td>{b.name}</td><td>{fmtDate(b.starts_at)}</td><td>{fmtDate(b.ends_at)}</td><td>{slotLabel(b.slot)}</td>
                     <td className="num">{b.multiplier}</td>
+                    <td>
+                      <form action={A.setBoostManual} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input type="hidden" name="id" value={b.id} /><input type="hidden" name="manual" value={b.manual ? '0' : '1'} />
+                        {b.manual ? <Link href={`/admin?tab=validations&boost=${b.id}`}>À valider</Link> : <span>Automatique</span>}
+                        <button className="btn small">{b.manual ? 'Rendre automatique' : 'Passer en validation'}</button>
+                      </form>
+                    </td>
                     <td><form action={A.deleteBoost}><input type="hidden" name="id" value={b.id} /><button className="btn small danger">Suppr.</button></form></td>
                   </tr>
                 ))}
@@ -235,6 +243,52 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           </div>
         </>
       )}
+
+      {tab === 'validations' && (() => {
+        const manual = d.boosts.filter((b) => b.manual);
+        if (!manual.length) return <div className="card"><p className="muted" style={{ margin: 0 }}>Aucun boost « à valider ». Passe un boost en validation dans l’onglet Boosts.</p></div>;
+        const current = manual.find((b) => String(b.id) === sp.boost) ?? manual[0];
+        const rows = d.scored.filter((a) => a.eligible && (a.pendingBoosts.some((x) => x.id === current.id) || (a.validated_boosts ?? []).map(Number).includes(current.id)));
+        const isOn = (a: (typeof rows)[number]) => (a.validated_boosts ?? []).map(Number).includes(current.id);
+        const teamOf = (pid: string) => allTeams.find((t) => t.id === d.participants.find((p) => p.id === pid)?.team_id);
+        return (
+          <>
+            <nav className="tabs sub">
+              {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={b.id === current.id ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
+            </nav>
+            <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {slotLabel(current.slot)}. Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.</p>
+            <div className="card" style={{ overflowX: 'auto' }}>
+              {rows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité sur cette période pour l’instant.</p> : (
+                <table>
+                  <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th></th><th></th></tr></thead>
+                  <tbody>
+                    {rows.map((a) => {
+                      const t = teamOf(a.participant_id);
+                      return (
+                        <tr key={a.id}>
+                          <td>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
+                          <td><span className="dot" style={{ background: t?.color }} /> {pName(a.participant_id)}</td>
+                          <td>{a.name || (a.source === 'manual' ? 'Saisie manuelle' : '—')} <span className="muted small">{SPORT_FR[a.sport_type] ?? a.sport_type}</span>
+                            {a.flag && <div className="small" style={{ color: 'var(--red)' }}>⚠ {a.flag}</div>}</td>
+                          <td className="num">{fmtKm(a.rawKm)} km</td>
+                          <td className="num">{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div className="small">×{a.multiplier}</div>}</td>
+                          <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava</a>}</td>
+                          <td>
+                            <form action={A.toggleBoostValidation}>
+                              <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="boost" value={current.id} /><input type="hidden" name="on" value={isOn(a) ? '0' : '1'} />
+                              {isOn(a) ? <button className="btn small">✓ Validé · retirer</button> : <button className="btn small primary">Valider ×{current.multiplier}</button>}
+                            </form>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {tab === 'mvp' && (() => {
         const prizes: [string, string, (x: (typeof d.people)[number]) => number, string][] = [

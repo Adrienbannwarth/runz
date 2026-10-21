@@ -89,7 +89,7 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
                   </td>
                   <td>{a.sport_type}</td>
                   <td className="num">{fmtKm(a.rawKm)} km</td>
-                  <td className="num">{a.eligible ? <>{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div><span className="pill">⚡ ×{a.multiplier} {a.boostName}</span></div>}</> : '—'}</td>
+                  <td className="num">{a.eligible ? <>{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div><span className="pill">⚡ ×{a.multiplier} {a.boostName}</span></div>}{a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="small muted">×{x.multiplier} {x.name} : en attente de validation</div>)}</> : '—'}</td>
                   <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava</a>}</td>
                 </tr>
               ))}

@@ -95,7 +95,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       )}
 
       {boost && (
-        <div className="banner">⚡ {boost.name} en cours : chaque km compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}</div>
+        <div className="banner">⚡ {boost.name} en cours : chaque km compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}{boost.manual ? ', après validation des organisateurs' : ''}</div>
       )}
 
       {view === 'admin' && (
@@ -160,7 +160,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                 <span style={{ color: 'var(--ink)' }}>⚡ <b>{current.name}</b>{current.name.includes('×') ? '' : ` · ×${current.multiplier}`}</span>
                 <span>{current.starts_at.slice(0, 10) === current.ends_at.slice(0, 10) ? `aujourd’hui` : `jusqu’au ${fmtDate(current.ends_at)}`} · {slotLabel(current.slot)}</span>
               </div>
-            ) : (
+            ) : null}
+            {current?.manual && (
+              <p className="muted small" style={{ margin: '6px 0 0' }}>Boost validé par les organisateurs : ton activité compte d’abord normalement, le multiplicateur s’ajoute une fois vérifiée.</p>
+            )}
+            {!current && (
               <p className="muted" style={{ margin: 0 }}>Pas de boost en ce moment. Le prochain sera annoncé sur zlack, ouvre l’œil !</p>
             )}
           </div>

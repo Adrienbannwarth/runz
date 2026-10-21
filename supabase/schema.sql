@@ -66,6 +66,7 @@ create table if not exists activities (
   strava_manual       boolean not null default false,  -- activité saisie à la main dans Strava
   trainer             boolean not null default false,  -- tapis / home trainer
   has_track           boolean,                         -- un tracé GPS existe (le tracé n'est pas stocké)
+  validated_boosts    int[] not null default '{}',     -- boosts « à valider » accordés par un admin
   created_at          timestamptz not null default now()
 );
 create index if not exists activities_participant_idx on activities(participant_id);
@@ -78,6 +79,7 @@ create table if not exists boosts (
   ends_at     timestamp not null,
   multiplier  numeric not null default 2,
   slot        text not null default 'Tous' check (slot in ('Tous','Avant 8h','12h-14h','19h-22h')),
+  manual      boolean not null default false,  -- true = ne s'applique qu'aux activités validées par un admin
   created_at  timestamptz not null default now()
 );
 

@@ -43,9 +43,9 @@ export function activeBoost(boosts: Boost[], settings: Settings) {
   const b = boosts
     .filter((x) => x.starts_at.slice(0, 10) <= day && day <= x.ends_at.slice(0, 10) && (!x.slot || x.slot === 'Tous' || x.slot === slot))
     .sort((a, c) => Number(c.multiplier) - Number(a.multiplier))[0];
-  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: b.slot || 'Tous' };
+  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: b.slot || 'Tous', manual: !!b.manual };
   if (now.slice(0, 10) === settings.end_date && Number(settings.sprint_multiplier) > 1)
-    return { name: 'Sprint final', multiplier: Number(settings.sprint_multiplier), until: `${settings.end_date}T23:59:59`, slot: 'Tous' };
+    return { name: 'Sprint final', multiplier: Number(settings.sprint_multiplier), until: `${settings.end_date}T23:59:59`, slot: 'Tous', manual: false };
   return null;
 }
 

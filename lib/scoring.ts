@@ -7,6 +7,7 @@
 // 2. Créneau déduit de l'heure de départ : « Avant 8h » (< 8 h), « 12h-14h », « 19h-22h », sinon « Autre ».
 // 3. Boost multiplicateur : s'applique si la date de l'activité est dans la période du boost et que le
 //    créneau correspond (ou boost « Tous »). Plusieurs boosts : le plus fort s'applique (MAX, comme l'Excel).
+//    Boost « à valider » (manual) : ne s'applique qu'aux activités validées par un admin (validated_boosts).
 // 4. Plafond journalier : en mode « alert » (Excel), les km comptent tous et la journée est signalée
 //    « Plafond dépassé » ; en mode « cap », les km du jour sont réduits au prorata.
 // 5. Équipe : total = km réels + km gagnés via multiplicateurs + km bonus. Classement au « total »
@@ -40,8 +41,9 @@ export type Activity = {
   strava_manual?: boolean | null;
   trainer?: boolean | null;
   has_track?: boolean | null;
+  validated_boosts?: number[] | null; // boosts « à valider » accordés par un admin
 };
-export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null };
+export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null };
 export type Bonus = { id: number; team_id: number; participant_id: string | null; km: number; reason: string; awarded_on: string };
 
 export type ScoredActivity = Activity & {
@@ -54,6 +56,7 @@ export type ScoredActivity = Activity & {
   cappedKm: number;
   multiplier: number;
   boostName?: string;
+  pendingBoosts: { id: number; name: string; multiplier: number }[]; // boosts « à valider » possibles, pas encore validés
   countedKm: number;
   overCap: boolean;   // la journée de cette personne dépasse le plafond
   flag?: string;      // à vérifier par les admins (compte quand même)
@@ -156,9 +159,16 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
 
     let multiplier = 1;
     let boostName: string | undefined;
+    const pendingBoosts: ScoredActivity['pendingBoosts'] = [];
     if (eligible) {
+      const validated = new Set((a.validated_boosts ?? []).map(Number));
       for (const b of boosts) {
-        if (Number(b.multiplier) > multiplier && boostApplies(b, local, slot)) { multiplier = Number(b.multiplier); boostName = b.name; }
+        if (!boostApplies(b, local, slot)) continue;
+        if (b.manual && !validated.has(Number(b.id))) {
+          pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
+          continue;
+        }
+        if (Number(b.multiplier) > multiplier) { multiplier = Number(b.multiplier); boostName = b.name; }
       }
       if (day === settings.end_date && Number(settings.sprint_multiplier) > multiplier) {
         multiplier = Number(settings.sprint_multiplier); boostName = 'Sprint final';
@@ -166,7 +176,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     }
     return {
       ...a, start_date_local: local, eligible, reason, day, week: weekOf(day, settings.start_date), slot,
-      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, countedKm: 0, overCap: false, flag: flagOf(a),
+      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, countedKm: 0, overCap: false, flag: flagOf(a),
     };
   });
 

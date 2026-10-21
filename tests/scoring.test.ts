@@ -120,3 +120,19 @@ test('phrase du récap avec un nom « Team … »', () => {
   const t = (name: string, score: number) => ({ team: { id: 1, name, color: '', emoji: '', active: true }, members: 5, realKm: 0, multiplierKm: 0, countedKm: 0, bonusKm: 0, totalKm: score, avgKm: 0, score, todayKm: 0, notYetThisWeek: 0, rank: 1 });
   assert.equal(leadSentence([t('Team Rouge', 30), t('Team Vert', 20)], 'total'), 'La Team Rouge mène de 10,0 km.');
 });
+
+test('boost « à valider » : sans validation pas de multiplicateur, avec validation il s’applique', () => {
+  const manual: Boost[] = boosts.map((b) => (b.id === 3 ? { ...b, manual: true } : b));
+  const base = act('a', '2026-11-17T10:00:00', 4); // Tracé GPS ×5, à valider
+  const [pending] = scoreActivities([base], settings, manual);
+  assert.equal(pending.multiplier, 1);
+  assert.equal(pending.countedKm, 4);
+  assert.deepEqual(pending.pendingBoosts.map((x) => x.id), [3]);
+  const [ok] = scoreActivities([{ ...base, validated_boosts: [3] }], settings, manual);
+  assert.equal(ok.multiplier, 5);
+  assert.equal(ok.countedKm, 20);
+  assert.equal(ok.pendingBoosts.length, 0);
+  // un boost automatique reste automatique à côté
+  const [flash] = scoreActivities([act('a', '2026-11-03T20:00:00', 4)], settings, manual);
+  assert.equal(flash.multiplier, 2);
+});
