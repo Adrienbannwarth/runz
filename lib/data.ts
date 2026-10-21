@@ -12,7 +12,7 @@ export function nowParis() {
 }
 
 export type ParticipantRow = Participant & {
-  invite_token: string; strava_athlete_id: number | null; is_admin: boolean; is_captain: boolean; pole: string | null; last_sync_at: string | null; created_at: string;
+  invite_token: string; strava_athlete_id: number | null; strava_app: string | null; is_admin: boolean; is_captain: boolean; pole: string | null; last_sync_at: string | null; created_at: string;
 };
 
 export async function getSettings(): Promise<Settings & { challenge_name: string }> {
@@ -24,7 +24,7 @@ export async function loadAll() {
     getSettings(),
     db().from('teams').select('*').order('id').then(must) as Promise<Team[]>,
     db().from('participants')
-      .select('id, display_name, team_id, invite_token, strava_athlete_id, is_admin, is_captain, pole, last_sync_at, created_at')
+      .select('id, display_name, team_id, invite_token, strava_athlete_id, strava_app, is_admin, is_captain, pole, last_sync_at, created_at')
       .order('display_name').then(must) as Promise<ParticipantRow[]>,
     db().from('activities').select('*').order('start_date_local', { ascending: false }).limit(10000).then(must) as Promise<Activity[]>,
     db().from('boosts').select('*').order('starts_at').then(must) as Promise<Boost[]>,

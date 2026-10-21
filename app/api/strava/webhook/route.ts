@@ -19,7 +19,9 @@ type Event = {
 // Strava exige une réponse 200 en moins de 2 s : le traitement se fait après la réponse.
 export async function POST(req: NextRequest) {
   const ev = (await req.json()) as Event;
-  if (process.env.STRAVA_SUBSCRIPTION_ID && String(ev.subscription_id) !== process.env.STRAVA_SUBSCRIPTION_ID) {
+  // STRAVA_SUBSCRIPTION_ID peut lister plusieurs abonnements (un par app), séparés par des virgules
+  const subs = (process.env.STRAVA_SUBSCRIPTION_ID || '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (subs.length && !subs.includes(String(ev.subscription_id))) {
     return new NextResponse('ignored');
   }
   after(async () => {

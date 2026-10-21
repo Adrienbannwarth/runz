@@ -42,6 +42,7 @@ create table if not exists participants (
   refresh_token      text,
   token_expires_at   bigint,          -- epoch seconds
   scope              text,
+  strava_app         text not null default 'a',  -- app Strava qui a émis les tokens (a, b...)
   last_sync_at       timestamptz,
   is_admin           boolean not null default false,  -- accès à l'administration via Mon espace
   is_captain         boolean not null default false,

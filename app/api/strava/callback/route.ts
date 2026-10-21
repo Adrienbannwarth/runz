@@ -9,17 +9,17 @@ const fail = (msg: string) => NextResponse.redirect(`${appUrl()}/?error=${encode
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
   if (q.get('error')) return fail('Connexion Strava annulée.');
-  const [nonce, invite] = (q.get('state') || '').split('.');
+  const [nonce, invite, appKey = 'a'] = (q.get('state') || '').split('.');
   if (!nonce || nonce !== req.cookies.get('runz_oauth')?.value) return fail('Session expirée, réessaie.');
   const scope = q.get('scope') || '';
   if (!scope.includes('activity:read')) return fail("Il faut autoriser l'accès à tes activités pour participer.");
 
   let t;
-  try { t = await exchangeCode(q.get('code') || ''); } catch { return fail('Échec de la connexion Strava.'); }
+  try { t = await exchangeCode(q.get('code') || '', appKey); } catch { return fail('Échec de la connexion Strava.'); }
   if (!t.athlete) return fail('Profil Strava introuvable.');
   const tokens = {
     strava_athlete_id: t.athlete.id, access_token: t.access_token, refresh_token: t.refresh_token,
-    token_expires_at: t.expires_at, scope,
+    token_expires_at: t.expires_at, scope, strava_app: appKey,
   };
 
   // 1) athlète déjà connu  2) lien d'invitation  3) nouveau participant (équipe à attribuer par l'admin)

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
-import { appUrl } from '@/lib/strava';
+import { appCapacity, appUrl, stravaApps } from '@/lib/strava';
 import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, slotLabel } from '@/lib/data';
 import { leadSentence } from '@/lib/scoring';
 import * as A from './actions';
@@ -44,6 +44,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
       {tab === 'participants' && (
         <>
           <h2>Participants · {d.participants.filter((p) => p.strava_athlete_id).length} connecté·es à Strava sur {d.participants.length} fiches</h2>
+          <div className="tabs" style={{ margin: '0 0 8px' }}>
+            {stravaApps().map((a) => {
+              const used = d.participants.filter((p) => p.strava_athlete_id && (p.strava_app || 'a') === a.key).length;
+              return <span key={a.key} className={`pill${used >= appCapacity() ? ' on' : ''}`}>App {a.key.toUpperCase()} · {used}/{appCapacity()}</span>;
+            })}
+          </div>
           <p className="muted small">Les fiches sont créées à l’avance (liens d’invitation, saisie manuelle). Côté participants, une personne n’apparaît qu’une fois connectée à Strava ou avec des km saisis.</p>
           <div className="card" style={{ overflowX: 'auto' }}>
             <table>
@@ -66,7 +72,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                         </form>
                       </td>
                       <td>{p.strava_athlete_id
-                        ? <span className="check" title={p.last_sync_at ? `Connecté · dernière synchro ${new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}` : 'Connecté à Strava'} aria-label="Connecté à Strava">✓</span>
+                        ? <span className="check" data-app={(p.strava_app || 'a').toUpperCase()} title={p.last_sync_at ? `Connecté · dernière synchro ${new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}` : 'Connecté à Strava'} aria-label="Connecté à Strava">✓</span>
                         : <span className="muted">—</span>}
                       </td>
                       <td className="num">{fmtKm(st?.rawKm ?? 0)}</td>
