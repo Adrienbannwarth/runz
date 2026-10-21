@@ -1,0 +1,15 @@
+# Filet de sécurité : resynchronise les comptes Strava toutes les 15 min (les webhooks font déjà le temps réel).
+# 15 min et pas 5 : avec ~9 athlètes par app, 5 min dépasserait la limite de 2 000 requêtes/jour de Strava.
+# À configurer : GitHub > Settings > Secrets and variables > Actions > CRON_SECRET (même valeur que sur Vercel).
+name: Synchro Strava
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - run: >
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          https://runz-colorz.vercel.app/api/cron/sync
