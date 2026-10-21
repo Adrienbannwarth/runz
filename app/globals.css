@@ -156,3 +156,11 @@ pre.recap { white-space: pre-wrap; background: var(--soft); border-radius: var(-
   .hero { padding: 36px 24px; } .hero h1, h1 { font-size: 36px; }
   .split { grid-template-columns: 1fr; } .split .photo { min-height: 220px; }
 }
+
+/* Transitions entre pages */
+.nav-progress { position: fixed; top: 0; left: 0; z-index: 100; height: 3px; width: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+.nav-progress.loading { opacity: 1; width: 85%; transition: width 2.5s cubic-bezier(.1,.7,.2,1); }
+.nav-progress.done { opacity: 0; width: 100%; transition: width .2s ease, opacity .3s ease .15s; }
+.page-enter { animation: page-enter .28s ease-out both; }
+@keyframes page-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } .nav-progress { transition: none !important; } }

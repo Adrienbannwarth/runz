@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
+import NavProgress from './NavProgress';
 import '@fontsource-variable/figtree';
 import './globals.css';
 import { fmtDate, getSettings } from '@/lib/data';
@@ -16,6 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="fr">
       <body>
+        <Suspense fallback={null}><NavProgress /></Suspense>
         <div className="announce">
           RunZ Challenge {dates && <>· {dates} </>}· chaque pas compte
           <Link href="/me">Je participe</Link>
