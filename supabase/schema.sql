@@ -38,6 +38,7 @@ create table if not exists participants (
   team_id            int references teams(id) on delete set null,
   invite_token       text unique not null default replace(gen_random_uuid()::text, '-', ''),
   strava_athlete_id  bigint unique,
+  strava_athlete_last bigint,         -- dernier compte Strava lié (retrouvé à la reconnexion)
   access_token       text,
   refresh_token      text,
   token_expires_at   bigint,          -- epoch seconds

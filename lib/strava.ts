@@ -68,8 +68,8 @@ async function tokenRequest(body: Record<string, string>, appKey?: string | null
 
 export const exchangeCode = (code: string, appKey: string) => tokenRequest({ code, grant_type: 'authorization_code' }, appKey);
 
-type TokenRow = { id: string; access_token: string | null; refresh_token: string | null; token_expires_at: number | null; strava_app: string | null };
-const TOKEN_COLS = 'id, access_token, refresh_token, token_expires_at, strava_app';
+type TokenRow = { id: string; strava_athlete_id?: number | null; access_token: string | null; refresh_token: string | null; token_expires_at: number | null; strava_app: string | null };
+const TOKEN_COLS = 'id, strava_athlete_id, access_token, refresh_token, token_expires_at, strava_app';
 
 /** Renvoie un access token valide, en le rafraîchissant si besoin (expire toutes les 6 h). */
 export async function validToken(p: TokenRow): Promise<string> {
@@ -163,7 +163,9 @@ export async function disconnect(participantId: string, revoke = true) {
     } catch { /* déjà révoqué côté Strava */ }
   }
   must(await db().from('activities').delete().eq('participant_id', participantId).eq('source', 'strava'));
+  // On garde l'identifiant Strava de côté pour retrouver le même profil (équipe, admin) à la reconnexion
   must(await db().from('participants').update({
     strava_athlete_id: null, access_token: null, refresh_token: null, token_expires_at: null, scope: null,
+    ...(p.strava_athlete_id ? { strava_athlete_last: p.strava_athlete_id } : {}),
   }).eq('id', participantId));
 }

@@ -22,9 +22,14 @@ export async function GET(req: NextRequest) {
     token_expires_at: t.expires_at, scope, strava_app: appKey,
   };
 
-  // 1) athlète déjà connu  2) lien d'invitation  3) nouveau participant (équipe à attribuer par l'admin)
+  // 1) athlète déjà connu  2) athlète qui s'était déconnecté  3) lien d'invitation  4) nouveau participant
   const known = must(await db().from('participants').select('id').eq('strava_athlete_id', t.athlete.id).maybeSingle()) as { id: string } | null;
   let pid = known?.id;
+  if (!pid) {
+    const back = must(await db().from('participants').select('id').eq('strava_athlete_last', t.athlete.id)
+      .is('strava_athlete_id', null).order('created_at').limit(1)) as { id: string }[];
+    pid = back[0]?.id;
+  }
   if (!pid && invite) {
     const inv = must(await db().from('participants').select('id, strava_athlete_id').eq('invite_token', invite).maybeSingle()) as { id: string; strava_athlete_id: number | null } | null;
     if (inv && inv.strava_athlete_id && inv.strava_athlete_id !== t.athlete.id) return fail('Ce lien est déjà associé à un autre compte Strava.');
