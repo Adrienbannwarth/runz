@@ -115,3 +115,8 @@ test('signalement des activités sans tracé (comptent quand même)', async () =
   assert.equal(s[0].countedKm, 5);
   assert.ok(s[0].flag);
 });
+
+test('phrase du récap avec un nom « Team … »', () => {
+  const t = (name: string, score: number) => ({ team: { id: 1, name, color: '', emoji: '', active: true }, members: 5, realKm: 0, multiplierKm: 0, countedKm: 0, bonusKm: 0, totalKm: score, avgKm: 0, score, todayKm: 0, notYetThisWeek: 0, rank: 1 });
+  assert.equal(leadSentence([t('Team Rouge', 30), t('Team Vert', 20)], 'total'), 'La Team Rouge mène de 10,0 km.');
+});

@@ -117,7 +117,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             <div className="my-team">
               {card(myTeam, true)}
               <div className="card">
-                <h2 style={{ margin: '0 0 12px' }}>Les {myTeam.team.name}</h2>
+                <h2 style={{ margin: '0 0 12px' }}>{/^team /i.test(myTeam.team.name) ? myTeam.team.name : `Les ${myTeam.team.name}`}</h2>
                 {mates.filter(isOn).map((p) => (
                   <div className="kv" key={p.id}>
                     <span style={{ color: 'var(--ink)' }}>{p.display_name}{p.id === me!.id ? ' (toi)' : ''}{p.is_captain ? ' · capitaine' : ''}</span>

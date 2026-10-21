@@ -25,10 +25,10 @@ create table if not exists teams (
 );
 insert into teams (name, color, emoji, active)
 select * from (values
-  ('Rouges', '#E5484D', '🔴', true),
-  ('Bleus',  '#3E63DD', '🔵', true),
-  ('Verts',  '#30A46C', '🟢', true),
-  ('Jaunes', '#FBBF24', '🟡', false)
+  ('Team Rouge',  '#9A1325', '🔴', true),
+  ('Team Bleu',   '#3847C4', '🔵', true),
+  ('Team Vert',   '#78AF5F', '🟢', true),
+  ('Team Orange', '#FA8F18', '🟠', true)
 ) as v(name, color, emoji, active)
 where not exists (select 1 from teams);
 
