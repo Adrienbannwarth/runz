@@ -32,6 +32,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Admin</h1>
         <div style={{ display: 'flex', gap: 8 }}>
+          <a className="btn small" href="/api/export" download>Exporter (format Saisie km)</a>
           <Link className="btn small" href="/me">← Mon espace</Link>
           {(await isPasswordAdmin()) && <form action={A.adminLogout}><button className="btn small">Déconnexion admin</button></form>}
         </div>
