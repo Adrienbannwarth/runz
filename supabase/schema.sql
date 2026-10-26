@@ -80,6 +80,8 @@ create table if not exists boosts (
   multiplier  numeric not null default 2,
   slot        text not null default 'Tous' check (slot in ('Tous','Avant 8h','12h-14h','19h-22h')),
   manual      boolean not null default false,  -- true = ne s'applique qu'aux activités validées par un admin
+  from_time   time,                            -- horaire perso quotidien (prioritaire sur slot), ex. 18:30
+  to_time     time,                            -- ex. 22:00 (exclu)
   created_at  timestamptz not null default now()
 );
 

@@ -136,3 +136,15 @@ test('boost « à valider » : sans validation pas de multiplicateur, avec valid
   const [flash] = scoreActivities([act('a', '2026-11-03T20:00:00', 4)], settings, manual);
   assert.equal(flash.multiplier, 2);
 });
+
+test('boost avec horaire perso 18h30-22h, chaque jour de la période', () => {
+  const b: Boost[] = [{ id: 9, name: 'Lancement ×2', starts_at: '2026-10-27T00:00:00', ends_at: '2026-10-30T23:59:59', multiplier: 2, slot: 'Tous', from_time: '18:30:00', to_time: '22:00:00' }];
+  const s = scoreActivities([
+    act('a', '2026-10-27T18:30:00', 3), // pile 18h30 → ×2
+    act('a', '2026-10-28T18:29:00', 3), // une minute avant → ×1
+    act('a', '2026-10-29T21:59:00', 3), // → ×2
+    act('a', '2026-10-30T22:00:00', 3), // 22h pile → ×1
+    act('a', '2026-10-31T19:00:00', 3), // hors période → ×1
+  ], settings, b);
+  assert.deepEqual(s.map((x) => x.multiplier), [2, 1, 2, 1, 1]);
+});

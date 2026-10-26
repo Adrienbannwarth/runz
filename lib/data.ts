@@ -41,9 +41,11 @@ export function activeBoost(boosts: Boost[], settings: Settings) {
   const day = now.slice(0, 10);
   const slot = slotOf(now);
   const b = boosts
-    .filter((x) => x.starts_at.slice(0, 10) <= day && day <= x.ends_at.slice(0, 10) && (!x.slot || x.slot === 'Tous' || x.slot === slot))
+    .filter((x) => x.starts_at.slice(0, 10) <= day && day <= x.ends_at.slice(0, 10) && (x.from_time && x.to_time
+      ? now.slice(11, 16) >= x.from_time.slice(0, 5) && now.slice(11, 16) < x.to_time.slice(0, 5)
+      : !x.slot || x.slot === 'Tous' || x.slot === slot))
     .sort((a, c) => Number(c.multiplier) - Number(a.multiplier))[0];
-  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: b.slot || 'Tous', manual: !!b.manual };
+  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: windowLabel(b) === 'toute la journée' ? 'Tous' : windowLabel(b), manual: !!b.manual };
   if (now.slice(0, 10) === settings.end_date && Number(settings.sprint_multiplier) > 1)
     return { name: 'Sprint final', multiplier: Number(settings.sprint_multiplier), until: `${settings.end_date}T23:59:59`, slot: 'Tous', manual: false };
   return null;
@@ -52,11 +54,15 @@ export function activeBoost(boosts: Boost[], settings: Settings) {
 /** Boost du jour, tous créneaux confondus (Classement!B23). */
 export function boostOfDay(boosts: Boost[], day: string) {
   return boosts.filter((x) => x.starts_at.slice(0, 10) <= day && day <= x.ends_at.slice(0, 10))
-    .map((x) => `${x.name}${x.slot && x.slot !== 'Tous' ? ` (${x.slot})` : ''}`).join(', ') || 'Aucun';
+    .map((x) => `${x.name}${windowLabel(x) !== 'toute la journée' ? ` (${windowLabel(x)})` : ''}`).join(', ') || 'Aucun';
 }
 export const daysLeft = (end: string, today: string) =>
   Math.max(0, Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86400000));
 export const slotLabel = (s?: string | null) => (!s || s === 'Tous' ? 'toute la journée' : s);
+const hFr = (t: string) => { const [h, m] = t.slice(0, 5).split(':'); return `${Number(h)}h${m === '00' ? '' : m}`; };
+/** Créneau d'un boost pour l'affichage : « 18h30-22h », « 19h-22h » ou « toute la journée ». */
+export const windowLabel = (b: Pick<Boost, 'slot' | 'from_time' | 'to_time'>) =>
+  b.from_time && b.to_time ? `${hFr(b.from_time)}-${hFr(b.to_time)}` : slotLabel(b.slot);
 
 export const fmtKm = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 export const fmtDate = (d: string) =>

@@ -109,7 +109,10 @@ export async function addBoost(fd: FormData) {
   const from = s(fd, 'date');
   const to = s(fd, 'end_date') || from;
   must(await db().from('boosts').insert({
-    name: s(fd, 'name'), multiplier: n(fd, 'multiplier') || 2, slot: s(fd, 'slot') || 'Tous', manual: fd.get('manual') === 'on',
+    name: s(fd, 'name'), multiplier: n(fd, 'multiplier') || 2, manual: fd.get('manual') === 'on',
+    ...(s(fd, 'from_time') && s(fd, 'to_time')
+      ? { slot: 'Tous', from_time: s(fd, 'from_time'), to_time: s(fd, 'to_time') }
+      : { slot: s(fd, 'slot') || 'Tous' }),
     starts_at: `${from}T00:00:00`, ends_at: `${to}T23:59:59`,
   }));
   done('boosts', 'Boost programmé');

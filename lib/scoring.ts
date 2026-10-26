@@ -7,6 +7,7 @@
 // 2. Créneau déduit de l'heure de départ : « Avant 8h » (< 8 h), « 12h-14h », « 19h-22h », sinon « Autre ».
 // 3. Boost multiplicateur : s'applique si la date de l'activité est dans la période du boost et que le
 //    créneau correspond (ou boost « Tous »). Plusieurs boosts : le plus fort s'applique (MAX, comme l'Excel).
+//    Un boost peut aussi avoir un horaire perso (from_time → to_time, ex. 18h30-22h) appliqué chaque jour.
 //    Boost « à valider » (manual) : ne s'applique qu'aux activités validées par un admin (validated_boosts).
 // 4. Plafond journalier : en mode « alert » (Excel), les km comptent tous et la journée est signalée
 //    « Plafond dépassé » ; en mode « cap », les km du jour sont réduits au prorata.
@@ -43,7 +44,9 @@ export type Activity = {
   has_track?: boolean | null;
   validated_boosts?: number[] | null; // boosts « à valider » accordés par un admin
 };
-export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null };
+export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null;
+  from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
+};
 export type Bonus = { id: number; team_id: number; participant_id: string | null; km: number; reason: string; awarded_on: string };
 
 export type ScoredActivity = Activity & {
@@ -135,6 +138,11 @@ function boostApplies(b: Boost, local: string, slot: Slot) {
   const from = normLocal(b.starts_at).slice(0, 10);
   const to = normLocal(b.ends_at).slice(0, 10);
   if (day < from || day > to) return false;
+  if (b.from_time && b.to_time) {
+    // horaire perso, chaque jour de la période, d'après l'heure de départ de l'activité
+    const t = local.slice(11, 16);
+    return t >= b.from_time.slice(0, 5) && t < b.to_time.slice(0, 5);
+  }
   const bs = b.slot || 'Tous';
   if (bs === 'Tous') {
     // compatibilité : un boost « Tous » limité à une fenêtre horaire le même jour (ex. ancien Flash HourZ)

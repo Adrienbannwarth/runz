@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appCapacity, appUrl, stravaApps } from '@/lib/strava';
-import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, slotLabel } from '@/lib/data';
+import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, windowLabel } from '@/lib/data';
 import { leadSentence } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
@@ -216,18 +216,20 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <label>Du<input type="date" name="date" required defaultValue={d.today} /></label>
             <label>Au<input type="date" name="end_date" /></label>
             <label>Créneau<select name="slot">{SLOTS.map((x) => <option key={x} value={x}>{x}</option>)}</select></label>
+            <label>ou horaire de<input type="time" name="from_time" style={{ width: 100 }} /></label>
+            <label>à<input type="time" name="to_time" style={{ width: 100 }} /></label>
             <label>Multiplicateur<input name="multiplier" defaultValue="2" style={{ width: 60 }} /></label>
             <label className="inline-check"><input type="checkbox" name="manual" /> À valider par un admin</label>
             <button className="btn primary">Programmer</button>
           </form>
-          <p className="muted small">Comme dans l’onglet Boost de l’Excel : une activité est boostée si son jour est dans la période et que son heure de départ tombe dans le créneau. Plusieurs boosts : le plus fort s’applique. Un boost « à valider » ne s’applique qu’aux activités que vous validez dans l’onglet Validations.</p>
+          <p className="muted small">Comme dans l’onglet Boost de l’Excel : une activité est boostée si son jour est dans la période et que son heure de départ tombe dans le créneau. Plusieurs boosts : le plus fort s’applique. Un horaire perso (ex. 18:30 à 22:00) remplace le créneau et s’applique chaque jour de la période, d’après l’heure de départ de l’activité. Un boost « à valider » ne s’applique qu’aux activités que vous validez dans l’onglet Validations.</p>
           <div className="card" style={{ marginTop: 12 }}>
             <table>
               <thead><tr><th>Boost</th><th>Début</th><th>Fin</th><th>Créneau</th><th className="num">×</th><th>Application</th><th></th></tr></thead>
               <tbody>
                 {d.boosts.map((b) => (
                   <tr key={b.id}>
-                    <td>{b.name}</td><td>{fmtDate(b.starts_at)}</td><td>{fmtDate(b.ends_at)}</td><td>{slotLabel(b.slot)}</td>
+                    <td>{b.name}</td><td>{fmtDate(b.starts_at)}</td><td>{fmtDate(b.ends_at)}</td><td>{windowLabel(b)}</td>
                     <td className="num">{b.multiplier}</td>
                     <td>
                       <form action={A.setBoostManual} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -257,7 +259,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <nav className="tabs sub">
               {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={b.id === current.id ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
             </nav>
-            <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {slotLabel(current.slot)}. Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.</p>
+            <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {windowLabel(current)}. Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.</p>
             <div className="card" style={{ overflowX: 'auto' }}>
               {rows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité sur cette période pour l’instant.</p> : (
                 <table>

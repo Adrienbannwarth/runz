@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { activeBoost, fmtDate, fmtKm, loadAll, slotLabel } from '@/lib/data';
+import { activeBoost, fmtDate, fmtKm, loadAll, windowLabel } from '@/lib/data';
 import { getParticipantId, isAdmin } from '@/lib/session';
 import type { TeamStats } from '@/lib/scoring';
 
@@ -145,7 +145,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
               {upcoming.map((b) => (
                 <div className="kv" key={b.id} style={{ padding: '4px 0' }}>
                   <span>⚡ {b.name}{b.name.includes('×') ? '' : ` · ×${b.multiplier}`}</span>
-                  <span>{b.starts_at.slice(0, 10) === b.ends_at.slice(0, 10) ? fmtDate(b.starts_at) : `du ${fmtDate(b.starts_at)} au ${fmtDate(b.ends_at)}`} · {slotLabel(b.slot)}</span>
+                  <span>{b.starts_at.slice(0, 10) === b.ends_at.slice(0, 10) ? fmtDate(b.starts_at) : `du ${fmtDate(b.starts_at)} au ${fmtDate(b.ends_at)}`} · {windowLabel(b)}</span>
                 </div>
               ))}
             </div>
@@ -158,7 +158,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             {current ? (
               <div className="kv" style={{ padding: '4px 0' }}>
                 <span style={{ color: 'var(--ink)' }}>⚡ <b>{current.name}</b>{current.name.includes('×') ? '' : ` · ×${current.multiplier}`}</span>
-                <span>{current.starts_at.slice(0, 10) === current.ends_at.slice(0, 10) ? `aujourd’hui` : `jusqu’au ${fmtDate(current.ends_at)}`} · {slotLabel(current.slot)}</span>
+                <span>{current.starts_at.slice(0, 10) === current.ends_at.slice(0, 10) ? `aujourd’hui` : `jusqu’au ${fmtDate(current.ends_at)}`} · {windowLabel(current)}</span>
               </div>
             ) : null}
             {current?.manual && (
