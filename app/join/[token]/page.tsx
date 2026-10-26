@@ -11,7 +11,7 @@ export default async function Join({ params }: { params: Promise<{ token: string
   return (
     <>
       <h1>Bienvenue {p.display_name} 👋</h1>
-      {p.teams && <p>Tu cours avec les <b>{p.teams.emoji} {p.teams.name}</b>.</p>}
+      {p.teams && <p>Tu fais partie de {/^team /i.test(p.teams.name) ? 'la' : 'l’équipe'} <b>{p.teams.emoji} {p.teams.name}</b>.</p>}
       <div className="card">
         <p style={{ marginTop: 0 }}>
           Connecte ton compte Strava pour que tes km remontent automatiquement dans le score de ton équipe.
