@@ -383,7 +383,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <label>Début<input type="date" name="start_date" defaultValue={d.settings.start_date} /></label>
             <label>Fin<input type="date" name="end_date" defaultValue={d.settings.end_date} /></label>
             <label>Plafond km/jour<input name="daily_cap_km" defaultValue={d.settings.daily_cap_km} style={{ width: 70 }} /></label>
-            <label>Plafond<select name="cap_mode" defaultValue={d.settings.cap_mode ?? 'alert'}><option value="alert">Alerte (comme l’Excel)</option><option value="cap">Coupe automatique</option></select></label>
+            <label>Plafond<select name="cap_mode" defaultValue={d.settings.cap_mode ?? 'alert'}><option value="alert">Alerte (comme l’Excel)</option><option value="cap">Coupe à {d.settings.daily_cap_km} km (km boostés d’abord)</option></select></label>
             <label>Classement<select name="ranking_mode" defaultValue={d.settings.ranking_mode ?? 'total'}><option value="total">Total</option><option value="average">Moyenne par personne</option></select></label>
             <input type="hidden" name="sprint_multiplier" value={d.settings.sprint_multiplier} />
             <fieldset style={{ border: 0, padding: 0, display: 'flex', gap: 10, flexWrap: 'wrap' }}>

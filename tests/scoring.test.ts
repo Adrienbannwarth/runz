@@ -148,3 +148,21 @@ test('boost avec horaire perso 18h30-22h, chaque jour de la période', () => {
   ], settings, b);
   assert.deepEqual(s.map((x) => x.multiplier), [2, 1, 2, 1, 1]);
 });
+
+test('plafond coupé : on garde les km les plus boostés, le reste ne compte pas', () => {
+  const b: Boost[] = [{ id: 9, name: 'Lancement ×2', starts_at: '2026-10-27T00:00:00', ends_at: '2026-10-30T23:59:59', multiplier: 2, slot: 'Tous', from_time: '18:30:00', to_time: '22:00:00' }];
+  const cap = { ...settings, cap_mode: 'cap' as const };
+  const total = (l: ReturnType<typeof scoreActivities>) => l.reduce((t, x) => t + x.countedKm, 0);
+  // 10 km le matin + 10 km à 19h (×2) → les 10 km boostés comptent : 20
+  const a = scoreActivities([act('a', '2026-10-27T08:00:00', 10), act('a', '2026-10-27T19:00:00', 10)], cap, b);
+  assert.equal(total(a), 20);
+  assert.equal(a[0].countedKm, 0);
+  assert.ok(a[0].overCap && a[1].overCap);
+  // 4 km le matin + 6 km à 19h → pile 10 km, rien n'est coupé : 4 + 12 = 16
+  assert.equal(total(scoreActivities([act('a', '2026-10-27T08:00:00', 4), act('a', '2026-10-27T19:00:00', 6)], cap, b)), 16);
+  // 7 km le matin + 5 km à 19h → 5 boostés (10) + 5 du matin = 15
+  assert.equal(total(scoreActivities([act('a', '2026-10-27T08:00:00', 7), act('a', '2026-10-27T19:00:00', 5)], cap, b)), 15);
+  // sans boost : les premiers km de la journée
+  const c = scoreActivities([act('a', '2026-11-12T08:00:00', 7), act('a', '2026-11-12T18:00:00', 5)], cap, []);
+  assert.deepEqual(c.map((x) => x.countedKm), [7, 3]);
+});

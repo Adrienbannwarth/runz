@@ -10,7 +10,8 @@
 //    Un boost peut aussi avoir un horaire perso (from_time → to_time, ex. 18h30-22h) appliqué chaque jour.
 //    Boost « à valider » (manual) : ne s'applique qu'aux activités validées par un admin (validated_boosts).
 // 4. Plafond journalier : en mode « alert » (Excel), les km comptent tous et la journée est signalée
-//    « Plafond dépassé » ; en mode « cap », les km du jour sont réduits au prorata.
+//    « Plafond dépassé » ; en mode « cap », seuls `daily_cap_km` km réels comptent, en gardant d'abord
+//    les km les plus boostés (puis les premiers de la journée) ; le reste ne compte pas.
 // 5. Équipe : total = km réels + km gagnés via multiplicateurs + km bonus. Classement au « total »
 //    ou à la « moyenne » par personne (réglage).
 
@@ -201,12 +202,15 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
   for (const list of byDay.values()) {
     const total = list.reduce((t, s) => t + s.rawKm, 0);
     const over = cap > 0 && total > cap;
-    const factor = over && capMode === 'cap' ? cap / total : 1;
-    for (const s of list) {
-      s.overCap = over;
-      s.cappedKm = s.rawKm * factor;
-      s.countedKm = s.cappedKm * s.multiplier;
+    for (const s of list) { s.overCap = over; s.cappedKm = s.rawKm; }
+    if (over && capMode === 'cap') {
+      // On garde les km qui rapportent le plus (multiplicateur le plus fort d'abord, puis ordre chronologique)
+      // jusqu'à `cap` km réels ; le reste de la journée ne compte pas.
+      let left = cap;
+      const order = [...list].sort((a, b) => b.multiplier - a.multiplier || a.start_date_local.localeCompare(b.start_date_local));
+      for (const s of order) { s.cappedKm = Math.min(s.rawKm, left); left -= s.cappedKm; }
     }
+    for (const s of list) s.countedKm = s.cappedKm * s.multiplier;
   }
   return scored;
 }

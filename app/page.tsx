@@ -88,7 +88,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             <li><b>Chaque km compte pour ton équipe</b>, qui est classée au {isTotal ? 'total des km' : 'nombre moyen de km par personne'}.</li>
             <li><b>Les boosts multiplient tes km</b> sur certains jours ou créneaux : surveille le boost en cours.</li>
             <li><b>Des bonus d’équipe</b> se gagnent aussi : photo aux couleurs, sortie commune, ParrainZ…</li>
-            <li><b>Au-delà de {settings.daily_cap_km} km par jour</b>, l’organisation vérifie l’activité. Écoute ton corps !</li>
+            <li><b>{settings.daily_cap_km} km max par jour</b>{settings.cap_mode === 'cap' ? ' : au-delà, les km ne comptent pas (on garde tes km les plus boostés). Écoute ton corps !' : ', au-delà l’organisation vérifie l’activité. Écoute ton corps !'}</li>
             <li><b>Le classement reste secret</b> jusqu’au {fmtDate(settings.end_date)} : résultats et prix à la fin du challenge.</li>
           </ol>
         </section>
@@ -104,7 +104,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           <h2 style={{ marginTop: 0 }}>Les équipes</h2>
           <div className="teams-row">{teams.map((t) => card(t))}</div>
           <p className="muted small" style={{ marginTop: 20 }}>
-            Les participants ne voient que leur équipe et son rang. Au-delà de {settings.daily_cap_km} km sur une journée, l’activité est signalée dans l’admin.
+            Les participants ne voient que leur équipe et son rang. Au-delà de {settings.daily_cap_km} km sur une journée, l’activité est signalée dans l’admin{settings.cap_mode === 'cap' ? ' et les km en trop ne comptent pas' : ''}.
           </p>
         </>
       )}
