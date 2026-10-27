@@ -118,12 +118,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
               {card(myTeam, true)}
               <div className="card">
                 <h2 style={{ margin: '0 0 12px' }}>{/^team /i.test(myTeam.team.name) ? myTeam.team.name : `Les ${myTeam.team.name}`}</h2>
-                {mates.filter(isOn).map((p) => (
+                {mates.filter(isOn)
+                  .map((p) => ({ p, st: data.people.find((x) => x.participant.id === p.id) }))
+                  .sort((a, b) => (b.st?.countedKm ?? 0) - (a.st?.countedKm ?? 0))
+                  .map(({ p, st }) => (
                   <div className="kv" key={p.id}>
                     <span style={{ color: 'var(--ink)' }}>{p.display_name}{p.id === me!.id ? ' (toi)' : ''}{p.is_captain ? ' · capitaine' : ''}</span>
-                    <span>{p.strava_athlete_id ? 'Strava' : 'saisie manuelle'}</span>
+                    <span>
+                      <b style={{ color: 'var(--ink)' }}>{fmtKm(st?.countedKm ?? 0)} km</b>
+                      {st && st.countedKm !== st.rawKm && <span className="muted small"> ({fmtKm(st.rawKm)} réels)</span>}
+                    </span>
                   </div>
                 ))}
+                <p className="muted small" style={{ margin: '8px 0 0' }}>Km comptés pour l’équipe, boosts compris, depuis le début du challenge.</p>
                 {mates.filter((p) => !isOn(p)).length > 0 && (
                   <p className="muted small" style={{ marginBottom: 0 }}>
                     + {mates.filter((p) => !isOn(p)).length} coéquipier·e{mates.filter((p) => !isOn(p)).length > 1 ? 's' : ''} pas encore connecté·e{mates.filter((p) => !isOn(p)).length > 1 ? 's' : ''}. Motive-les !
