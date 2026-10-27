@@ -47,7 +47,23 @@ export type Activity = {
 };
 export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null;
   from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
+  bonus_note?: string | null; // défi bonus sans multiplicateur (ex. « +10 km par photo validée »), affiché seulement
 };
+
+/** Boosts et défis qui ont lieu ce jour-là (le plus fort d'abord, les défis bonus après). */
+export function boostsOn(boosts: Boost[], day: string): Boost[] {
+  return boosts
+    .filter((b) => normLocal(b.starts_at).slice(0, 10) <= day && day <= normLocal(b.ends_at).slice(0, 10))
+    .sort((a, b) => Number(!!a.bonus_note) - Number(!!b.bonus_note) || Number(b.multiplier) - Number(a.multiplier));
+}
+
+/** Boost multiplicateur actif à cet instant local « YYYY-MM-DDTHH:MM:SS » (le plus fort), ou undefined. */
+export function boostActiveAt(boosts: Boost[], local: string): Boost | undefined {
+  const l = normLocal(local);
+  return boosts
+    .filter((b) => !b.bonus_note && Number(b.multiplier) > 1 && boostApplies(b, l, slotOf(l)))
+    .sort((a, b) => Number(b.multiplier) - Number(a.multiplier))[0];
+}
 export type Bonus = { id: number; team_id: number; participant_id: string | null; km: number; reason: string; awarded_on: string };
 
 export type ScoredActivity = Activity & {
@@ -173,7 +189,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     if (eligible) {
       const validated = new Set((a.validated_boosts ?? []).map(Number));
       for (const b of boosts) {
-        if (!boostApplies(b, local, slot)) continue;
+        if (b.bonus_note || !boostApplies(b, local, slot)) continue;
         if (b.manual && !validated.has(Number(b.id))) {
           pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
           continue;

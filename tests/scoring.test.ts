@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeStandings, leadSentence, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
+import { boostActiveAt, boostsOn, computeStandings, leadSentence, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 // Réglages du fichier RunZ-Suivi.xlsx (onglet Paramètres)
 const settings: Settings = {
@@ -176,4 +176,59 @@ test('équipe : le plafond ne crée pas de « boost » négatif', () => {
   assert.equal(res.teams[0].totalKm, 10);
   assert.equal(res.teams[0].realKm, 10);
   assert.equal(res.teams[0].multiplierKm, 0);
+});
+
+// Calendrier réel en prod (au 28/10) : ce que voient les membres chaque jour, et le bandeau heure par heure
+const prod: Boost[] = [
+  { id: 5, name: 'Flash HourZ', starts_at: '2026-10-27T00:00:00', ends_at: '2026-10-30T23:59:59', multiplier: 2, slot: 'Tous', from_time: '18:30:00', to_time: '22:00:00' },
+  { id: 2, name: 'On vient à pied Days', starts_at: '2026-11-05T00:00:00', ends_at: '2026-11-05T23:59:59', multiplier: 3, slot: 'Tous' },
+  { id: 1, name: 'Tracé GPS', starts_at: '2026-11-07T00:00:00', ends_at: '2026-11-08T23:59:59', multiplier: 5, slot: 'Tous', manual: true },
+  { id: 6, name: 'Flash Morning HourZ', starts_at: '2026-11-09T00:00:00', ends_at: '2026-11-11T23:59:59', multiplier: 1.5, slot: 'Tous', from_time: '00:00:00', to_time: '09:30:00' },
+  { id: 7, name: 'Photo couleur', starts_at: '2026-11-13T00:00:00', ends_at: '2026-11-15T23:59:59', multiplier: 1, slot: 'Tous', bonus_note: '+10 km par photo validée' },
+  { id: 3, name: 'Sprint final', starts_at: '2026-11-23T00:00:00', ends_at: '2026-11-27T23:59:59', multiplier: 2, slot: 'Tous' },
+];
+
+test('calendrier : bloc « Boost en cours » des membres, jour par jour', () => {
+  const on = (d: string) => boostsOn(prod, d).map((b) => b.name);
+  assert.deepEqual(on('2026-10-26'), []);
+  assert.deepEqual(on('2026-10-27'), ['Flash HourZ']);
+  assert.deepEqual(on('2026-10-30'), ['Flash HourZ']);
+  assert.deepEqual(on('2026-10-31'), []);
+  assert.deepEqual(on('2026-11-04'), []);
+  assert.deepEqual(on('2026-11-05'), ['On vient à pied Days']);
+  assert.deepEqual(on('2026-11-06'), []);
+  assert.deepEqual(on('2026-11-07'), ['Tracé GPS']);
+  assert.deepEqual(on('2026-11-08'), ['Tracé GPS']);
+  assert.deepEqual(on('2026-11-09'), ['Flash Morning HourZ']);
+  assert.deepEqual(on('2026-11-11'), ['Flash Morning HourZ']);
+  assert.deepEqual(on('2026-11-12'), []);
+  assert.deepEqual(on('2026-11-13'), ['Photo couleur']);
+  assert.deepEqual(on('2026-11-15'), ['Photo couleur']);
+  assert.deepEqual(on('2026-11-16'), []);
+  assert.deepEqual(on('2026-11-23'), ['Sprint final']);
+  assert.deepEqual(on('2026-11-27'), ['Sprint final']);
+  assert.deepEqual(on('2026-11-28'), []);
+});
+
+test('calendrier : bandeau « en cours » heure par heure, et km comptés', () => {
+  const at = (t: string) => boostActiveAt(prod, t)?.name ?? null;
+  assert.equal(at('2026-10-28T18:29:00'), null);
+  assert.equal(at('2026-10-28T18:30:00'), 'Flash HourZ');
+  assert.equal(at('2026-10-28T21:59:00'), 'Flash HourZ');
+  assert.equal(at('2026-10-28T22:00:00'), null);
+  assert.equal(at('2026-11-05T07:00:00'), 'On vient à pied Days');
+  assert.equal(at('2026-11-07T15:00:00'), 'Tracé GPS');
+  assert.equal(at('2026-11-10T09:29:00'), 'Flash Morning HourZ');
+  assert.equal(at('2026-11-10T09:30:00'), null);
+  assert.equal(at('2026-11-14T12:00:00'), null); // Photo couleur : défi, pas de bandeau ×
+  assert.equal(at('2026-11-25T12:00:00'), 'Sprint final');
+  // km comptés pour une sortie de 4 km
+  const k = (t: string, v: number[] = []) => scoreActivities([{ ...act('a', t, 4), validated_boosts: v }], { ...settings, cap_mode: 'cap' }, prod)[0].countedKm;
+  assert.equal(k('2026-10-28T19:00:00'), 8);
+  assert.equal(k('2026-11-05T08:00:00'), 12);
+  assert.equal(k('2026-11-07T10:00:00'), 4);       // Tracé GPS pas encore validé
+  assert.equal(k('2026-11-07T10:00:00', [1]), 20); // validé
+  assert.equal(k('2026-11-10T08:00:00'), 6);
+  assert.equal(k('2026-11-14T10:00:00'), 4);       // Photo couleur ne multiplie rien
+  assert.equal(k('2026-11-24T10:00:00'), 8);
 });

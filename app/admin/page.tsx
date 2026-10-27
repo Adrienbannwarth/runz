@@ -230,7 +230,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                 {d.boosts.map((b) => (
                   <tr key={b.id}>
                     <td>{b.name}</td><td>{fmtDate(b.starts_at)}</td><td>{fmtDate(b.ends_at)}</td><td>{windowLabel(b)}</td>
-                    <td className="num">{b.multiplier}</td>
+                    <td className="num">{b.bonus_note ?? b.multiplier}</td>
                     <td>
                       <form action={A.setBoostManual} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <input type="hidden" name="id" value={b.id} /><input type="hidden" name="manual" value={b.manual ? '0' : '1'} />

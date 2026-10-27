@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { activeBoost, fmtDate, fmtKm, loadAll, windowLabel } from '@/lib/data';
+import { activeBoost, boostEffect, fmtDate, fmtKm, loadAll, windowLabel } from '@/lib/data';
+import { boostsOn } from '@/lib/scoring';
 import { getParticipantId, isAdmin } from '@/lib/session';
 import type { TeamStats } from '@/lib/scoring';
 
@@ -23,9 +24,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const ended = today > settings.end_date;
   const totalKm = teams.reduce((t, x) => t + x.totalKm, 0);
   const people = teams.reduce((t, x) => t + x.members, 0);
-  const upcoming = boosts.filter((b) => b.ends_at.slice(0, 10) >= today).slice(0, 4);
-  const current = boosts.filter((b) => b.starts_at.slice(0, 10) <= today && today <= b.ends_at.slice(0, 10))
-    .sort((a, c) => Number(c.multiplier) - Number(a.multiplier))[0];
+  const allBoosts = [...boosts].sort((a, c) => a.starts_at.localeCompare(c.starts_at));
+  const todays = boostsOn(boosts, today); // boosts et défis du jour (vue membre)
   // Vue : admin = toutes les équipes ; membre = sa propre équipe ; visiteur = invitation à se connecter
   const me = pid ? data.participants.find((p) => p.id === pid) : undefined;
   const myTeam = me ? teams.find((t) => t.team.id === me.team_id) : undefined;
@@ -145,16 +145,20 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       )}
 
       {view === 'admin' ? (
-        upcoming.length > 0 && (
+        allBoosts.length > 0 && (
           <>
-            <h2>Boosts du challenge</h2>
+            <h2>Boosts et défis du challenge</h2>
             <div className="card">
-              {upcoming.map((b) => (
-                <div className="kv" key={b.id} style={{ padding: '4px 0' }}>
-                  <span>⚡ {b.name}{b.name.includes('×') ? '' : ` · ×${b.multiplier}`}</span>
-                  <span>{b.starts_at.slice(0, 10) === b.ends_at.slice(0, 10) ? fmtDate(b.starts_at) : `du ${fmtDate(b.starts_at)} au ${fmtDate(b.ends_at)}`} · {windowLabel(b)}</span>
-                </div>
-              ))}
+              {allBoosts.map((b) => {
+                const past = b.ends_at.slice(0, 10) < today;
+                const live = todays.some((x) => x.id === b.id);
+                return (
+                  <div className="kv" key={b.id} style={{ padding: '4px 0', opacity: past ? 0.45 : 1 }}>
+                    <span style={{ color: live ? 'var(--ink)' : undefined }}>{b.bonus_note ? '📸' : '⚡'} {live ? <b>{b.name}</b> : b.name} · {boostEffect(b)}{b.manual ? ' · à valider' : ''}{live ? ' · en cours' : ''}</span>
+                    <span>{b.starts_at.slice(0, 10) === b.ends_at.slice(0, 10) ? fmtDate(b.starts_at) : `du ${fmtDate(b.starts_at)} au ${fmtDate(b.ends_at)}`} · {windowLabel(b)}</span>
+                  </div>
+                );
+              })}
             </div>
           </>
         )
@@ -162,16 +166,19 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         <>
           <h2>Boost en cours</h2>
           <div className="card">
-            {current ? (
-              <div className="kv" style={{ padding: '4px 0' }}>
-                <span style={{ color: 'var(--ink)' }}>⚡ <b>{current.name}</b>{current.name.includes('×') ? '' : ` · ×${current.multiplier}`}</span>
-                <span>{current.starts_at.slice(0, 10) === current.ends_at.slice(0, 10) ? `aujourd’hui` : `jusqu’au ${fmtDate(current.ends_at)}`} · {windowLabel(current)}</span>
+            {todays.map((b) => (
+              <div className="kv" key={b.id} style={{ padding: '4px 0' }}>
+                <span style={{ color: 'var(--ink)' }}>{b.bonus_note ? '📸' : '⚡'} <b>{b.name}</b> · {boostEffect(b)}</span>
+                <span>{b.starts_at.slice(0, 10) === b.ends_at.slice(0, 10) ? 'aujourd’hui' : `jusqu’au ${fmtDate(b.ends_at)}`} · {windowLabel(b)}</span>
               </div>
-            ) : null}
-            {current?.manual && (
-              <p className="muted small" style={{ margin: '6px 0 0' }}>Boost validé par les organisateurs : ton activité compte d’abord normalement, le multiplicateur s’ajoute une fois vérifiée.</p>
+            ))}
+            {todays.some((b) => b.manual || b.bonus_note) && (
+              <p className="muted small" style={{ margin: '6px 0 0' }}>
+                {todays.some((b) => b.bonus_note) ? 'Défi validé par les organisateurs : envoie ta preuve, les km bonus s’ajoutent à ton équipe une fois vérifiée. ' : ''}
+                {todays.some((b) => b.manual) ? 'Boost validé par les organisateurs : ton activité compte d’abord normalement, le multiplicateur s’ajoute une fois vérifiée.' : ''}
+              </p>
             )}
-            {!current && (
+            {todays.length === 0 && (
               <p className="muted" style={{ margin: 0 }}>Pas de boost en ce moment. Le prochain sera annoncé sur zlack, ouvre l’œil !</p>
             )}
           </div>

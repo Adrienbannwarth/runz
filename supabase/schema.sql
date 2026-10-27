@@ -82,6 +82,7 @@ create table if not exists boosts (
   manual      boolean not null default false,  -- true = ne s'applique qu'aux activités validées par un admin
   from_time   time,                            -- horaire perso quotidien (prioritaire sur slot), ex. 18:30
   to_time     time,                            -- ex. 22:00 (exclu)
+  bonus_note  text,                            -- défi bonus sans multiplicateur (affichage seul), ex. « +10 km par photo validée »
   created_at  timestamptz not null default now()
 );
 
