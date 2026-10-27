@@ -79,6 +79,7 @@ export type ParticipantStats = {
   participant: Participant;
   activities: number;
   rawKm: number;       // km réels éligibles
+  cappedKm: number;    // km réels retenus après plafond (= rawKm en mode alerte)
   countedKm: number;   // km comptés (multiplicateurs, plafond si mode cap)
   activeDays: number;
   longestKm: number;   // plus longue sortie
@@ -232,6 +233,7 @@ export function computeStandings(input: {
       participant: p,
       activities: mine.length,
       rawKm: sum(mine, (s) => s.rawKm),
+      cappedKm: sum(mine, (s) => s.cappedKm),
       countedKm: sum(mine, (s) => s.countedKm),
       activeDays: new Set(mine.map((s) => s.day)).size,
       longestKm: r2(Math.max(0, ...mine.map((s) => s.rawKm))),
@@ -249,7 +251,7 @@ export function computeStandings(input: {
   const mode = settings.ranking_mode ?? 'total';
   const teamStats: TeamStats[] = teams.filter((t) => t.active).map((team) => {
     const members = people.filter((p) => p.participant.team_id === team.id);
-    const realKm = members.reduce((t, p) => t + p.rawKm, 0);
+    const realKm = members.reduce((t, p) => t + p.cappedKm, 0); // km réels retenus (plafond appliqué)
     const countedKm = members.reduce((t, p) => t + p.countedKm, 0);
     const bonusKm = bonuses.filter((b) => b.team_id === team.id).reduce((t, b) => t + Number(b.km), 0);
     const totalKm = countedKm + bonusKm;

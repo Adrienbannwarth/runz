@@ -166,3 +166,14 @@ test('plafond coupé : on garde les km les plus boostés, le reste ne compte pas
   const c = scoreActivities([act('a', '2026-11-12T08:00:00', 7), act('a', '2026-11-12T18:00:00', 5)], cap, []);
   assert.deepEqual(c.map((x) => x.countedKm), [7, 3]);
 });
+
+test('équipe : le plafond ne crée pas de « boost » négatif', () => {
+  const teams = [{ id: 1, name: 'Team Rouge', color: '#f00', emoji: '', active: true }];
+  const res = computeStandings({
+    settings: { ...settings, cap_mode: 'cap' }, teams, participants: [{ id: 'r1', display_name: 'R1', team_id: 1 }], boosts: [], bonuses: [], today: '2026-10-28',
+    activities: [act('r1', '2026-10-28T08:00:00', 10.06)],
+  });
+  assert.equal(res.teams[0].totalKm, 10);
+  assert.equal(res.teams[0].realKm, 10);
+  assert.equal(res.teams[0].multiplierKm, 0);
+});
