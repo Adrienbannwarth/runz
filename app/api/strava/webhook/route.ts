@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { db, must } from '@/lib/db';
-import { disconnect, fetchActivity, upsertActivity } from '@/lib/strava';
+import { disconnect, fetchActivity, stillAuthorized, upsertActivity } from '@/lib/strava';
 
 // Validation de l'abonnement webhook (voir README)
 export async function GET(req: NextRequest) {
@@ -29,6 +29,9 @@ export async function POST(req: NextRequest) {
       const p = must(await db().from('participants').select('id').eq('strava_athlete_id', ev.owner_id).maybeSingle()) as { id: string } | null;
       if (!p) return;
       if (ev.object_type === 'athlete' && ev.updates?.authorized === 'false') {
+        // L'athlète a révoqué une app. S'il a autorisé deux apps RunZ (doublon) et révoque l'autre,
+        // son accès via l'app enregistrée marche encore : on ne touche à rien.
+        if (await stillAuthorized(p.id)) return;
         await disconnect(p.id, false); // l'athlète a révoqué l'accès depuis Strava : on efface ses données
       } else if (ev.object_type === 'activity' && ev.aspect_type === 'delete') {
         must(await db().from('activities').delete().eq('strava_activity_id', ev.object_id));

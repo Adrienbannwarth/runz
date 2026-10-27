@@ -159,6 +159,15 @@ export async function fetchActivity(participantId: string, activityId: number) {
   return api<StravaActivity>(await validToken(p), `/activities/${activityId}`);
 }
 
+/** Vrai si le token de l'app enregistrée pour ce participant fonctionne encore (pas révoqué). */
+export async function stillAuthorized(participantId: string) {
+  try {
+    const p = must(await db().from('participants').select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
+    const res = await fetch(`${API}/athlete`, { headers: { Authorization: `Bearer ${await validToken(p)}` }, cache: 'no-store' });
+    return res.ok;
+  } catch { return false; }
+}
+
 /** Révoque l'accès côté Strava et efface tokens + activités Strava stockées. */
 export async function disconnect(participantId: string, revoke = true) {
   const p = must(await db().from('participants')
