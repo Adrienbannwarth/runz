@@ -87,7 +87,7 @@ test('classement au total, stats MVP et phrase du récap', () => {
   assert.equal(res.teams[0].totalKm, 40);
   assert.equal(res.teams[0].avgKm, 20);
   assert.equal(res.teams[1].multiplierKm, 9);
-  assert.equal(leadSentence(res.teams, 'total'), 'Les Rouges mènent de 22,0 km.');
+  assert.equal(leadSentence(res.teams, 'total'), 'Les Rouges mènent de 22,00 km.');
   const b1 = res.people.find((p) => p.participant.id === 'b1')!;
   assert.equal(b1.flashKm, 9);
   assert.equal(b1.rawKm, 9);
@@ -118,7 +118,7 @@ test('signalement des activités sans tracé (comptent quand même)', async () =
 
 test('phrase du récap avec un nom « Team … »', () => {
   const t = (name: string, score: number) => ({ team: { id: 1, name, color: '', emoji: '', active: true }, members: 5, realKm: 0, multiplierKm: 0, countedKm: 0, bonusKm: 0, totalKm: score, avgKm: 0, score, todayKm: 0, notYetThisWeek: 0, rank: 1 });
-  assert.equal(leadSentence([t('Team Rouge', 30), t('Team Vert', 20)], 'total'), 'La Team Rouge mène de 10,0 km.');
+  assert.equal(leadSentence([t('Team Rouge', 30), t('Team Vert', 20)], 'total'), 'La Team Rouge mène de 10,00 km.');
 });
 
 test('boost « à valider » : sans validation pas de multiplicateur, avec validation il s’applique', () => {

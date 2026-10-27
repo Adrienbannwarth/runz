@@ -64,6 +64,6 @@ const hFr = (t: string) => { const [h, m] = t.slice(0, 5).split(':'); return `${
 export const windowLabel = (b: Pick<Boost, 'slot' | 'from_time' | 'to_time'>) =>
   b.from_time && b.to_time ? `${hFr(b.from_time)}-${hFr(b.to_time)}` : slotLabel(b.slot);
 
-export const fmtKm = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+export const fmtKm = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 export const fmtDate = (d: string) =>
   new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });

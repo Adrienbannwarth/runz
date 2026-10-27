@@ -276,7 +276,7 @@ export function leadSentence(teams: TeamStats[], mode: 'total' | 'average') {
   if (teams.length < 2) return '';
   const gap = teams[0].score - teams[1].score;
   if (gap < 0.05) return 'Égalité parfaite en tête !';
-  const km = gap.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const km = gap.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const n = teams[0].team.name;
   const who = /^team /i.test(n) ? `La ${n} mène` : `Les ${n} mènent`;
   return `${who} de ${km} km${mode === 'total' ? '' : ' par personne'}.`;
