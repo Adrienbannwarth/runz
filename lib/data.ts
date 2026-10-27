@@ -62,7 +62,9 @@ export const slotLabel = (s?: string | null) => (!s || s === 'Tous' ? 'toute la 
 const hFr = (t: string) => { const [h, m] = t.slice(0, 5).split(':'); return `${Number(h)}h${m === '00' ? '' : m}`; };
 /** Créneau d'un boost pour l'affichage : « 18h30-22h », « 19h-22h » ou « toute la journée ». */
 export const windowLabel = (b: Pick<Boost, 'slot' | 'from_time' | 'to_time'>) =>
-  b.from_time && b.to_time ? `${hFr(b.from_time)}-${hFr(b.to_time)}` : slotLabel(b.slot);
+  b.from_time && b.to_time
+    ? (b.from_time.slice(0, 5) === '00:00' ? `avant ${hFr(b.to_time)}` : `${hFr(b.from_time)}-${hFr(b.to_time)}`)
+    : slotLabel(b.slot);
 
 export const fmtKm = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 export const fmtDate = (d: string) =>
