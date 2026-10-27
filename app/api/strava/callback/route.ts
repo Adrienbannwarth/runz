@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { db, must } from '@/lib/db';
-import { appUrl, exchangeCode, syncParticipant } from '@/lib/strava';
+import { appUrl, exchangeCode, stravaApps, syncParticipant } from '@/lib/strava';
 import { setUserSession } from '@/lib/session';
 import { getSettings } from '@/lib/data';
 
@@ -15,7 +15,16 @@ export async function GET(req: NextRequest) {
   if (!scope.includes('activity:read')) return fail("Il faut autoriser l'accès à tes activités pour participer.");
 
   let t;
-  try { t = await exchangeCode(q.get('code') || '', appKey); } catch { return fail('Échec de la connexion Strava.'); }
+  try { t = await exchangeCode(q.get('code') || '', appKey); } catch (e) {
+    // App pleine côté Strava (403 « limit of connected athletes ») : on relance la connexion sur l'app suivante
+    const next = stravaApps().map((a) => a.key).filter((k) => k > appKey)[0];
+    if (/ 403:/.test(String((e as Error).message)) && next) {
+      console.error('app Strava pleine, bascule', appKey, '→', next);
+      return NextResponse.redirect(`${appUrl()}/api/strava/connect?app=${next}${invite ? `&invite=${invite}` : ''}`);
+    }
+    console.error('échange du code Strava', e);
+    return fail('Échec de la connexion Strava.');
+  }
   if (!t.athlete) return fail('Profil Strava introuvable.');
   const tokens = {
     strava_athlete_id: t.athlete.id, access_token: t.access_token, refresh_token: t.refresh_token,
