@@ -6,6 +6,7 @@ import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, windowLabel } from '@/li
 import { leadSentence } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
+import CopyLink from './CopyLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,6 @@ const TABS = [
   ['boosts', 'Boosts'], ['validations', 'Validations'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
 ] as const;
 const SPORTS = ['Walk', 'Run', 'TrailRun', 'Hike', 'VirtualRun'];
-const POLES = ['Projet', 'Développement', 'Design', 'Commercial', 'Autre'];
 const SLOTS = ['Tous', 'Avant 8h', '12h-14h', '19h-22h'];
 const SPORT_FR: Record<string, string> = { Walk: 'Marche', Run: 'Course', TrailRun: 'Trail', Hike: 'Randonnée', VirtualRun: 'Tapis', Wheelchair: 'Fauteuil' };
 
@@ -51,12 +51,24 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
               return <span key={a.key} className={`pill${used >= appCapacity() ? ' on' : ''}`}>App {a.key.toUpperCase()} · {used}/{appCapacity()}</span>;
             })}
           </div>
+          <nav className="tabs sub">
+            <Link href="/admin?tab=participants" className={!sp.team ? 'on' : ''}>Toutes les équipes</Link>
+            {allTeams.map((t) => (
+              <Link key={t.id} href={`/admin?tab=participants&team=${t.id}`} className={sp.team === String(t.id) ? 'on' : ''}>
+                <span className="dot" style={{ background: t.color }} /> {t.name} · {d.participants.filter((p) => p.team_id === t.id).length}
+              </Link>
+            ))}
+            {d.participants.some((p) => !p.team_id) && <Link href="/admin?tab=participants&team=none" className={sp.team === 'none' ? 'on' : ''}>Sans équipe</Link>}
+          </nav>
           <p className="muted small">Les fiches sont créées à l’avance (liens d’invitation, saisie manuelle). Côté participants, une personne n’apparaît qu’une fois connectée à Strava ou avec des km saisis.</p>
           <div className="card" style={{ overflowX: 'auto' }}>
             <table>
-              <thead><tr><th>Nom · équipe · pôle</th><th>Strava</th><th className="num">Km réels</th><th>Cette semaine</th><th>Lien d’invitation</th><th></th></tr></thead>
+              <thead><tr><th>Nom · équipe</th><th style={{ minWidth: 150 }}>Strava</th><th className="num">Km réels</th><th>Lien d’invitation</th><th></th></tr></thead>
               <tbody>
-                {d.participants.map((p) => {
+                {d.participants
+                  .filter((p) => !sp.team || (sp.team === 'none' ? !p.team_id : String(p.team_id) === sp.team))
+                  .sort((a, b) => (teamsAll.findIndex((t) => t.id === a.team_id) + 1 || 99) - (teamsAll.findIndex((t) => t.id === b.team_id) + 1 || 99) || a.display_name.localeCompare(b.display_name, 'fr'))
+                  .map((p) => {
                   const st = d.people.find((x) => x.participant.id === p.id);
                   return (
                     <tr key={p.id}>
@@ -65,25 +77,20 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                           <input type="hidden" name="id" value={p.id} />
                           <input name="display_name" defaultValue={p.display_name} style={{ width: 170 }} />
                           <TeamSelect teams={teamsAll} defaultValue={p.team_id} />
-                          <select name="pole" defaultValue={p.pole ?? ''}>
-                            <option value="">— pôle —</option>
-                            {POLES.map((x) => <option key={x} value={x}>{x}</option>)}
-                          </select>
-                          <button className="btn small">OK</button>
+                          <button className="btn small ok-btn">OK</button>
                         </form>
                       </td>
                       <td>{p.strava_athlete_id
-                        ? <span className="check" data-app={(p.strava_app || 'a').toUpperCase()} title={p.last_sync_at ? `Connecté · dernière synchro ${new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}` : 'Connecté à Strava'} aria-label="Connecté à Strava">✓</span>
+                        ? <span className="check" title={p.last_sync_at ? `Connecté · dernière synchro ${new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}` : 'Connecté à Strava'}>App {(p.strava_app || 'a').toUpperCase()}</span>
                         : <span className="muted">—</span>}
                         {p.strava_athlete_id && (
-                          <div><a className="strava-link" href={`https://www.strava.com/athletes/${p.strava_athlete_id}`} target="_blank" rel="noopener noreferrer">Profil Strava ↗</a></div>
+                          <a className="strava-link" style={{ marginLeft: 8, whiteSpace: 'nowrap' }} href={`https://www.strava.com/athletes/${p.strava_athlete_id}`} target="_blank" rel="noopener noreferrer">Profil Strava ↗</a>
                         )}
                       </td>
                       <td className="num">{fmtKm(st?.rawKm ?? 0)}</td>
-                      <td>{st?.activeThisWeek ? <span className="pill">✅ au compteur</span> : <span className="pill" style={{ color: 'var(--red)' }}>pas encore</span>}</td>
-                      <td><input readOnly value={`${appUrl()}/join/${p.invite_token}`} style={{ width: 220, fontSize: 12 }} /></td>
+                      <td><CopyLink url={`${appUrl()}/join/${p.invite_token}`} /></td>
                       <td>
-                        <form action={A.deleteParticipant}><input type="hidden" name="id" value={p.id} /><button className="btn small danger">Suppr.</button></form>
+                        <form action={A.deleteParticipant}><input type="hidden" name="id" value={p.id} /><button className="btn small danger icon-x" aria-label="Supprimer" title="Supprimer">×</button></form>
                       </td>
                     </tr>
                   );
@@ -167,7 +174,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                     <td>{fmtDate(a.start_date_local)} {String(a.start_date_local).slice(11, 16)}</td>
                     <td>{pName(a.participant_id)}</td><td>{SPORT_FR[a.sport_type] ?? a.sport_type}</td>
                     <td className="num">{fmtKm(Number(a.distance_m) / 1000)}</td><td>{a.name}</td>
-                    <td><form action={A.deleteActivity}><input type="hidden" name="id" value={a.id} /><button className="btn small danger">Suppr.</button></form></td>
+                    <td><form action={A.deleteActivity}><input type="hidden" name="id" value={a.id} /><button className="btn small danger icon-x" aria-label="Supprimer" title="Supprimer">×</button></form></td>
                   </tr>
                 ))}
               </tbody>
@@ -202,7 +209,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                   <tr key={b.id}>
                     <td>{fmtDate(b.awarded_on)}</td><td>{teamsAll.find((t) => t.id === b.team_id)?.name}</td>
                     <td>{pName(b.participant_id)}</td><td>{b.reason}</td><td className="num">+{fmtKm(Number(b.km))}</td>
-                    <td><form action={A.deleteBonus}><input type="hidden" name="id" value={b.id} /><button className="btn small danger">Suppr.</button></form></td>
+                    <td><form action={A.deleteBonus}><input type="hidden" name="id" value={b.id} /><button className="btn small danger icon-x" aria-label="Supprimer" title="Supprimer">×</button></form></td>
                   </tr>
                 ))}
               </tbody>
@@ -241,7 +248,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                         <button className="btn small">{b.manual ? 'Rendre automatique' : 'Passer en validation'}</button>
                       </form>
                     </td>
-                    <td><form action={A.deleteBoost}><input type="hidden" name="id" value={b.id} /><button className="btn small danger">Suppr.</button></form></td>
+                    <td><form action={A.deleteBoost}><input type="hidden" name="id" value={b.id} /><button className="btn small danger icon-x" aria-label="Supprimer" title="Supprimer">×</button></form></td>
                   </tr>
                 ))}
               </tbody>
