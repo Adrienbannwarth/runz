@@ -11,7 +11,7 @@ import CopyLink from './CopyLink';
 export const dynamic = 'force-dynamic';
 
 const TABS = [
-  ['participants', 'Participants'], ['saisie', 'Saisie manuelle'], ['bonus', 'Bonus'],
+  ['participants', 'Participants'], ['activites', 'Activités'], ['saisie', 'Saisie manuelle'], ['bonus', 'Bonus'],
   ['boosts', 'Boosts'], ['validations', 'Validations'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
 ] as const;
 const SPORTS = ['Walk', 'Run', 'TrailRun', 'Hike', 'VirtualRun'];
@@ -147,6 +147,89 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           <p className="muted small">Chaque participant reçoit un lien d’invitation personnel : en se connectant à Strava via ce lien, son compte est rattaché à sa fiche et à son équipe. Une personne qui se connecte sans lien apparaît ici « sans équipe ».</p>
         </>
       )}
+
+      {tab === 'activites' && (() => {
+        const teamOf = (pid: string) => d.participants.find((p) => p.id === pid)?.team_id ?? null;
+        const rows = d.scored
+          .filter((a) => !sp.team || (sp.team === 'none' ? !teamOf(a.participant_id) : String(teamOf(a.participant_id)) === sp.team))
+          .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
+        const ok = rows.filter((a) => a.eligible);
+        const sum = (f: (a: (typeof rows)[number]) => number) => ok.reduce((t, a) => t + f(a), 0);
+        const ts = sp.team ? d.teams.find((t) => String(t.team.id) === sp.team) : undefined;
+        const bonusRows = d.bonuses.filter((b) => !sp.team || String(b.team_id) === sp.team)
+          .sort((a, b) => b.awarded_on.localeCompare(a.awarded_on));
+        const bonusKm = bonusRows.reduce((t, b) => t + Number(b.km), 0);
+        return (
+          <>
+            <nav className="tabs sub">
+              <Link href="/admin?tab=activites" className={!sp.team ? 'on' : ''}>Toutes les équipes</Link>
+              {allTeams.map((t) => (
+                <Link key={t.id} href={`/admin?tab=activites&team=${t.id}`} className={sp.team === String(t.id) ? 'on' : ''}>
+                  <span className="dot" style={{ background: t.color }} /> {t.name}
+                </Link>
+              ))}
+            </nav>
+            <p className="muted small">
+              {ok.length} activité{ok.length > 1 ? 's' : ''} comptée{ok.length > 1 ? 's' : ''} · {fmtKm(sum((a) => a.rawKm))} km réels · {fmtKm(sum((a) => a.countedKm))} km comptés
+              {' · '}{fmtKm(bonusKm)} km de bonus
+              {ts ? <> · total équipe : <b>{fmtKm(ts.totalKm)} km</b></> : null}
+              {rows.length > ok.length ? ` · ${rows.length - ok.length} non comptée${rows.length - ok.length > 1 ? 's' : ''} (grisées)` : ''}
+            </p>
+            <div className="card" style={{ overflowX: 'auto' }}>
+              {rows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité pour l’instant.</p> : (
+                <table>
+                  <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th>Infos</th><th></th></tr></thead>
+                  <tbody>
+                    {rows.map((a) => {
+                      const t = allTeams.find((x) => x.id === teamOf(a.participant_id));
+                      return (
+                        <tr key={a.id} className={a.eligible ? '' : 'off'}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><span className="dot" style={{ display: 'inline-block', background: t?.color }} /> {pName(a.participant_id)}</td>
+                          <td>{a.name || (a.source === 'manual' ? 'Saisie manuelle' : '—')} <span className="muted small">{SPORT_FR[a.sport_type] ?? a.sport_type}</span></td>
+                          <td className="num">{fmtKm(a.rawKm)} km</td>
+                          <td className="num">{a.eligible ? `${fmtKm(a.countedKm)} km` : '—'}</td>
+                          <td className="small">
+                            {!a.eligible && <div>{a.reason}</div>}
+                            {a.multiplier > 1 && <div>⚡ ×{a.multiplier.toLocaleString('fr-FR')} {a.boostName}</div>}
+                            {a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="muted">×{x.multiplier} {x.name} à valider</div>)}
+                            {a.eligible && a.overCap && <div style={{ color: 'var(--red)' }}>Plafond {d.settings.daily_cap_km} km dépassé ce jour</div>}
+                            {a.flag && <div style={{ color: 'var(--red)' }}>⚠ {a.flag}</div>}
+                            {a.source === 'manual' && <div className="muted">Saisie admin</div>}
+                          </td>
+                          <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank" rel="noopener noreferrer">Voir sur Strava</a>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <h2>Bonus</h2>
+            <div className="card" style={{ overflowX: 'auto' }}>
+              {bonusRows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucun bonus pour l’instant (onglet Bonus pour en ajouter).</p> : (
+                <table>
+                  <thead><tr><th>Date</th><th>Équipe</th><th>Membre</th><th>Motif</th><th className="num">Km</th></tr></thead>
+                  <tbody>
+                    {bonusRows.map((b) => {
+                      const t = allTeams.find((x) => x.id === b.team_id);
+                      return (
+                        <tr key={b.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(b.awarded_on)}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><span className="dot" style={{ display: 'inline-block', background: t?.color }} /> {t?.name}</td>
+                          <td>{b.participant_id ? pName(b.participant_id) : <span className="muted">toute l’équipe</span>}</td>
+                          <td>{b.reason}</td>
+                          <td className="num">+{fmtKm(Number(b.km))} km</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {tab === 'saisie' && (
         <>
