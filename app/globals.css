@@ -172,4 +172,5 @@ pre.recap { white-space: pre-wrap; background: var(--soft); border-radius: var(-
 label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-space: nowrap; }
 .btn.icon-x { width: 28px; height: 28px; padding: 0; font-size: 18px; line-height: 1; display: inline-grid; place-items: center; }
 .tabs a .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: 1px; }
-.btn.ok-btn { width: 40px; height: 40px; padding: 0; border-radius: 50%; flex: none; }
+.btn.ok-btn { width: 40px; height: 40px; padding: 0; border-radius: 50%; flex: none; background: #efefec; border-color: #efefec; color: var(--ink); font-size: 11px; font-weight: 700; letter-spacing: .03em; }
+.btn.ok-btn:hover { background: #e2e2de; border-color: #e2e2de; }
