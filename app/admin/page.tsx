@@ -75,6 +75,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                       <td>{p.strava_athlete_id
                         ? <span className="check" data-app={(p.strava_app || 'a').toUpperCase()} title={p.last_sync_at ? `Connecté · dernière synchro ${new Date(p.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' })}` : 'Connecté à Strava'} aria-label="Connecté à Strava">✓</span>
                         : <span className="muted">—</span>}
+                        {p.strava_athlete_id && (
+                          <div><a className="strava-link" href={`https://www.strava.com/athletes/${p.strava_athlete_id}`} target="_blank" rel="noopener noreferrer">Profil Strava ↗</a></div>
+                        )}
                       </td>
                       <td className="num">{fmtKm(st?.rawKm ?? 0)}</td>
                       <td>{st?.activeThisWeek ? <span className="pill">✅ au compteur</span> : <span className="pill" style={{ color: 'var(--red)' }}>pas encore</span>}</td>
