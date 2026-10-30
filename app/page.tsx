@@ -75,13 +75,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           </div>
         </section>
       ) : (
-        <section className="hero rules">
-          <div>
-            <p className="eyebrow" style={{ color: '#bdbdbd' }}>
-              {ended ? 'Challenge terminé' : started ? 'Challenge en cours' : 'Bientôt le coup d’envoi'} · du {fmtDate(settings.start_date)} au {fmtDate(settings.end_date)}
-            </p>
-            <h1>Les règles du jeu</h1>
-          </div>
+        <details className="hero rules">
+          <summary>
+            <div>
+              <p className="eyebrow" style={{ color: '#bdbdbd' }}>
+                {ended ? 'Challenge terminé' : started ? 'Challenge en cours' : 'Bientôt le coup d’envoi'} · du {fmtDate(settings.start_date)} au {fmtDate(settings.end_date)}
+              </p>
+              <h1>Les règles du jeu</h1>
+            </div>
+            <span className="rules-toggle" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+            </span>
+          </summary>
           <ol>
             <li><b>Marche, rando, course, trail ou tapis</b> : tout compte, à ton rythme. Le vélo ne compte pas.</li>
             <li><b>Tes activités Strava remontent toutes seules.</b> Pas de Strava ? Envoie une capture à l’organisation.</li>
@@ -91,7 +96,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             <li><b>{settings.daily_cap_km} km max par jour</b>{settings.cap_mode === 'cap' ? ' : au-delà, les km ne comptent pas (on garde tes km les plus boostés). Écoute ton corps !' : ', au-delà l’organisation vérifie l’activité. Écoute ton corps !'}</li>
             <li><b>Le classement reste secret</b> jusqu’au {fmtDate(settings.end_date)} : résultats et prix à la fin du challenge.</li>
           </ol>
-        </section>
+        </details>
       )}
 
       {boost && (

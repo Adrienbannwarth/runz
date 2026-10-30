@@ -51,15 +51,23 @@ h2 { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; margin: 48px 0 
 .hero p { margin: 0; color: #d6d6d6; font-size: 16px; }
 .hero .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .hero .stat { font-size: 15px; color: #fff; }
-.hero.rules { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: start; gap: 40px; }
-.hero.rules h1 { font-size: 44px; }
-.hero.rules { padding-top: 36px; padding-bottom: 36px; }
+.hero.rules { display: block; padding-top: 24px; padding-bottom: 24px; }
+.hero.rules summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; cursor: pointer; list-style: none; }
+.hero.rules summary::-webkit-details-marker { display: none; }
+.hero.rules h1 { font-size: 36px; margin: 0; }
+.hero.rules .eyebrow { margin-bottom: 4px; }
+.rules-toggle { flex: none; width: 44px; height: 44px; border-radius: 50%; background: #fff; color: var(--ink);
+  display: grid; place-items: center; transition: transform .2s ease; }
+.hero.rules[open] .rules-toggle { transform: rotate(180deg); }
+.hero.rules summary:hover .rules-toggle { background: #e9e9e6; }
+.hero.rules summary:focus-visible { outline: 2px solid #fff; outline-offset: 6px; border-radius: 4px; }
+.hero.rules[open] ol { margin-top: 20px; animation: page-enter .2s ease-out both; }
 .hero.rules ol { margin: 0; padding: 0; list-style: none; counter-reset: rule; display: grid; gap: 6px; font-size: 13px; color: #d6d6d6; line-height: 1.4; }
 .hero.rules ol li { counter-increment: rule; position: relative; padding-left: 28px; }
 .hero.rules ol li::before { content: counter(rule); position: absolute; left: 0; top: 0; width: 18px; height: 18px; border-radius: 50%;
   background: #fff; color: var(--ink); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 .hero.rules ol b { color: #fff; font-weight: 600; }
-@media (max-width: 760px) { .hero.rules { grid-template-columns: 1fr; gap: 16px; padding-top: 28px; padding-bottom: 28px; } }
+@media (max-width: 760px) { .hero.rules { padding-top: 20px; padding-bottom: 20px; } .hero.rules h1 { font-size: 26px; } .rules-toggle { width: 38px; height: 38px; } }
 /* Sélecteur d'équipe avec pastille de couleur */
 .team-select { position: relative; display: inline-block; }
 .team-select > button { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 15px; padding: 10px 34px 10px 12px;
