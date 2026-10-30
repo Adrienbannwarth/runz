@@ -7,7 +7,7 @@ import './globals.css';
 import { getSettings } from '@/lib/data';
 
 const longDate = (d: string) =>
-  new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
 
 export const metadata: Metadata = {
   title: 'RunZ Challenge · Chaque pas compte',
