@@ -196,3 +196,11 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .act-km span { font-size: 12px; color: var(--muted); }
 .act-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 10px; font-size: 13px; }
 @media (max-width: 760px) { .only-desktop { display: none; } .only-mobile { display: grid; } }
+
+/* En-tête admin : boutons icônes */
+.admin-head { display: flex; align-items: center; gap: 12px; }
+.admin-head h1 { margin: 0; }
+.admin-head-actions { margin-left: auto; display: flex; gap: 8px; }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
+  background: #efefec; color: var(--ink); border: 0; cursor: pointer; text-decoration: none; }
+.icon-btn:hover { background: #e2e2de; }

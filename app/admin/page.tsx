@@ -29,12 +29,22 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="admin-head">
+        <Link className="icon-btn" href="/me" aria-label="Retour à Mon espace" title="Retour à Mon espace">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6" /></svg>
+        </Link>
         <h1>Admin</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <a className="btn small" href="/api/export" download>Exporter (format Saisie km)</a>
-          <Link className="btn small" href="/me">← Mon espace</Link>
-          {(await isPasswordAdmin()) && <form action={A.adminLogout}><button className="btn small">Déconnexion admin</button></form>}
+        <div className="admin-head-actions">
+          <a className="icon-btn" href="/api/export" download aria-label="Exporter au format Saisie km (Excel)" title="Exporter au format Saisie km (Excel)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+          </a>
+          {(await isPasswordAdmin()) && (
+            <form action={A.adminLogout}>
+              <button className="icon-btn" aria-label="Déconnexion admin" title="Déconnexion admin">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" /></svg>
+              </button>
+            </form>
+          )}
         </div>
       </div>
       <nav className="tabs">
