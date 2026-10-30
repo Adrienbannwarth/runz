@@ -62,15 +62,9 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
           <div>
             <p className="eyebrow">Organisation</p>
             <h2 style={{ margin: '0 0 6px' }}>Administration</h2>
-            <p className="muted" style={{ margin: 0 }}>Participants, saisie des km, bonus, boosts, MVP et récap du soir.</p>
+            <p className="muted" style={{ margin: 0 }}>Participants, activités, saisie des km, bonus, boosts, validations, MVP et récap du soir.</p>
           </div>
-          <div className="tabs" style={{ margin: 0 }}>
-            <Link href="/admin?tab=participants">Participants</Link>
-            <Link href="/admin?tab=saisie">Saisie manuelle</Link>
-            <Link href="/admin?tab=bonus">Bonus</Link>
-            <Link href="/admin?tab=recap">Récap zlack</Link>
-            <Link className="on" href="/admin">Ouvrir l’admin →</Link>
-          </div>
+          <Link className="btn primary" href="/admin">Ouvrir l’admin →</Link>
         </div>
       )}
 
