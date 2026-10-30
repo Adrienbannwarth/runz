@@ -116,8 +116,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
       {view === 'member' && (
         <>
-          {preview && <div className="banner">👀 Aperçu de la vue membre (ce que voient les participants). <Link href="/#classement">Revenir à la vue organisateurs</Link></div>}
-          <p className="eyebrow" id="classement">Ton équipe{!ended ? ' · le classement sera dévoilé à la fin du challenge' : ''}</p>
+          <p className="eyebrow" id="classement">{preview && <>Aperçu vue membre · </>}Ton équipe{!ended ? ' · le classement sera dévoilé à la fin du challenge' : ''}{preview && <> · <Link href="/#classement">Revenir à la vue organisateurs</Link></>}</p>
           {myTeam ? (
             <div className="my-team">
               {card(myTeam, true)}
