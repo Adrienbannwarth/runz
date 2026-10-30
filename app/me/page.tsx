@@ -3,6 +3,8 @@ import { fmtDate, fmtKm, loadAll } from '@/lib/data';
 import { getParticipantId } from '@/lib/session';
 import { disconnectMe, logout, syncMe } from '../actions';
 
+const SPORT_FR: Record<string, string> = { Walk: 'Marche', Run: 'Course', TrailRun: 'Trail', Hike: 'Randonnée', VirtualRun: 'Tapis', Ride: 'Vélo', Wheelchair: 'Fauteuil' };
+
 export const dynamic = 'force-dynamic';
 
 export default async function Me({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -28,6 +30,9 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
   const team = data.teams.find((t) => t.team.id === me.team_id);
   const mine = data.scored.filter((s) => s.participant_id === pid);
 
+  const capNote = data.settings.cap_mode === 'cap'
+    ? `Plus de ${data.settings.daily_cap_km} km ce jour-là : seuls ${data.settings.daily_cap_km} km comptent (les plus boostés d’abord)`
+    : `Plus de ${data.settings.daily_cap_km} km ce jour-là : vérification par l’organisation`;
   return (
     <>
       {sp.welcome && <div className="alert ok">Strava est connecté ✅ Tes activités depuis le début du challenge sont en cours d’import.</div>}
@@ -69,30 +74,58 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
       )}
 
       <h2>Mes activités</h2>
-      <div className="card" style={{ overflowX: 'auto' }}>
-        {mine.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité pour l’instant.</p> : (
-          <table>
-            <thead><tr><th>Date</th><th>Activité</th><th>Type</th><th className="num">Distance</th><th className="num">Comptés</th><th></th></tr></thead>
-            <tbody>
-              {mine.map((a) => (
-                <tr key={a.id} className={a.eligible ? '' : 'off'}>
-                  <td>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
-                  <td>{a.name || (a.source === 'manual' ? 'Saisie manuelle' : '—')}
-                    {!a.eligible && <div className="small">{a.reason}</div>}
-                    {a.eligible && a.overCap && <div className="small" style={{ color: 'var(--red)' }}>{data.settings.cap_mode === 'cap'
-                      ? `Plus de ${data.settings.daily_cap_km} km ce jour-là : seuls ${data.settings.daily_cap_km} km comptent (les plus boostés d’abord)`
-                      : `Plus de ${data.settings.daily_cap_km} km ce jour-là : vérification par l’organisation`}</div>}
-                  </td>
-                  <td>{a.sport_type}</td>
-                  <td className="num">{fmtKm(a.rawKm)} km</td>
-                  <td className="num">{a.eligible ? <>{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div><span className="pill">⚡ ×{a.multiplier} {a.boostName}</span></div>}{a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="small muted">×{x.multiplier} {x.name} : en attente de validation</div>)}</> : '—'}</td>
-                  <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava</a>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {mine.length === 0 ? <div className="card"><p className="muted" style={{ margin: 0 }}>Aucune activité pour l’instant.</p></div> : (
+        <>
+          {/* Ordinateur : tableau */}
+          <div className="card only-desktop" style={{ overflowX: 'auto' }}>
+            <table>
+              <thead><tr><th>Date</th><th>Activité</th><th>Type</th><th className="num">Distance</th><th className="num">Comptés</th><th></th></tr></thead>
+              <tbody>
+                {mine.map((a) => (
+                  <tr key={a.id} className={a.eligible ? '' : 'off'}>
+                    <td>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
+                    <td>{a.name || (a.source === 'manual' ? 'Saisie manuelle' : '—')}
+                      {!a.eligible && <div className="small">{a.reason}</div>}
+                      {a.eligible && a.overCap && <div className="small" style={{ color: 'var(--red)' }}>{capNote}</div>}
+                    </td>
+                    <td>{SPORT_FR[a.sport_type] ?? a.sport_type}</td>
+                    <td className="num">{fmtKm(a.rawKm)} km</td>
+                    <td className="num">{a.eligible ? <>{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div><span className="pill">⚡ ×{a.multiplier.toLocaleString('fr-FR')} {a.boostName}</span></div>}{a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="small muted">×{x.multiplier} {x.name} : en attente de validation</div>)}</> : '—'}</td>
+                    <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava</a>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Mobile : une carte par activité */}
+          <div className="act-list only-mobile">
+            {mine.map((a) => (
+              <div key={a.id} className={`act-card${a.eligible ? '' : ' off'}`}>
+                <div className="act-top">
+                  <div>
+                    <div className="act-date">{fmtDate(a.day)} · {a.start_date_local.slice(11, 16)} · {SPORT_FR[a.sport_type] ?? a.sport_type}</div>
+                    <div className="act-name">{a.name || (a.source === 'manual' ? 'Saisie manuelle' : '—')}</div>
+                  </div>
+                  <div className="act-km">
+                    <b>{a.eligible ? `${fmtKm(a.countedKm)} km` : '—'}</b>
+                    {a.eligible && a.countedKm !== a.rawKm && <span>{fmtKm(a.rawKm)} réels</span>}
+                    {!a.eligible && <span>{fmtKm(a.rawKm)} km</span>}
+                  </div>
+                </div>
+                {(a.multiplier > 1 || !a.eligible || a.overCap || a.pendingBoosts.some((x) => x.multiplier > a.multiplier) || a.strava_activity_id) && (
+                  <div className="act-meta">
+                    {a.eligible && a.multiplier > 1 && <span className="pill">⚡ ×{a.multiplier.toLocaleString('fr-FR')} {a.boostName}</span>}
+                    {a.eligible && a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <span key={x.id} className="small muted">×{x.multiplier} {x.name} en attente de validation</span>)}
+                    {!a.eligible && <span className="small">{a.reason}</span>}
+                    {a.eligible && a.overCap && <span className="small" style={{ color: 'var(--red)' }}>{capNote}</span>}
+                    {a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava ↗</a>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       <p className="muted small">Tu ne vois que tes propres activités. Le classement public n’affiche que des totaux par équipe. <Link href="/confidentialite">En savoir plus</Link></p>
     </>
   );
