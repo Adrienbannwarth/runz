@@ -4,7 +4,10 @@ import { Suspense } from 'react';
 import NavProgress from './NavProgress';
 import '@fontsource-variable/figtree';
 import './globals.css';
-import { fmtDate, getSettings } from '@/lib/data';
+import { getSettings } from '@/lib/data';
+
+const longDate = (d: string) =>
+  new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 export const metadata: Metadata = {
   title: 'RunZ Challenge · Chaque pas compte',
@@ -13,15 +16,14 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const dates = await getSettings()
-    .then((s) => `du ${fmtDate(s.start_date)} au ${fmtDate(s.end_date)}`)
+    .then((s) => `du ${longDate(s.start_date)} au ${longDate(s.end_date)}`)
     .catch(() => '');
   return (
     <html lang="fr">
       <body>
         <Suspense fallback={null}><NavProgress /></Suspense>
         <div className="announce">
-          RunZ Challenge {dates && <>· {dates} </>}· chaque pas compte
-          <Link href="/me">Je participe</Link>
+          RunZ Challenge{dates && <> {dates}</>}
         </div>
         <header className="top">
           <span aria-hidden="true" />
