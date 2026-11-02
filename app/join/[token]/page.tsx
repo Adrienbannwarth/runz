@@ -15,7 +15,7 @@ export default async function Join({ params }: { params: Promise<{ token: string
       <div className="card">
         <p style={{ marginTop: 0 }}>
           Connecte ton compte Strava pour que tes km remontent automatiquement dans le score de ton équipe.
-          Seules la distance, la durée, le dénivelé et l’heure de départ de tes activités sont utilisées.
+          Seules la distance, la durée, le dénivelé et l’heure de départ de tes activités sont utilisées (et le tracé des seules activités que tu tagues #TRACEZ pour le jeu des formes).
         </p>
         <a className="btn strava" href={`/api/strava/connect?invite=${token}`}>
           {p.strava_athlete_id ? 'Reconnecter Strava' : 'Se connecter avec Strava'}

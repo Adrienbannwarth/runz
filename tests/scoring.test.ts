@@ -1,6 +1,8 @@
 import { test } from 'node:test';
+import { battleResults, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
 import assert from 'node:assert/strict';
-import { boostActiveAt, boostsOn, computeStandings, leadSentence, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
+import { decodePolyline, hasTraceTag, polylineToPath } from '../lib/polyline.ts';
+import { boostActiveAt, boostsOn, computeStandings, leadSentence, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 // Réglages du fichier RunZ-Suivi.xlsx (onglet Paramètres)
 const settings: Settings = {
@@ -252,4 +254,59 @@ test('saisies manuelles Strava : ne comptent plus à partir de la date, sauf val
   assert.equal(gps.countedKm, 6);
   // règle désactivée : tout compte comme avant
   assert.equal(scoreActivities([m('2026-11-02')], settings, [])[0].countedKm, 5);
+});
+
+test('#TRACEZ : tag, polyline, boost réservé aux activités taguées', () => {
+  assert.ok(hasTraceTag('Mon cœur #TRACEZ'));
+  assert.ok(hasTraceTag('licorne #tracez'));
+  assert.ok(!hasTraceTag('Footing du midi'));
+  assert.ok(tagMatch('#TRACEZ', 'Dessin # TraceZ du dimanche'));
+  // exemple officiel de l'algorithme Google
+  assert.deepEqual(decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@'), [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]]);
+  const path = polylineToPath('_p~iF~ps|U_ulLnnqC_mqNvxq`@')!;
+  assert.match(path, /^M[\d.]+ [\d.]+L/);
+  for (const n of path.match(/[\d.]+/g)!.map(Number)) assert.ok(n >= 0 && n <= 100);
+  assert.equal(polylineToPath(null), null);
+  // Tracé GPS ×5 à valider, réservé aux activités #TRACEZ
+  const b: Boost[] = [{ id: 1, name: 'Tracé GPS', starts_at: '2026-11-07T00:00:00', ends_at: '2026-11-08T23:59:59', multiplier: 5, slot: 'Tous', manual: true, tag: '#TRACEZ' }];
+  const cap = { ...settings, cap_mode: 'cap' as const };
+  const [normale, forme, formeValidee] = scoreActivities([
+    { ...act('a', '2026-11-07T10:00:00', 6), name: 'Run du samedi' },
+    { ...act('a', '2026-11-08T10:00:00', 4), name: 'Cœur #TRACEZ' },
+    { ...act('a', '2026-11-08T15:00:00', 12), name: 'Licorne #TRACEZ', validated_boosts: [1] },
+  ], cap, b);
+  assert.equal(normale.pendingBoosts.length, 0);   // pas taguée : n'apparaît pas à valider
+  assert.equal(normale.countedKm, 6);
+  assert.equal(forme.pendingBoosts.length, 1);     // taguée : à valider
+  // dimanche : 4 + 12 = 16 km réels → plafond 10, la forme validée (×5) passe d'abord : 10 × 5 = 50
+  assert.equal(formeValidee.countedKm, 50);
+  assert.equal(forme.countedKm, 0);
+});
+
+test('Battle TraceZ : ouverture lundi 9h, duels, % de victoires', () => {
+  const tb: Boost = { id: 1, name: 'Tracé GPS', starts_at: '2026-11-07T00:00:00', ends_at: '2026-11-08T23:59:59', multiplier: 5, tag: '#TRACEZ', vote_from: '2026-11-09', vote_to: '2026-11-13' };
+  assert.equal(voteOpen(tb, '2026-11-09T08:59:59'), false);
+  assert.equal(voteOpen(tb, '2026-11-09T09:00:00'), true);
+  assert.equal(voteOpen(tb, '2026-11-13T23:59:00'), true);
+  assert.equal(voteOpen(tb, '2026-11-14T00:00:00'), false);
+  assert.equal(voteEnded(tb, '2026-11-13T23:59:00'), false);
+  assert.equal(voteEnded(tb, '2026-11-14T08:00:00'), true);
+  // 4 formes (A, B, C à des personnes différentes, D au votant) : 3 duels sans sa forme, 6 en test
+  const sh: Shape[] = [['A', 'pa'], ['B', 'pb'], ['C', 'pc'], ['D', 'me']].map(([id, p]) => ({ id, participant_id: p, path: 'M0 0L1 1' }));
+  const pairs = remainingPairs(sh, [], 'me');
+  assert.equal(pairs.length, 3);
+  assert.ok(pairs.every(([x, y]) => x !== 'D' && y !== 'D'));
+  assert.equal(remainingPairs(sh, [], 'me', { allowOwn: true }).length, 6);
+  // un duel déjà voté (dans un sens ou l'autre) n'est plus proposé
+  const v: Vote[] = [{ voter_id: 'me', a: 'B', b: 'A', winner: 'A' }];
+  assert.equal(remainingPairs(sh, v, 'me').length, 2);
+  // % = victoires ÷ duels
+  const votes: Vote[] = [
+    { voter_id: 'x', a: 'A', b: 'B', winner: 'A' }, { voter_id: 'y', a: 'A', b: 'C', winner: 'A' },
+    { voter_id: 'z', a: 'A', b: 'B', winner: 'B' }, { voter_id: 'x', a: 'B', b: 'C', winner: 'C' },
+  ];
+  const r = battleResults(sh.slice(0, 3), votes);
+  assert.deepEqual(r.map((x) => [x.shape.id, x.wins, x.duels]), [['A', 2, 3], ['C', 1, 2], ['B', 1, 3]]); // C (50 %) passe devant B (33 %)
+  assert.equal(Math.round(r[0].pct * 100), 67);
+  assert.equal(r[1].pct, 0.5);
 });

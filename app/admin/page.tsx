@@ -7,6 +7,9 @@ import { leadSentence } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
 import CopyLink from './CopyLink';
+import ShapeSvg from '../ShapeSvg';
+import { polylineToPath } from '@/lib/polyline';
+import { battleBoost, battleResults, battleShapes, loadVotes, testShapes } from '@/lib/battle';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +26,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
   const sp = await searchParams;
   const tab = sp.tab || 'participants';
   const d = await loadAll();
+  const bb = battleBoost(d.boosts);
+  const battle = bb && tab === 'mvp' ? await (async () => {
+    const shapes = battleShapes(bb, d.activities); const votes = await loadVotes();
+    const tShapes = testShapes(d.activities); const tVotes = await loadVotes(true);
+    return { boost: bb, shapes, votes, results: battleResults(shapes, votes), test: { shapes: tShapes, votes: tVotes, results: battleResults(tShapes, tVotes) } };
+  })() : null;
   const teamsAll = d.teamList;                       // toutes les équipes (y compris inactives)
   const allTeams = teamsAll.filter((t) => t.active); // équipes en jeu
   const pName = (id: string | null) => d.participants.find((p) => p.id === id)?.display_name ?? '';
@@ -408,17 +417,18 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         return (
           <>
             {subnav}
-            <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {windowLabel(current)}. Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.</p>
+            <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {windowLabel(current)}. Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.
+              {current.tag && <> Seules les activités dont le titre contient <b>{current.tag}</b> apparaissent ici, et <b>une seule par personne</b> peut être validée (valider une autre remplace la précédente). Les formes validées participent au vote{current.vote_from ? ` du ${fmtDate(current.vote_from)} au ${fmtDate(current.vote_to ?? current.vote_from)}` : ''}</>}</p>
             <div className="card" style={{ overflowX: 'auto' }}>
               {rows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité sur cette période pour l’instant.</p> : (
                 <table>
-                  <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th></th><th></th></tr></thead>
+                  <thead><tr>{current.tag && <th>Forme</th>}<th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th></th><th></th></tr></thead>
                   <tbody>
                     {rows.map((a) => {
                       const t = teamOf(a.participant_id);
                       return (
                         <tr key={a.id}>
-                          <td>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
+                          {current.tag && <td><ShapeSvg path={polylineToPath(a.polyline)} size={72} /></td>}<td>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
                           <td><span className="dot" style={{ background: t?.color }} /> {pName(a.participant_id)}</td>
                           <td>{a.name || (a.source === 'manual' ? 'Saisie manuelle' : '—')} <span className="muted small">{SPORT_FR[a.sport_type] ?? a.sport_type}</span>
                             {a.flag && <div className="small" style={{ color: 'var(--red)' }}>⚠ {a.flag}</div>}</td>
@@ -453,6 +463,58 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         const teamOf = (id: number | null) => d.teamList.find((t) => t.id === id);
         return (
           <>
+            {battle && (
+              <>
+                <h2>Battle TraceZ · mode test admins</h2>
+                <p className="muted small">
+                  Avant l’ouverture ({fmtDate(battle.boost.vote_from!)} à 9h), les admins connectés à Strava voient la fenêtre de vote sur l’accueil avec leurs propres tracés récents.
+                  Ces votes sont marqués « test » et ne comptent jamais dans le vrai classement. {battle.test.shapes.length} tracé{battle.test.shapes.length > 1 ? 's' : ''} · {battle.test.votes.length} vote{battle.test.votes.length > 1 ? 's' : ''} de test.
+                </p>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <form action={A.prepareBattleTest}><button className="btn small primary">{battle.test.shapes.length ? 'Rafraîchir les tracés de test' : 'Préparer le test'}</button></form>
+                  {(battle.test.shapes.length > 0 || battle.test.votes.length > 0) && <form action={A.clearBattleTest}><button className="btn small danger">Effacer le test</button></form>}
+                </div>
+                {battle.test.results.length > 0 && (
+                  <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
+                    <table>
+                      <thead><tr><th>#</th><th>Forme</th><th>Admin</th><th className="num">Victoires</th><th className="num">Duels</th><th className="num">% gagnés</th></tr></thead>
+                      <tbody>
+                        {battle.test.results.map((r, k) => (
+                          <tr key={r.shape.id}>
+                            <td>{k + 1}</td><td><ShapeSvg path={r.shape.path} size={48} /></td><td>{pName(r.shape.participant_id)}</td>
+                            <td className="num">{r.wins}</td><td className="num">{r.duels}</td><td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+            {battle && (
+              <>
+                <h2>Battle TraceZ · {battle.shapes.length} forme{battle.shapes.length > 1 ? 's' : ''} validée{battle.shapes.length > 1 ? 's' : ''} · {battle.votes.length} vote{battle.votes.length > 1 ? 's' : ''}</h2>
+                <p className="muted small">Vote du {fmtDate(battle.boost.vote_from!)} au {fmtDate(battle.boost.vote_to ?? battle.boost.vote_from!)} · classement au % de duels gagnés (visible par les participants seulement après la fin du vote).</p>
+                <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
+                  {battle.results.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune forme validée pour l’instant (onglet Validations › {battle.boost.name}).</p> : (
+                    <table>
+                      <thead><tr><th>#</th><th>Forme</th><th>Participant</th><th className="num">Victoires</th><th className="num">Duels</th><th className="num">% gagnés</th></tr></thead>
+                      <tbody>
+                        {battle.results.map((r, k) => (
+                          <tr key={r.shape.id}>
+                            <td>{k + 1}</td>
+                            <td><ShapeSvg path={r.shape.path} size={56} /></td>
+                            <td>{pName(r.shape.participant_id)}</td>
+                            <td className="num">{r.wins}</td><td className="num">{r.duels}</td>
+                            <td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
+            )}
             <h2>Prix calculés</h2>
             <div className="card" style={{ overflowX: 'auto' }}>
               <table>

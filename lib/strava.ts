@@ -1,5 +1,6 @@
 import 'server-only';
 import { db, must } from './db';
+import { hasTraceTag } from './polyline';
 
 const API = 'https://www.strava.com/api/v3';
 const OAUTH = 'https://www.strava.com/oauth';
@@ -110,10 +111,12 @@ function toRow(participantId: string, a: StravaActivity) {
     strava_manual: !!a.manual,
     trainer: !!a.trainer,
     has_track: !!(a.map?.summary_polyline || a.map?.polyline),
+    // Tracé conservé UNIQUEMENT pour les activités que la personne a taguées #TRACEZ (jeu des formes)
+    polyline: hasTraceTag(a.name) ? (a.map?.summary_polyline || a.map?.polyline || null) : null,
   };
 }
 
-/** Seules les données utiles au calcul sont stockées (pas de tracé GPS, pas de polyline). */
+/** Seules les données utiles au calcul sont stockées (pas de tracé GPS, sauf activités taguées #TRACEZ). */
 export async function upsertActivity(participantId: string, a: StravaActivity) {
   must(await db().from('activities').upsert(toRow(participantId, a), { onConflict: 'strava_activity_id' }));
 }
@@ -151,6 +154,20 @@ export async function syncParticipant(participantId: string, startDate: string, 
 
   must(await db().from('participants').update({ last_sync_at: new Date().toISOString() }).eq('id', participantId));
   return all.length;
+}
+
+/** Mode test Battle (admins) : récupère les tracés des dernières activités déjà en base et les range dans test_polyline. */
+export async function fetchTestPolylines(participantId: string, max = 8) {
+  const p = must(await db().from('participants').select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
+  const list = await api<StravaActivity[]>(await validToken(p), `/athlete/activities?per_page=30`);
+  let n = 0;
+  for (const a of list) {
+    const pl = a.map?.summary_polyline;
+    if (!pl || n >= max) continue;
+    const { data } = await db().from('activities').update({ test_polyline: pl }).eq('strava_activity_id', a.id).eq('participant_id', participantId).select('id');
+    if (data?.length) n++;
+  }
+  return n;
 }
 
 export async function fetchActivity(participantId: string, activityId: number) {

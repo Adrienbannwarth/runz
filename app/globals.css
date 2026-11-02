@@ -204,3 +204,20 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
   background: #efefec; color: var(--ink); border: 0; cursor: pointer; text-decoration: none; }
 .icon-btn:hover { background: #e2e2de; }
+
+/* Battle TraceZ */
+.battle-overlay { position: fixed; inset: 0; z-index: 90; background: rgba(17,17,17,.6); display: grid; place-items: center; padding: 16px; }
+.battle { position: relative; background: #fff; border-radius: 12px; padding: 28px; width: min(720px, 100%); max-height: calc(100vh - 32px); overflow: auto; text-align: center; }
+.battle h2 { margin: 4px 0 18px; }
+.battle-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: #efefec; font-size: 20px; cursor: pointer; }
+.battle-duel { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+.battle-card { border: 2px solid var(--line); border-radius: 12px; padding: 10px; background: var(--soft); cursor: pointer; aspect-ratio: 1; transition: transform .15s, border-color .15s; }
+.battle-card:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--ink); }
+.battle-card:disabled { opacity: .6; cursor: wait; }
+.battle-vs { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--ink); color: #fff; font-weight: 800; font-size: 13px; border-radius: 99px; padding: 6px 10px; }
+@media (max-width: 520px) { .battle { padding: 20px 16px; } .battle-duel { gap: 10px; } }
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 32px; }
+.podium-item { display: grid; gap: 6px; text-align: center; justify-items: center; }
+.podium-rank { font-size: 28px; }
+@media (max-width: 520px) { .podium { gap: 8px; } .podium-item b { font-size: 13px; } }
+.battle .eyebrow { padding: 0 40px; }

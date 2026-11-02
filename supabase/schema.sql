@@ -69,6 +69,8 @@ create table if not exists activities (
   has_track           boolean,                         -- un tracé GPS existe (le tracé n'est pas stocké)
   validated_boosts    int[] not null default '{}',     -- boosts « à valider » accordés par un admin
   manual_ok           boolean not null default false,  -- saisie manuelle Strava validée par un admin
+  polyline            text,                            -- tracé, conservé seulement pour les activités taguées #TRACEZ
+  test_polyline       text,                            -- mode test Battle (admins uniquement)
   created_at          timestamptz not null default now()
 );
 create index if not exists activities_participant_idx on activities(participant_id);
@@ -84,7 +86,9 @@ create table if not exists boosts (
   manual      boolean not null default false,  -- true = ne s'applique qu'aux activités validées par un admin
   from_time   time,                            -- horaire perso quotidien (prioritaire sur slot), ex. 18:30
   to_time     time,                            -- ex. 22:00 (exclu)
-  bonus_note  text,                            -- défi bonus sans multiplicateur (affichage seul), ex. « +10 km par photo validée »
+  bonus_note  text,
+  tag         text,                            -- boost réservé aux activités dont le titre contient ce tag (ex. #TRACEZ)
+  vote_from   date, vote_to date,              -- vote « Battle TraceZ » des formes validées                            -- défi bonus sans multiplicateur (affichage seul), ex. « +10 km par photo validée »
   created_at  timestamptz not null default now()
 );
 
@@ -105,3 +109,16 @@ alter table participants enable row level security;
 alter table activities   enable row level security;
 alter table boosts       enable row level security;
 alter table bonuses      enable row level security;
+
+-- Battle TraceZ : votes en duels
+create table if not exists votes (
+  id          serial primary key,
+  voter_id    uuid not null references participants(id) on delete cascade,
+  a           uuid not null references activities(id) on delete cascade,
+  b           uuid not null references activities(id) on delete cascade,
+  winner      uuid not null references activities(id) on delete cascade,
+  test        boolean not null default false,  -- vote du mode test admins
+  created_at  timestamptz not null default now()
+);
+create unique index if not exists votes_pair_unique on votes (voter_id, least(a, b), greatest(a, b));
+alter table votes enable row level security;

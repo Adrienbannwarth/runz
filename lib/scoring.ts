@@ -48,11 +48,18 @@ export type Activity = {
   has_track?: boolean | null;
   validated_boosts?: number[] | null; // boosts « à valider » accordés par un admin
   manual_ok?: boolean | null;         // saisie manuelle Strava validée par un admin
+  polyline?: string | null;           // tracé, conservé seulement pour les activités #TRACEZ
 };
 export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null;
   from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
   bonus_note?: string | null; // défi bonus sans multiplicateur (ex. « +10 km par photo validée »), affiché seulement
+  tag?: string | null;        // boost à valider réservé aux activités dont le titre contient ce tag (ex. #TRACEZ)
+  vote_from?: string | null; vote_to?: string | null; // vote « battle » des formes validées
 };
+
+/** Le titre contient le tag (insensible à la casse, aux espaces et au #). */
+export const tagMatch = (tag: string, name?: string | null) =>
+  !!name && name.toLowerCase().replace(/[\s#]/g, '').includes(tag.toLowerCase().replace(/[\s#]/g, ''));
 
 /** Boosts et défis qui ont lieu ce jour-là (le plus fort d'abord, les défis bonus après). */
 export function boostsOn(boosts: Boost[], day: string): Boost[] {
@@ -197,6 +204,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
       const validated = new Set((a.validated_boosts ?? []).map(Number));
       for (const b of boosts) {
         if (b.bonus_note || !boostApplies(b, local, slot)) continue;
+        if (b.tag && !tagMatch(b.tag, a.name)) continue; // boost réservé aux activités taguées
         if (b.manual && !validated.has(Number(b.id))) {
           pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
           continue;

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { timingSafeEqual } from 'node:crypto';
 import { db, must } from '@/lib/db';
 import { clearAdminSession, isAdmin, setAdminSession } from '@/lib/session';
-import { syncParticipant } from '@/lib/strava';
+import { fetchTestPolylines, syncParticipant } from '@/lib/strava';
 import { getSettings } from '@/lib/data';
 
 const s = (fd: FormData, k: string) => String(fd.get(k) ?? '').trim();
@@ -121,6 +121,24 @@ export async function setBoostManual(fd: FormData) {
   must(await db().from('boosts').update({ manual: s(fd, 'manual') === '1' }).eq('id', Number(s(fd, 'id'))));
   done('boosts', 'Boost mis à jour');
 }
+/** Battle TraceZ, mode test : prend les tracés récents des admins connectés à Strava. */
+export async function prepareBattleTest() {
+  await guard();
+  const admins = must(await db().from('participants').select('id, display_name').eq('is_admin', true).not('refresh_token', 'is', null)) as { id: string; display_name: string }[];
+  const report: string[] = [];
+  for (const a of admins) {
+    try { report.push(`${a.display_name} : ${await fetchTestPolylines(a.id)} tracé(s)`); }
+    catch (e) { report.push(`${a.display_name} : ${(e as Error).message}`); }
+  }
+  done('mvp', `Test préparé · ${report.join(' · ')}`);
+}
+/** Efface le mode test (tracés et votes de test). */
+export async function clearBattleTest() {
+  await guard();
+  must(await db().from('votes').delete().eq('test', true));
+  must(await db().from('activities').update({ test_polyline: null }).not('test_polyline', 'is', null));
+  done('mvp', 'Test effacé');
+}
 /** Valide (ou refuse) une saisie manuelle Strava. */
 export async function toggleManualOk(fd: FormData) {
   await guard();
@@ -131,11 +149,22 @@ export async function toggleManualOk(fd: FormData) {
 export async function toggleBoostValidation(fd: FormData) {
   await guard();
   const id = s(fd, 'activity'); const boost = Number(s(fd, 'boost')); const on = s(fd, 'on') === '1';
-  const row = must(await db().from('activities').select('validated_boosts').eq('id', id).single()) as { validated_boosts: number[] | null };
+  const row = must(await db().from('activities').select('participant_id, validated_boosts').eq('id', id).single()) as { participant_id: string; validated_boosts: number[] | null };
+  const b = must(await db().from('boosts').select('tag').eq('id', boost).single()) as { tag: string | null };
+  let replaced = false;
+  if (on && b.tag) {
+    // Boost à tag (forme #TRACEZ) : une seule activité validée par personne sur la période
+    const others = must(await db().from('activities').select('id, validated_boosts').eq('participant_id', row.participant_id)
+      .contains('validated_boosts', [boost]).neq('id', id)) as { id: string; validated_boosts: number[] }[];
+    for (const o of others) {
+      must(await db().from('activities').update({ validated_boosts: o.validated_boosts.filter((x) => Number(x) !== boost) }).eq('id', o.id));
+      replaced = true;
+    }
+  }
   const set = new Set((row.validated_boosts ?? []).map(Number));
   if (on) set.add(boost); else set.delete(boost);
   must(await db().from('activities').update({ validated_boosts: [...set] }).eq('id', id));
-  done(`validations&boost=${boost}`, on ? 'Boost validé' : 'Validation retirée');
+  done(`validations&boost=${boost}`, on ? (replaced ? 'Forme validée (remplace la précédente de cette personne)' : 'Boost validé') : 'Validation retirée');
 }
 export async function deleteBoost(fd: FormData) {
   await guard();

@@ -1,8 +1,11 @@
 import Link from 'next/link';
-import { activeBoost, boostEffect, fmtDate, fmtKm, loadAll, windowLabel } from '@/lib/data';
+import { activeBoost, boostEffect, fmtDate, fmtKm, loadAll, nowParis, windowLabel } from '@/lib/data';
 import { boostsOn } from '@/lib/scoring';
 import { getParticipantId, isAdmin } from '@/lib/session';
 import type { TeamStats } from '@/lib/scoring';
+import { battleBoost, battleResults, battleShapes, loadVotes, remainingPairs, testShapes, voteEnded, voteOpen } from '@/lib/battle';
+import BattleModal from './BattleModal';
+import ShapeSvg from './ShapeSvg';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +41,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const connected = data.participants.filter(isOn);
   const mates = me ? data.participants.filter((p) => p.team_id === me.team_id) : [];
 
+  // Battle TraceZ : fenêtre de vote pour les participants connectés, résultats après la fin
+  const now = nowParis();
+  const bBoost = battleBoost(boosts);
+  const isOpen = !!bBoost && voteOpen(bBoost, now);
+  const shapes = bBoost ? battleShapes(bBoost, data.activities) : [];
+  const votes = bBoost && shapes.length > 1 && (isOpen || voteEnded(bBoost, now)) ? await loadVotes() : [];
+  const pairsToVote = bBoost && me && isOpen ? remainingPairs(shapes, votes, me.id) : [];
+  const podium = bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
+  // Mode test : avant l'ouverture, les admins participants votent sur leurs propres tracés (votes « test »)
+  const tShapes = bBoost && me?.is_admin && !isOpen && !voteEnded(bBoost, now) ? testShapes(data.activities) : [];
+  const testPairs = tShapes.length > 1 ? remainingPairs(tShapes, await loadVotes(true), me!.id, { allowOwn: true }) : [];
+
   const card = (t: TeamStats, big = false) => (
     <div className={`card team${big ? ' big' : ''}`} key={t.team.id}>
       <div className={`visual ${isLight(t.team.color) ? 'light' : ''}`} style={{ background: t.team.color }}>
@@ -58,6 +73,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
   return (
     <>
+      {pairsToVote.length > 0 && bBoost && (
+        <BattleModal pairs={pairsToVote} paths={Object.fromEntries(shapes.map((x) => [x.id, x.path]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
+      )}
+      {testPairs.length > 0 && bBoost && (
+        <BattleModal test pairs={testPairs} paths={Object.fromEntries(tShapes.map((x) => [x.id, x.path]))} until={`${fmtDate(bBoost.vote_from!)} à 9h`} />
+      )}
       {sp.error && <div className="alert err">{sp.error}</div>}
       {sp.disconnected && <div className="alert ok">Ton compte Strava est déconnecté et tes données Strava ont été effacées.</div>}
 
@@ -96,6 +117,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </details>
       )}
 
+      {podium.length > 0 && view !== 'visitor' && (
+        <>
+          <h2>🏆 Battle TraceZ : le podium</h2>
+          <div className="podium">
+            {podium.map((r, k) => (
+              <div className="card podium-item" key={r.shape.id}>
+                <div className="podium-rank">{['🥇', '🥈', '🥉'][k]}</div>
+                <ShapeSvg path={r.shape.path} size="100%" />
+                <b>{data.participants.find((p) => p.id === r.shape.participant_id)?.display_name}</b>
+                <span className="muted small">{Math.round(r.pct * 100)} % de duels gagnés</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       {boost && (
         <div className="banner">⚡ {boost.name} en cours : chaque km compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}{boost.manual ? ', après validation des organisateurs' : ''}</div>
       )}
