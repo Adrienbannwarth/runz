@@ -73,12 +73,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
   return (
     <>
-      {pairsToVote.length > 0 && bBoost && (
-        <BattleModal pairs={pairsToVote} paths={Object.fromEntries(shapes.map((x) => [x.id, x.path]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
-      )}
-      {testPairs.length > 0 && bBoost && (
-        <BattleModal test pairs={testPairs} paths={Object.fromEntries(tShapes.map((x) => [x.id, x.path]))} until={`${fmtDate(bBoost.vote_from!)} à 9h`} />
-      )}
       {sp.error && <div className="alert err">{sp.error}</div>}
       {sp.disconnected && <div className="alert ok">Ton compte Strava est déconnecté et tes données Strava ont été effacées.</div>}
 
@@ -115,6 +109,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             <li><b>Le classement reste secret</b> jusqu’au {fmtDate(settings.end_date)} : résultats et prix à la fin du challenge.</li>
           </ol>
         </details>
+      )}
+      {bBoost && me && isOpen && shapes.length > 1 && (
+        <BattleModal pairs={pairsToVote} paths={Object.fromEntries(shapes.map((x) => [x.id, x.path]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
+      )}
+      {bBoost && tShapes.length > 1 && (
+        <BattleModal test pairs={testPairs} paths={Object.fromEntries(tShapes.map((x) => [x.id, x.path]))} until={`${fmtDate(bBoost.vote_from!)} à 9h`} />
       )}
 
       {podium.length > 0 && view !== 'visitor' && (
