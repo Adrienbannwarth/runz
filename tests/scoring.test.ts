@@ -319,3 +319,15 @@ test('Battle TraceZ : ouverture lundi 9h, duels, % de victoires', () => {
   assert.equal(Math.round(r[0].pct * 100), 67);
   assert.equal(r[1].pct, 0.5);
 });
+
+test('On vient à pied Days : ×3 sur la marche et la rando seulement', () => {
+  const b: Boost[] = [{ id: 2, name: 'On vient à pied Days', starts_at: '2026-11-05T00:00:00', ends_at: '2026-11-05T23:59:59', multiplier: 3, slot: 'Tous', sport_types: ['Walk', 'Hike'] }];
+  const s = scoreActivities([
+    act('a', '2026-11-05T08:30:00', 3, 'Walk'),   // marche → ×3
+    act('b', '2026-11-05T12:00:00', 4, 'Hike'),   // rando → ×3
+    act('c', '2026-11-05T19:00:00', 5, 'Run'),    // course → compte normalement, sans ×3
+    act('d', '2026-11-06T08:30:00', 3, 'Walk'),   // lendemain → ×1
+  ], settings, b);
+  assert.deepEqual(s.map((x) => x.multiplier), [3, 3, 1, 1]);
+  assert.deepEqual(s.map((x) => x.countedKm), [9, 12, 5, 3]);
+});

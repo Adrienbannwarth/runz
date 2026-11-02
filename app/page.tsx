@@ -133,7 +133,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </>
       )}
       {boost && (
-        <div className="banner">⚡ {boost.name} en cours : chaque km compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}{boost.manual ? ', après validation des organisateurs' : ''}</div>
+        <div className="banner">⚡ {boost.name} en cours : chaque km{boost.sports ? ` (${boost.sports} uniquement)` : ''} compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}{boost.manual ? ', après validation des organisateurs' : ''}</div>
       )}
 
       {view === 'admin' && (

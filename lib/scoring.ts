@@ -54,6 +54,7 @@ export type Boost = { id: number; name: string; starts_at: string; ends_at: stri
   from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
   bonus_note?: string | null; // défi bonus sans multiplicateur (ex. « +10 km par photo validée »), affiché seulement
   tag?: string | null;        // boost à valider réservé aux activités dont le titre contient ce tag (ex. #TRACEZ)
+  sport_types?: string[] | null; // boost réservé à ces types d'activité (ex. Walk, Hike) ; vide = tous
   vote_from?: string | null; vote_to?: string | null; // vote « battle » des formes validées
 };
 
@@ -205,6 +206,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
       for (const b of boosts) {
         if (b.bonus_note || !boostApplies(b, local, slot)) continue;
         if (b.tag && !tagMatch(b.tag, a.name)) continue; // boost réservé aux activités taguées
+        if (b.sport_types?.length && !b.sport_types.includes(a.sport_type)) continue; // boost réservé à certains types (ex. marche)
         if (b.manual && !validated.has(Number(b.id))) {
           pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
           continue;

@@ -39,9 +39,9 @@ export async function loadAll() {
 export function activeBoost(boosts: Boost[], settings: Settings) {
   const now = nowParis();
   const b = boostActiveAt(boosts, now);
-  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: windowLabel(b) === 'toute la journée' ? 'Tous' : windowLabel(b), manual: !!b.manual };
+  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: windowLabel(b) === 'toute la journée' ? 'Tous' : windowLabel(b), manual: !!b.manual, sports: sportsLabel(b.sport_types) };
   if (now.slice(0, 10) === settings.end_date && Number(settings.sprint_multiplier) > 1)
-    return { name: 'Sprint final', multiplier: Number(settings.sprint_multiplier), until: `${settings.end_date}T23:59:59`, slot: 'Tous', manual: false };
+    return { name: 'Sprint final', multiplier: Number(settings.sprint_multiplier), until: `${settings.end_date}T23:59:59`, slot: 'Tous', manual: false, sports: '' };
   return null;
 }
 
@@ -65,5 +65,16 @@ export const fmtDate = (d: string) =>
   new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** « ×2 », « ×1,5 » ou le texte du défi bonus. */
-export const boostEffect = (b: Pick<Boost, 'multiplier' | 'bonus_note'>) =>
-  b.bonus_note || `×${Number(b.multiplier).toLocaleString('fr-FR')}`;
+const SPORT_LABEL: Record<string, string> = { Walk: 'marche', Hike: 'rando', Run: 'course', TrailRun: 'trail', VirtualRun: 'tapis' };
+/** « ×3 », « ×3 · marche et rando » ou le texte du défi bonus. */
+export const boostEffect = (b: Pick<Boost, 'multiplier' | 'bonus_note' | 'sport_types'>) => {
+  if (b.bonus_note) return b.bonus_note;
+  const x = `×${Number(b.multiplier).toLocaleString('fr-FR')}`;
+  const t = sportsLabel(b.sport_types);
+  return t ? `${x} · ${t} uniquement` : x;
+};
+/** « marche et rando » (vide si tous les types). */
+export function sportsLabel(types?: string[] | null) {
+  const t = (types ?? []).map((s) => SPORT_LABEL[s] ?? s);
+  return t.length > 1 ? `${t.slice(0, -1).join(', ')} et ${t[t.length - 1]}` : t[0] ?? '';
+}

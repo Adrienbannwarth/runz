@@ -88,6 +88,7 @@ create table if not exists boosts (
   to_time     time,                            -- ex. 22:00 (exclu)
   bonus_note  text,
   tag         text,                            -- boost réservé aux activités dont le titre contient ce tag (ex. #TRACEZ)
+  sport_types text[],                          -- boost réservé à ces types d'activité (ex. Walk, Hike) ; vide = tous
   vote_from   date, vote_to date,              -- vote « Battle TraceZ » des formes validées                            -- défi bonus sans multiplicateur (affichage seul), ex. « +10 km par photo validée »
   created_at  timestamptz not null default now()
 );

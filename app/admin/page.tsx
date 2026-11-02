@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appCapacity, appUrl, stravaApps } from '@/lib/strava';
-import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, windowLabel } from '@/lib/data';
+import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, sportsLabel, windowLabel } from '@/lib/data';
 import { leadSentence } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
@@ -341,7 +341,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
               <tbody>
                 {d.boosts.map((b) => (
                   <tr key={b.id}>
-                    <td>{b.name}</td><td>{fmtDate(b.starts_at)}</td><td>{fmtDate(b.ends_at)}</td><td>{windowLabel(b)}</td>
+                    <td>{b.name}{b.sport_types?.length ? <div className="muted small">{sportsLabel(b.sport_types)} uniquement</div> : null}</td><td>{fmtDate(b.starts_at)}</td><td>{fmtDate(b.ends_at)}</td><td>{windowLabel(b)}</td>
                     <td className="num">{b.bonus_note ?? b.multiplier}</td>
                     <td>
                       <form action={A.setBoostManual} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
