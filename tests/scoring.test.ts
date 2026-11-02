@@ -283,10 +283,10 @@ test('#TRACEZ : tag, polyline, boost réservé aux activités taguées', () => {
   assert.equal(forme.countedKm, 0);
 });
 
-test('Battle TraceZ : ouverture lundi 9h, duels, % de victoires', () => {
+test('Battle TraceZ : ouverture lundi 14h, duels, % de victoires', () => {
   const tb: Boost = { id: 1, name: 'Tracé GPS', starts_at: '2026-11-07T00:00:00', ends_at: '2026-11-08T23:59:59', multiplier: 5, tag: '#TRACEZ', vote_from: '2026-11-09', vote_to: '2026-11-13' };
-  assert.equal(voteOpen(tb, '2026-11-09T08:59:59'), false);
-  assert.equal(voteOpen(tb, '2026-11-09T09:00:00'), true);
+  assert.equal(voteOpen(tb, '2026-11-09T13:59:59'), false);
+  assert.equal(voteOpen(tb, '2026-11-09T14:00:00'), true);
   assert.equal(voteOpen(tb, '2026-11-13T23:59:00'), true);
   assert.equal(voteOpen(tb, '2026-11-14T00:00:00'), false);
   assert.equal(voteEnded(tb, '2026-11-13T23:59:00'), false);

@@ -114,7 +114,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         <BattleModal pairs={pairsToVote} shapes={Object.fromEntries(shapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
       )}
       {bBoost && testPairs.length > 0 && (
-        <BattleModal test pairs={testPairs} shapes={Object.fromEntries(tShapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={`${fmtDate(bBoost.vote_from!)} à 9h`} />
+        <BattleModal test pairs={testPairs} shapes={Object.fromEntries(tShapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={`${fmtDate(bBoost.vote_from!)} à 14h`} />
       )}
 
       {podium.length > 0 && view !== 'visitor' && (

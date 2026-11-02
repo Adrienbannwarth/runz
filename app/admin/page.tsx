@@ -467,7 +467,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
               <>
                 <h2>Battle TraceZ · mode test admins</h2>
                 <p className="muted small">
-                  Avant l’ouverture ({fmtDate(battle.boost.vote_from!)} à 9h), les admins connectés à Strava voient la fenêtre de vote sur l’accueil avec leurs propres tracés récents.
+                  Avant l’ouverture ({fmtDate(battle.boost.vote_from!)} à 14h), les admins connectés à Strava voient la fenêtre de vote sur l’accueil avec leurs propres tracés récents.
                   Ces votes sont marqués « test » et ne comptent jamais dans le vrai classement. {battle.test.shapes.length} tracé{battle.test.shapes.length > 1 ? 's' : ''} · {battle.test.votes.length} vote{battle.test.votes.length > 1 ? 's' : ''} de test.
                 </p>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>

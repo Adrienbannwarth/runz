@@ -5,7 +5,7 @@ import type { Activity, Boost } from './scoring.ts';
 export type Vote = { voter_id: string; a: string; b: string; winner: string; test?: boolean | null };
 export type Shape = { id: string; participant_id: string; path: string; km: number; label: string };
 
-export const VOTE_OPEN_HOUR = '09:00'; // la fenêtre de vote s'ouvre le premier jour à 9h
+export const VOTE_OPEN_HOUR = '14:00'; // la fenêtre de vote s'ouvre le premier jour à 14h (matinée laissée aux validations)
 
 /** Le boost « forme » qui porte un vote (le plus récent), s'il existe. */
 export const battleBoost = (boosts: Boost[]) =>
@@ -27,7 +27,7 @@ export function testShapes(activities: (Activity & { test_polyline?: string | nu
     .filter((s) => s.path);
 }
 
-/** Ouvert du premier jour à 9h (heure de Paris) jusqu'au dernier jour inclus. `now` = « YYYY-MM-DDTHH:MM:SS ». */
+/** Ouvert du premier jour à 14h (heure de Paris) jusqu'au dernier jour inclus. `now` = « YYYY-MM-DDTHH:MM:SS ». */
 export const voteOpen = (boost: Boost, now: string) =>
   !!boost.vote_from && now >= `${boost.vote_from}T${VOTE_OPEN_HOUR}` && now.slice(0, 10) <= (boost.vote_to ?? boost.vote_from);
 export const voteEnded = (boost: Boost, now: string) => !!boost.vote_from && now.slice(0, 10) > (boost.vote_to ?? boost.vote_from);
