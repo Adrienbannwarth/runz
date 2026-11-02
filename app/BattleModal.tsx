@@ -9,7 +9,7 @@ import { voteDuel } from './battle-actions';
  * Chaque votant a son tirage : chaque forme n'apparaît qu'une fois pour lui, dans un seul duel.
  */
 type Info = { path: string; km: number; label: string };
-const km = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
+const km = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
 
 export default function BattleModal({ pairs, shapes, until, test = false }: { pairs: [string, string][]; shapes: Record<string, Info>; until: string; test?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -52,7 +52,7 @@ export default function BattleModal({ pairs, shapes, until, test = false }: { pa
             <div className="battle-duel">
               {[a, b].map((id, k) => (
                 <button key={id} className="battle-card" disabled={pending} onClick={() => pick(id)} aria-label={`Choisir la forme ${k === 0 ? 'de gauche' : 'de droite'}${shapes[id]?.label ? ` : ${shapes[id].label}` : ''}, ${km(shapes[id]?.km ?? 0)}`}>
-                  <ShapeSvg path={shapes[id]?.path ?? null} size="100%" bg="var(--soft)" color="var(--strava)" />
+                  <ShapeSvg path={shapes[id]?.path ?? null} size="100%" bg="var(--soft)" color="var(--strava)" stroke={1.3} />
                   <span className="shape-tags">
                     {shapes[id]?.label && <span className="shape-tag">{shapes[id].label}</span>}
                     <span className="shape-tag">{km(shapes[id]?.km ?? 0)}</span>
