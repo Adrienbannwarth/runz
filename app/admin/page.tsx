@@ -352,16 +352,62 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
 
       {tab === 'validations' && (() => {
         const manual = d.boosts.filter((b) => b.manual);
-        if (!manual.length) return <div className="card"><p className="muted" style={{ margin: 0 }}>Aucun boost « à valider ». Passe un boost en validation dans l’onglet Boosts.</p></div>;
+        const manualRows = d.scored.filter((a) => a.manualReview && a.sport_type && d.settings.sport_types.includes(a.sport_type) && a.day <= d.settings.end_date)
+          .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
+        const showSaisies = !sp.boost || !manual.length; // par défaut : les saisies manuelles
+        const subnav = (
+          <nav className="tabs sub">
+            <Link href="/admin?tab=validations&v=saisies" className={showSaisies ? 'on' : ''}>Saisies manuelles Strava · {manualRows.filter((a) => !a.manual_ok).length} non validée{manualRows.filter((a) => !a.manual_ok).length > 1 ? "s" : ""}</Link>
+            {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={!showSaisies && String(b.id) === (sp.boost ?? String(manual[0].id)) ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
+          </nav>
+        );
+        if (showSaisies) {
+          return (
+            <>
+              {subnav}
+              <p className="muted small">
+                {d.settings.manual_strava_from
+                  ? <>Depuis le {fmtDate(d.settings.manual_strava_from)}, une activité saisie à la main dans Strava (sans tracé enregistré) ne compte pas, sauf si vous la validez ici. Les saisies admin (captures) ne sont pas concernées.</>
+                  : <>Règle désactivée : les saisies manuelles Strava comptent normalement. Date de départ dans l’onglet Réglages.</>}
+              </p>
+              <div className="card" style={{ overflowX: 'auto' }}>
+                {manualRows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune saisie manuelle Strava concernée.</p> : (
+                  <table>
+                    <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th></th><th></th></tr></thead>
+                    <tbody>
+                      {manualRows.map((a) => {
+                        const t = allTeams.find((x) => x.id === d.participants.find((p) => p.id === a.participant_id)?.team_id);
+                        return (
+                          <tr key={a.id} className={a.manual_ok ? '' : 'off'}>
+                            <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}><span className="dot" style={{ display: 'inline-block', background: t?.color }} /> {pName(a.participant_id)}</td>
+                            <td>{a.name || '—'} <span className="muted small">{SPORT_FR[a.sport_type] ?? a.sport_type}</span></td>
+                            <td className="num">{fmtKm(a.rawKm)} km</td>
+                            <td className="num">{a.manual_ok ? `${fmtKm(a.countedKm)} km` : '0,00 km'}</td>
+                            <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank" rel="noopener noreferrer">Voir sur Strava</a>}</td>
+                            <td>
+                              <form action={A.toggleManualOk}>
+                                <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value={a.manual_ok ? '0' : '1'} />
+                                {a.manual_ok ? <button className="btn small">✓ Validée · retirer</button> : <button className="btn small primary">Valider</button>}
+                              </form>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          );
+        }
         const current = manual.find((b) => String(b.id) === sp.boost) ?? manual[0];
         const rows = d.scored.filter((a) => a.eligible && (a.pendingBoosts.some((x) => x.id === current.id) || (a.validated_boosts ?? []).map(Number).includes(current.id)));
         const isOn = (a: (typeof rows)[number]) => (a.validated_boosts ?? []).map(Number).includes(current.id);
         const teamOf = (pid: string) => allTeams.find((t) => t.id === d.participants.find((p) => p.id === pid)?.team_id);
         return (
           <>
-            <nav className="tabs sub">
-              {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={b.id === current.id ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
-            </nav>
+            {subnav}
             <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {windowLabel(current)}. Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.</p>
             <div className="card" style={{ overflowX: 'auto' }}>
               {rows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité sur cette période pour l’instant.</p> : (
@@ -488,6 +534,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <label>Plafond km/jour<input name="daily_cap_km" defaultValue={d.settings.daily_cap_km} style={{ width: 70 }} /></label>
             <label>Plafond<select name="cap_mode" defaultValue={d.settings.cap_mode ?? 'alert'}><option value="alert">Alerte (comme l’Excel)</option><option value="cap">Coupe à {d.settings.daily_cap_km} km (km boostés d’abord)</option></select></label>
             <label>Classement<select name="ranking_mode" defaultValue={d.settings.ranking_mode ?? 'total'}><option value="total">Total</option><option value="average">Moyenne par personne</option></select></label>
+            <label>Saisies manuelles Strava refusées à partir du<input type="date" name="manual_strava_from" defaultValue={d.settings.manual_strava_from ?? ''} /></label>
             <input type="hidden" name="sprint_multiplier" value={d.settings.sprint_multiplier} />
             <fieldset style={{ border: 0, padding: 0, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {SPORTS.map((x) => (

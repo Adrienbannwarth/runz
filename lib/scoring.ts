@@ -12,6 +12,8 @@
 // 4. Plafond journalier : en mode « alert » (Excel), les km comptent tous et la journée est signalée
 //    « Plafond dépassé » ; en mode « cap », seuls `daily_cap_km` km réels comptent, en gardant d'abord
 //    les km les plus boostés (puis les premiers de la journée) ; le reste ne compte pas.
+// 4b. Saisies manuelles Strava (pas de tracé enregistré) : à partir de `manual_strava_from`, elles ne comptent
+//    que si un admin les valide (onglet Validations). Les saisies admin (captures) ne sont pas concernées.
 // 5. Équipe : total = km réels + km gagnés via multiplicateurs + km bonus. Classement au « total »
 //    ou à la « moyenne » par personne (réglage).
 
@@ -25,6 +27,7 @@ export type Settings = {
   sprint_multiplier: number;           // ancien réglage, 1 = désactivé (le Sprint final est un boost)
   sport_types: string[];
   ranking_mode?: 'total' | 'average';  // défaut : total
+  manual_strava_from?: string | null;   // à partir de ce jour, les saisies manuelles Strava ne comptent que si un admin les valide
   cap_mode?: 'alert' | 'cap';          // défaut : alert
 };
 export type Team = { id: number; name: string; color: string; emoji: string; active: boolean };
@@ -44,6 +47,7 @@ export type Activity = {
   trainer?: boolean | null;
   has_track?: boolean | null;
   validated_boosts?: number[] | null; // boosts « à valider » accordés par un admin
+  manual_ok?: boolean | null;         // saisie manuelle Strava validée par un admin
 };
 export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null;
   from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
@@ -76,7 +80,8 @@ export type ScoredActivity = Activity & {
   cappedKm: number;
   multiplier: number;
   boostName?: string;
-  pendingBoosts: { id: number; name: string; multiplier: number }[]; // boosts « à valider » possibles, pas encore validés
+  pendingBoosts: { id: number; name: string; multiplier: number }[];
+  manualReview: boolean; // saisie manuelle Strava soumise à validation (comptée seulement si validée) // boosts « à valider » possibles, pas encore validés
   countedKm: number;
   overCap: boolean;   // la journée de cette personne dépasse le plafond
   flag?: string;      // à vérifier par les admins (compte quand même)
@@ -182,6 +187,8 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     let reason: string | undefined;
     if (!allowed.has(a.sport_type)) { eligible = false; reason = `Type « ${a.sport_type} » non comptabilisé`; }
     else if (day < settings.start_date || day > settings.end_date) { eligible = false; reason = 'Hors période du challenge'; }
+    const manualReview = !!a.strava_manual && a.source === 'strava' && !!settings.manual_strava_from && day >= settings.manual_strava_from;
+    if (eligible && manualReview && !a.manual_ok) { eligible = false; reason = 'Saisie manuelle dans Strava : ne compte pas sans validation de l’organisation'; }
 
     let multiplier = 1;
     let boostName: string | undefined;
@@ -202,7 +209,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     }
     return {
       ...a, start_date_local: local, eligible, reason, day, week: weekOf(day, settings.start_date), slot,
-      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, countedKm: 0, overCap: false, flag: flagOf(a),
+      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, manualReview, countedKm: 0, overCap: false, flag: flagOf(a),
     };
   });
 

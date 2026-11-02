@@ -12,7 +12,8 @@ create table if not exists settings (
   cap_mode           text    not null default 'alert' check (cap_mode in ('alert','cap')),      -- alert = comme l'Excel
   ranking_mode       text    not null default 'total' check (ranking_mode in ('total','average')),
   sprint_multiplier  numeric not null default 1,      -- obsolète : le Sprint final est un boost
-  sport_types        text[]  not null default array['Walk','Run','TrailRun','Hike','VirtualRun']
+  sport_types        text[]  not null default array['Walk','Run','TrailRun','Hike','VirtualRun'],
+  manual_strava_from date                             -- dès ce jour, saisies manuelles Strava comptées seulement si validées
 );
 insert into settings (id) values (1) on conflict do nothing;
 
@@ -67,6 +68,7 @@ create table if not exists activities (
   trainer             boolean not null default false,  -- tapis / home trainer
   has_track           boolean,                         -- un tracé GPS existe (le tracé n'est pas stocké)
   validated_boosts    int[] not null default '{}',     -- boosts « à valider » accordés par un admin
+  manual_ok           boolean not null default false,  -- saisie manuelle Strava validée par un admin
   created_at          timestamptz not null default now()
 );
 create index if not exists activities_participant_idx on activities(participant_id);

@@ -232,3 +232,24 @@ test('calendrier : bandeau « en cours » heure par heure, et km comptés', () =
   assert.equal(k('2026-11-14T10:00:00'), 4);       // Photo couleur ne multiplie rien
   assert.equal(k('2026-11-24T10:00:00'), 8);
 });
+
+test('saisies manuelles Strava : ne comptent plus à partir de la date, sauf validation', () => {
+  const s2 = { ...settings, manual_strava_from: '2026-10-31' };
+  const m = (day: string, extra = {}) => ({ ...act('a', `${day}T10:00:00`, 5), strava_manual: true, ...extra });
+  const [avant, apres, valide, capture, gps] = scoreActivities([
+    m('2026-10-30'),                                  // avant la règle : compte
+    m('2026-10-31'),                                  // week-end : ne compte pas
+    m('2026-11-02', { manual_ok: true }),             // validée par un admin : compte
+    { ...act('a', '2026-11-02T12:00:00', 4), source: 'manual' as const }, // saisie admin (capture) : pas concernée
+    { ...act('a', '2026-11-03T12:00:00', 6), has_track: true },           // activité enregistrée : compte
+  ], s2, []);
+  assert.equal(avant.countedKm, 5);
+  assert.equal(apres.eligible, false);
+  assert.equal(apres.countedKm, 0);
+  assert.ok(apres.manualReview);
+  assert.equal(valide.countedKm, 5);
+  assert.equal(capture.countedKm, 4);
+  assert.equal(gps.countedKm, 6);
+  // règle désactivée : tout compte comme avant
+  assert.equal(scoreActivities([m('2026-11-02')], settings, [])[0].countedKm, 5);
+});

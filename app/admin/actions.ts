@@ -121,6 +121,12 @@ export async function setBoostManual(fd: FormData) {
   must(await db().from('boosts').update({ manual: s(fd, 'manual') === '1' }).eq('id', Number(s(fd, 'id'))));
   done('boosts', 'Boost mis à jour');
 }
+/** Valide (ou refuse) une saisie manuelle Strava. */
+export async function toggleManualOk(fd: FormData) {
+  await guard();
+  must(await db().from('activities').update({ manual_ok: s(fd, 'on') === '1' }).eq('id', s(fd, 'activity')));
+  done('validations&v=saisies', s(fd, 'on') === '1' ? 'Saisie manuelle validée' : 'Validation retirée');
+}
 /** Accorde (ou retire) un boost « à valider » à une activité. */
 export async function toggleBoostValidation(fd: FormData) {
   await guard();
@@ -146,6 +152,7 @@ export async function saveSettings(fd: FormData) {
     ranking_mode: s(fd, 'ranking_mode') === 'average' ? 'average' : 'total',
     cap_mode: s(fd, 'cap_mode') === 'cap' ? 'cap' : 'alert',
     sport_types: fd.getAll('sport_types').map(String),
+    manual_strava_from: orNull(s(fd, 'manual_strava_from')),
   }).eq('id', 1));
   done('reglages');
 }
