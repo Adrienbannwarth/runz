@@ -110,10 +110,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           </ol>
         </details>
       )}
-      {bBoost && me && isOpen && shapes.length > 1 && (
+      {bBoost && me && isOpen && pairsToVote.length > 0 && (
         <BattleModal pairs={pairsToVote} paths={Object.fromEntries(shapes.map((x) => [x.id, x.path]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
       )}
-      {bBoost && tShapes.length > 1 && (
+      {bBoost && testPairs.length > 0 && (
         <BattleModal test pairs={testPairs} paths={Object.fromEntries(tShapes.map((x) => [x.id, x.path]))} until={`${fmtDate(bBoost.vote_from!)} à 9h`} />
       )}
 

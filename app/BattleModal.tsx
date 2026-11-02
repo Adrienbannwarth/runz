@@ -62,11 +62,14 @@ export default function BattleModal({ pairs, paths, until, test = false }: { pai
     </div>
   );
 
+  // Tout est voté : la bannière disparaît (une fois la fenêtre de remerciement fermée)
+  if (done && !open) return null;
+
   return (
     <>
-      <button type="button" className="battle-entry" onClick={() => setOpen(true)} disabled={done}>
+      <button type="button" className="battle-entry" onClick={() => setOpen(true)}>
         <span className="battle-entry-title">Tracé GPS</span>
-        {done ? <span className="battle-entry-done">✓ Tu as voté</span> : <span className="battle-entry-cta">Voter <span aria-hidden="true">→</span></span>}
+        <span className="battle-entry-cta">Voter <span aria-hidden="true">→</span></span>
       </button>
       {/* Rendue à la racine de la page : couvre tout l'écran, quel que soit le conteneur */}
       {open && createPortal(modal, document.body)}
