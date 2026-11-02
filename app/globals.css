@@ -211,8 +211,8 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .battle h2 { margin: 4px 0 18px; }
 .battle-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: #efefec; font-size: 20px; cursor: pointer; }
 .battle-duel { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
-.battle-card { border: 2px solid var(--line); border-radius: 12px; padding: 10px; background: var(--soft); cursor: pointer; aspect-ratio: 1; transition: transform .15s, border-color .15s; }
-.battle-card:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--ink); }
+.battle-card { border: 2px solid var(--line); border-radius: 12px; padding: 0; overflow: hidden; background: var(--soft); cursor: pointer; aspect-ratio: 1; transition: transform .15s, border-color .15s; }
+.battle-card:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--strava); }
 .battle-card:disabled { opacity: .6; cursor: wait; }
 .battle-vs { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--ink); color: #fff; font-weight: 800; font-size: 13px; border-radius: 99px; padding: 6px 10px; }
 @media (max-width: 520px) { .battle { padding: 20px 16px; } .battle-duel { gap: 10px; } }
@@ -221,12 +221,10 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .podium-rank { font-size: 28px; }
 @media (max-width: 520px) { .podium { gap: 8px; } .podium-item b { font-size: 13px; } }
 .battle .eyebrow { padding: 0 40px; }
-.battle-entry { width: 100%; display: flex; align-items: center; gap: 16px; text-align: left; font: inherit; color: var(--ink);
-  background: var(--pink); border: 0; border-radius: var(--radius); padding: 16px 20px; margin: -24px 0 40px; cursor: pointer; }
+.battle-entry { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px; text-align: left; font: inherit; color: var(--ink);
+  background: var(--pink); border: 0; border-radius: var(--radius); padding: 24px 48px; margin: -24px 0 40px; cursor: pointer; }
 .battle-entry:hover:not(:disabled) { background: #f0aab4; }
 .battle-entry:disabled { cursor: default; opacity: .7; }
-.battle-entry-text { display: grid; gap: 2px; flex: 1; }
-.battle-entry-text b { font-size: 17px; }
-.battle-entry-text span { font-size: 14px; color: #5a3a3f; }
-.battle-entry-cta { flex: none; background: var(--ink); color: #fff; font-weight: 600; font-size: 14px; border-radius: 99px; padding: 10px 18px; }
-@media (max-width: 520px) { .battle-entry { padding: 14px 16px; gap: 12px; } .battle-entry-cta { padding: 8px 12px; } }
+.battle-entry-title { font-size: 36px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; }
+.battle-entry-cta { flex: none; background: var(--ink); color: #fff; font-weight: 600; font-size: 15px; border-radius: 99px; padding: 12px 22px; }
+@media (max-width: 760px) { .battle-entry { padding: 20px 24px; } .battle-entry-title { font-size: 26px; } .battle-entry-cta { padding: 10px 16px; } }

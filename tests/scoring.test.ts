@@ -291,21 +291,30 @@ test('Battle TraceZ : ouverture lundi 9h, duels, % de victoires', () => {
   assert.equal(voteOpen(tb, '2026-11-14T00:00:00'), false);
   assert.equal(voteEnded(tb, '2026-11-13T23:59:00'), false);
   assert.equal(voteEnded(tb, '2026-11-14T08:00:00'), true);
-  // 4 formes (A, B, C à des personnes différentes, D au votant) : 3 duels sans sa forme, 6 en test
-  const sh: Shape[] = [['A', 'pa'], ['B', 'pb'], ['C', 'pc'], ['D', 'me']].map(([id, p]) => ({ id, participant_id: p, path: 'M0 0L1 1' }));
+  // Tirage « battle royale » : chaque forme n'apparaît qu'une fois par votant
+  const mk = (n: number, owner = (i: number) => `p${i}`) => Array.from({ length: n }, (_, i) => ({ id: `S${String(i).padStart(2, '0')}`, participant_id: owner(i), path: 'M0 0L1 1' }));
+  const sixteen: Shape[] = mk(16, (i) => (i < 8 ? 'me' : 'christelle'));
+  const draw = remainingPairs(sixteen, [], 'me', { allowOwn: true });
+  assert.equal(draw.length, 8);                                    // 16 formes → 8 duels, pas 120
+  assert.equal(new Set(draw.flat()).size, 16);                     // chaque forme une seule fois
+  assert.deepEqual(remainingPairs(sixteen, [], 'me', { allowOwn: true }), draw); // tirage stable d'un chargement à l'autre
+  assert.notDeepEqual(remainingPairs(sixteen, [], 'christelle', { allowOwn: true }), draw); // tirage propre à chaque votant
+  // après un vote, les deux formes du duel ne reviennent plus jamais (gagnante comme perdante)
+  const [x0, y0] = draw[0];
+  const after = remainingPairs(sixteen, [{ voter_id: 'me', a: x0, b: y0, winner: x0 }], 'me', { allowOwn: true });
+  assert.equal(after.length, 7);
+  assert.ok(after.every(([x, y]) => ![x0, y0].includes(x) && ![x0, y0].includes(y)));
+  // hors test, jamais sa propre forme ; nombre impair → une forme ne joue pas
+  const sh = mk(4, (i) => (i === 3 ? 'me' : `p${i}`));
   const pairs = remainingPairs(sh, [], 'me');
-  assert.equal(pairs.length, 3);
-  assert.ok(pairs.every(([x, y]) => x !== 'D' && y !== 'D'));
-  assert.equal(remainingPairs(sh, [], 'me', { allowOwn: true }).length, 6);
-  // un duel déjà voté (dans un sens ou l'autre) n'est plus proposé
-  const v: Vote[] = [{ voter_id: 'me', a: 'B', b: 'A', winner: 'A' }];
-  assert.equal(remainingPairs(sh, v, 'me').length, 2);
+  assert.equal(pairs.length, 1);
+  assert.ok(pairs.every(([x, y]) => x !== 'S03' && y !== 'S03'));
   // % = victoires ÷ duels
   const votes: Vote[] = [
     { voter_id: 'x', a: 'A', b: 'B', winner: 'A' }, { voter_id: 'y', a: 'A', b: 'C', winner: 'A' },
     { voter_id: 'z', a: 'A', b: 'B', winner: 'B' }, { voter_id: 'x', a: 'B', b: 'C', winner: 'C' },
   ];
-  const r = battleResults(sh.slice(0, 3), votes);
+  const r = battleResults(['A', 'B', 'C'].map((id) => ({ id, participant_id: id, path: 'M0 0L1 1' })), votes);
   assert.deepEqual(r.map((x) => [x.shape.id, x.wins, x.duels]), [['A', 2, 3], ['C', 1, 2], ['B', 1, 3]]); // C (50 %) passe devant B (33 %)
   assert.equal(Math.round(r[0].pct * 100), 67);
   assert.equal(r[1].pct, 0.5);

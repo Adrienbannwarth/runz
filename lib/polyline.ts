@@ -20,7 +20,7 @@ export function decodePolyline(str: string): [number, number][] {
   return out;
 }
 
-/** Chemin SVG (viewBox 0 0 100 100, marge 6) qui dessine la forme en gardant ses proportions. */
+/** Chemin SVG (viewBox 0 0 100 100, marge 14) qui dessine la forme en gardant ses proportions. */
 export function polylineToPath(str?: string | null): string | null {
   if (!str) return null;
   const pts = decodePolyline(str);
@@ -31,7 +31,7 @@ export function polylineToPath(str?: string | null): string | null {
   const xs = xy.map((p) => p[0]), ys = xy.map((p) => p[1]);
   const minX = Math.min(...xs), minY = Math.min(...ys);
   const w = Math.max(...xs) - minX || 1e-9, h = Math.max(...ys) - minY || 1e-9;
-  const s = 88 / Math.max(w, h);
-  const ox = 6 + (88 - w * s) / 2, oy = 6 + (88 - h * s) / 2;
+  const s = 72 / Math.max(w, h);
+  const ox = 14 + (72 - w * s) / 2, oy = 14 + (72 - h * s) / 2;
   return xy.map(([x, y], j) => `${j ? 'L' : 'M'}${(ox + (x - minX) * s).toFixed(1)} ${(oy + (y - minY) * s).toFixed(1)}`).join('');
 }

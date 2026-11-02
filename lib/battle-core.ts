@@ -32,21 +32,28 @@ export const voteOpen = (boost: Boost, now: string) =>
   !!boost.vote_from && now >= `${boost.vote_from}T${VOTE_OPEN_HOUR}` && now.slice(0, 10) <= (boost.vote_to ?? boost.vote_from);
 export const voteEnded = (boost: Boost, now: string) => !!boost.vote_from && now.slice(0, 10) > (boost.vote_to ?? boost.vote_from);
 
-const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+/** Générateur pseudo-aléatoire reproductible (le tirage d'un votant reste le même d'un chargement à l'autre). */
+function seeded(seed: string) {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) { h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+}
 
 /**
- * Duels restants pour ce votant : toutes les paires possibles, sauf celles déjà votées et (sauf en test)
- * celles qui contiennent sa propre forme ; ordre et côté gauche/droite tirés au hasard.
+ * Tirage « battle royale » d'un votant : les formes qu'il n'a jamais vues sont mélangées (tirage propre à
+ * chaque votant, reproductible) puis appariées deux à deux. Chaque forme n'apparaît donc qu'UNE fois pour lui,
+ * gagnante ou perdante, et ne revient jamais. 16 formes = 8 duels. Hors test, sa propre forme est exclue.
  */
-export function remainingPairs(shapes: Shape[], votes: Vote[], voterId: string, opts: { allowOwn?: boolean; random?: () => number } = {}): [string, string][] {
-  const rnd = opts.random ?? Math.random;
-  const done = new Set(votes.filter((v) => v.voter_id === voterId).map((v) => key(v.a, v.b)));
-  const pool = opts.allowOwn ? shapes : shapes.filter((s) => s.participant_id !== voterId);
+export function remainingPairs(shapes: Shape[], votes: Vote[], voterId: string, opts: { allowOwn?: boolean; seed?: string } = {}): [string, string][] {
+  const seen = new Set(votes.filter((v) => v.voter_id === voterId).flatMap((v) => [v.a, v.b]));
+  const pool = shapes.filter((s) => !seen.has(s.id) && (opts.allowOwn || s.participant_id !== voterId)).map((s) => s.id).sort();
+  const rnd = seeded(opts.seed ?? voterId);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   const pairs: [string, string][] = [];
-  for (let i = 0; i < pool.length; i++) for (let j = i + 1; j < pool.length; j++) {
-    if (!done.has(key(pool[i].id, pool[j].id))) pairs.push(rnd() < 0.5 ? [pool[i].id, pool[j].id] : [pool[j].id, pool[i].id]);
-  }
-  for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
+  for (let i = 0; i + 1 < pool.length; i += 2) pairs.push([pool[i], pool[i + 1]]);
   return pairs;
 }
 

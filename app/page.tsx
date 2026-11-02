@@ -124,7 +124,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             {podium.map((r, k) => (
               <div className="card podium-item" key={r.shape.id}>
                 <div className="podium-rank">{['🥇', '🥈', '🥉'][k]}</div>
-                <ShapeSvg path={r.shape.path} size="100%" />
+                <ShapeSvg path={r.shape.path} size="100%" bg="var(--soft)" color="var(--strava)" />
                 <b>{data.participants.find((p) => p.id === r.shape.participant_id)?.display_name}</b>
                 <span className="muted small">{Math.round(r.pct * 100)} % de duels gagnés</span>
               </div>
