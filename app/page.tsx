@@ -111,10 +111,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </details>
       )}
       {bBoost && me && isOpen && pairsToVote.length > 0 && (
-        <BattleModal pairs={pairsToVote} paths={Object.fromEntries(shapes.map((x) => [x.id, x.path]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
+        <BattleModal pairs={pairsToVote} shapes={Object.fromEntries(shapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
       )}
       {bBoost && testPairs.length > 0 && (
-        <BattleModal test pairs={testPairs} paths={Object.fromEntries(tShapes.map((x) => [x.id, x.path]))} until={`${fmtDate(bBoost.vote_from!)} à 9h`} />
+        <BattleModal test pairs={testPairs} shapes={Object.fromEntries(tShapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={`${fmtDate(bBoost.vote_from!)} à 9h`} />
       )}
 
       {podium.length > 0 && view !== 'visitor' && (
@@ -126,6 +126,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
                 <div className="podium-rank">{['🥇', '🥈', '🥉'][k]}</div>
                 <ShapeSvg path={r.shape.path} size="100%" bg="var(--soft)" color="var(--strava)" />
                 <b>{data.participants.find((p) => p.id === r.shape.participant_id)?.display_name}</b>
+                <span className="small">{r.shape.label ? `${r.shape.label} · ` : ''}{fmtKm(r.shape.km)} km</span>
                 <span className="muted small">{Math.round(r.pct * 100)} % de duels gagnés</span>
               </div>
             ))}

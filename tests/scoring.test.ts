@@ -292,7 +292,7 @@ test('Battle TraceZ : ouverture lundi 9h, duels, % de victoires', () => {
   assert.equal(voteEnded(tb, '2026-11-13T23:59:00'), false);
   assert.equal(voteEnded(tb, '2026-11-14T08:00:00'), true);
   // Tirage « battle royale » : chaque forme n'apparaît qu'une fois par votant
-  const mk = (n: number, owner = (i: number) => `p${i}`) => Array.from({ length: n }, (_, i) => ({ id: `S${String(i).padStart(2, '0')}`, participant_id: owner(i), path: 'M0 0L1 1' }));
+  const mk = (n: number, owner = (i: number) => `p${i}`) => Array.from({ length: n }, (_, i) => ({ id: `S${String(i).padStart(2, '0')}`, participant_id: owner(i), path: 'M0 0L1 1', km: 0, label: '' }));
   const sixteen: Shape[] = mk(16, (i) => (i < 8 ? 'me' : 'christelle'));
   const draw = remainingPairs(sixteen, [], 'me', { allowOwn: true });
   assert.equal(draw.length, 8);                                    // 16 formes → 8 duels, pas 120
@@ -314,7 +314,7 @@ test('Battle TraceZ : ouverture lundi 9h, duels, % de victoires', () => {
     { voter_id: 'x', a: 'A', b: 'B', winner: 'A' }, { voter_id: 'y', a: 'A', b: 'C', winner: 'A' },
     { voter_id: 'z', a: 'A', b: 'B', winner: 'B' }, { voter_id: 'x', a: 'B', b: 'C', winner: 'C' },
   ];
-  const r = battleResults(['A', 'B', 'C'].map((id) => ({ id, participant_id: id, path: 'M0 0L1 1' })), votes);
+  const r = battleResults(['A', 'B', 'C'].map((id) => ({ id, participant_id: id, path: 'M0 0L1 1', km: 0, label: '' })), votes);
   assert.deepEqual(r.map((x) => [x.shape.id, x.wins, x.duels]), [['A', 2, 3], ['C', 1, 2], ['B', 1, 3]]); // C (50 %) passe devant B (33 %)
   assert.equal(Math.round(r[0].pct * 100), 67);
   assert.equal(r[1].pct, 0.5);
@@ -330,4 +330,14 @@ test('On vient à pied Days : ×3 sur la marche et la rando seulement', () => {
   ], settings, b);
   assert.deepEqual(s.map((x) => x.multiplier), [3, 3, 1, 1]);
   assert.deepEqual(s.map((x) => x.countedKm), [9, 12, 5, 3]);
+});
+
+test('nom de la forme et variantes du tag', async () => {
+  const { shapeLabel } = await import('../lib/polyline.ts');
+  assert.equal(shapeLabel('#TRACEZ (Cœur de Colorz)'), 'Cœur de Colorz');
+  assert.equal(shapeLabel('Licorne #TRACEZ'), 'Licorne');
+  assert.equal(shapeLabel('#tracé (Étoile)'), 'Étoile');
+  assert.equal(shapeLabel('#TRACEZ'), '');
+  for (const t of ['#TRACEZ (Cœur)', '#tracez', '# Tracé (Z)', '#TRACE (Chat)']) assert.ok(hasTraceTag(t) && tagMatch('#TRACEZ', t), t);
+  for (const t of ['Footing', '#tracer la route', 'Mon parcours']) assert.ok(!tagMatch('#TRACEZ', t), t);
 });

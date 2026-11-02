@@ -59,8 +59,13 @@ export type Boost = { id: number; name: string; starts_at: string; ends_at: stri
 };
 
 /** Le titre contient le tag (insensible à la casse, aux espaces et au #). */
-export const tagMatch = (tag: string, name?: string | null) =>
-  !!name && name.toLowerCase().replace(/[\s#]/g, '').includes(tag.toLowerCase().replace(/[\s#]/g, ''));
+export const tagMatch = (tag: string, name?: string | null) => {
+  if (!name) return false;
+  const norm = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s#]/g, '');
+  // #TRACEZ : on accepte aussi #TRACE / #TRACÉ
+  if (norm(tag) === 'tracez') return /#\s*trac[eé]\s*z?(?![a-zà-ÿ])/i.test(name);
+  return norm(name).includes(norm(tag));
+};
 
 /** Boosts et défis qui ont lieu ce jour-là (le plus fort d'abord, les défis bonus après). */
 export function boostsOn(boosts: Boost[], day: string): Boost[] {

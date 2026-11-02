@@ -481,7 +481,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                       <tbody>
                         {battle.test.results.map((r, k) => (
                           <tr key={r.shape.id}>
-                            <td>{k + 1}</td><td><ShapeSvg path={r.shape.path} size={48} /></td><td>{pName(r.shape.participant_id)}</td>
+                            <td>{k + 1}</td><td><ShapeSvg path={r.shape.path} size={48} /></td><td>{pName(r.shape.participant_id)}<div className="muted small">{r.shape.label ? `${r.shape.label} · ` : ''}{fmtKm(r.shape.km)} km</div></td>
                             <td className="num">{r.wins}</td><td className="num">{r.duels}</td><td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
                           </tr>
                         ))}
@@ -504,7 +504,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                           <tr key={r.shape.id}>
                             <td>{k + 1}</td>
                             <td><ShapeSvg path={r.shape.path} size={56} /></td>
-                            <td>{pName(r.shape.participant_id)}</td>
+                            <td>{pName(r.shape.participant_id)}<div className="muted small">{r.shape.label ? `${r.shape.label} · ` : ''}{fmtKm(r.shape.km)} km</div></td>
                             <td className="num">{r.wins}</td><td className="num">{r.duels}</td>
                             <td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
                           </tr>

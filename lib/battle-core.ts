@@ -1,9 +1,9 @@
 // Battle TraceZ : logique pure (testée dans tests/scoring.test.ts), sans accès base.
-import { polylineToPath } from './polyline.ts';
+import { polylineToPath, shapeLabel } from './polyline.ts';
 import type { Activity, Boost } from './scoring.ts';
 
 export type Vote = { voter_id: string; a: string; b: string; winner: string; test?: boolean | null };
-export type Shape = { id: string; participant_id: string; path: string };
+export type Shape = { id: string; participant_id: string; path: string; km: number; label: string };
 
 export const VOTE_OPEN_HOUR = '09:00'; // la fenêtre de vote s'ouvre le premier jour à 9h
 
@@ -15,7 +15,7 @@ export const battleBoost = (boosts: Boost[]) =>
 export function battleShapes(boost: Boost, activities: Activity[]): Shape[] {
   return activities
     .filter((a) => (a.validated_boosts ?? []).map(Number).includes(Number(boost.id)) && a.polyline)
-    .map((a) => ({ id: a.id, participant_id: a.participant_id, path: polylineToPath(a.polyline)! }))
+    .map((a) => ({ id: a.id, participant_id: a.participant_id, path: polylineToPath(a.polyline)!, km: Math.round(Number(a.distance_m) / 10) / 100, label: shapeLabel(a.name) }))
     .filter((s) => s.path);
 }
 
@@ -23,7 +23,7 @@ export function battleShapes(boost: Boost, activities: Activity[]): Shape[] {
 export function testShapes(activities: (Activity & { test_polyline?: string | null })[]): Shape[] {
   return activities
     .filter((a) => a.test_polyline)
-    .map((a) => ({ id: a.id, participant_id: a.participant_id, path: polylineToPath(a.test_polyline)! }))
+    .map((a) => ({ id: a.id, participant_id: a.participant_id, path: polylineToPath(a.test_polyline)!, km: Math.round(Number(a.distance_m) / 10) / 100, label: shapeLabel(a.name) }))
     .filter((s) => s.path);
 }
 

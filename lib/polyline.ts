@@ -1,8 +1,17 @@
 // Tracés « forme » (#TRACEZ) : décodage du polyline Strava et conversion en chemin SVG.
 // Fonctions pures, sans fond de carte : on ne montre que la forme, jamais le lieu.
 
-export const TRACE_TAG = /#\s*trace\s*z/i;
+// Nomenclature : « #TRACEZ (nom de la forme) ». Tolère #TRACE, #TRACÉ, majuscules et espaces.
+export const TRACE_TAG = /#\s*trac[eé]\s*z?(?![a-zà-ÿ])/i;
 export const hasTraceTag = (name?: string | null) => !!name && TRACE_TAG.test(name);
+
+/** Nom de la forme : le texte entre parenthèses (« #TRACEZ (Cœur) » → « Cœur »), sinon le reste du titre. */
+export function shapeLabel(title?: string | null): string {
+  if (!title) return '';
+  const paren = title.match(/\(([^)]+)\)/);
+  if (paren) return paren[1].trim().slice(0, 40);
+  return title.replace(TRACE_TAG, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+}
 
 /** Décode un polyline encodé (algorithme Google, précision 1e-5) en [lat, lng][]. */
 export function decodePolyline(str: string): [number, number][] {

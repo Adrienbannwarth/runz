@@ -8,7 +8,10 @@ import { voteDuel } from './battle-actions';
  * Vote « Tracé GPS » : bannière d'accès (sous les règles du jeu) + fenêtre de vote plein écran au clic.
  * Chaque votant a son tirage : chaque forme n'apparaît qu'une fois pour lui, dans un seul duel.
  */
-export default function BattleModal({ pairs, paths, until, test = false }: { pairs: [string, string][]; paths: Record<string, string>; until: string; test?: boolean }) {
+type Info = { path: string; km: number; label: string };
+const km = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
+
+export default function BattleModal({ pairs, shapes, until, test = false }: { pairs: [string, string][]; shapes: Record<string, Info>; until: string; test?: boolean }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const [err, setErr] = useState('');
@@ -48,8 +51,12 @@ export default function BattleModal({ pairs, paths, until, test = false }: { pai
             <h2 id="battle-title">Quelle forme préfères-tu ?</h2>
             <div className="battle-duel">
               {[a, b].map((id, k) => (
-                <button key={id} className="battle-card" disabled={pending} onClick={() => pick(id)} aria-label={`Choisir la forme ${k === 0 ? 'de gauche' : 'de droite'}`}>
-                  <ShapeSvg path={paths[id]} size="100%" bg="var(--soft)" color="var(--strava)" />
+                <button key={id} className="battle-card" disabled={pending} onClick={() => pick(id)} aria-label={`Choisir la forme ${k === 0 ? 'de gauche' : 'de droite'}${shapes[id]?.label ? ` : ${shapes[id].label}` : ''}, ${km(shapes[id]?.km ?? 0)}`}>
+                  <ShapeSvg path={shapes[id]?.path ?? null} size="100%" bg="var(--soft)" color="var(--strava)" />
+                  <span className="shape-tags">
+                    {shapes[id]?.label && <span className="shape-tag">{shapes[id].label}</span>}
+                    <span className="shape-tag">{km(shapes[id]?.km ?? 0)}</span>
+                  </span>
                 </button>
               ))}
               <span className="battle-vs" aria-hidden="true">VS</span>
