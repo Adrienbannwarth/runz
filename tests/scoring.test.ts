@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import { battleResults, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
 import assert from 'node:assert/strict';
 import { decodePolyline, hasTraceTag, polylineToPath } from '../lib/polyline.ts';
-import { boostActiveAt, boostsOn, computeStandings, leadSentence, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
+import { boostActiveAt, boostsOn, computeStandings, leadSentence, speedSuspect, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 // Réglages du fichier RunZ-Suivi.xlsx (onglet Paramètres)
 const settings: Settings = {
@@ -340,4 +340,24 @@ test('nom de la forme et variantes du tag', async () => {
   assert.equal(shapeLabel('#TRACEZ'), '');
   for (const t of ['#TRACEZ (Cœur)', '#tracez', '# Tracé (Z)', '#TRACE (Chat)']) assert.ok(hasTraceTag(t) && tagMatch('#TRACEZ', t), t);
   for (const t of ['Footing', '#tracer la route', 'Mon parcours']) assert.ok(!tagMatch('#TRACEZ', t), t);
+});
+
+test('vitesse suspecte et exclusion manuelle', () => {
+  const fast = { ...act('v', '2026-11-03T10:00:00', 10), moving_time_s: 300 };            // 10 km en 5 min = 120 km/h
+  const okRun = { ...act('v', '2026-11-04T10:00:00', 10), moving_time_s: 3000 };          // 12 km/h
+  const fastWalk = { ...act('v', '2026-11-05T10:00:00', 6, 'Walk'), moving_time_s: 1500 }; // 14,4 km/h en marche
+  const validated = { ...fast, id: 'val', speed_ok: true };
+  const excluded = { ...okRun, id: 'exc', excluded: true };
+  assert.equal(speedSuspect(fast), true);
+  assert.equal(speedSuspect(okRun), false);
+  assert.equal(speedSuspect(fastWalk), true);
+  const s = scoreActivities([fast, okRun, fastWalk, validated, excluded], settings, []);
+  const by = (id: string) => s.find((x) => x.id === id)!;
+  assert.equal(by(fast.id).eligible, false);
+  assert.match(by(fast.id).reason!, /Vitesse suspecte \(120 km\/h\)/);
+  assert.equal(by(okRun.id).eligible, true);
+  assert.equal(by(fastWalk.id).eligible, false);
+  assert.equal(by('val').eligible, true);   // validée par un admin
+  assert.equal(by('exc').eligible, false);  // exclue, même si tout est normal
+  assert.equal(by('exc').reason, 'Exclue par l’organisation');
 });

@@ -49,6 +49,8 @@ export type Activity = {
   validated_boosts?: number[] | null; // boosts « à valider » accordés par un admin
   manual_ok?: boolean | null;         // saisie manuelle Strava validée par un admin
   polyline?: string | null;           // tracé, conservé seulement pour les activités #TRACEZ
+  excluded?: boolean | null;          // exclue par un admin (triche, erreur) : ne compte jamais
+  speed_ok?: boolean | null;          // vitesse suspecte vérifiée et validée par un admin
 };
 export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null;
   from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
@@ -94,6 +96,7 @@ export type ScoredActivity = Activity & {
   multiplier: number;
   boostName?: string;
   pendingBoosts: { id: number; name: string; multiplier: number }[];
+  speedReview: boolean;  // vitesse moyenne anormale (course > 24 km/h, marche > 12 km/h) : comptée seulement si validée
   manualReview: boolean; // saisie manuelle Strava soumise à validation (comptée seulement si validée) // boosts « à valider » possibles, pas encore validés
   countedKm: number;
   overCap: boolean;   // la journée de cette personne dépasse le plafond
@@ -189,6 +192,15 @@ function boostApplies(b: Boost, local: string, slot: Slot) {
   return bs === slot;
 }
 
+/** Vitesse moyenne au-delà de laquelle une activité est mise de côté « à vérifier » (km/h). */
+export const SPEED_LIMITS: Record<string, number> = { Run: 24, TrailRun: 24, VirtualRun: 24, Walk: 12, Hike: 12 };
+export const speedKmh = (a: Pick<Activity, 'distance_m' | 'moving_time_s'>) =>
+  a.moving_time_s && Number(a.moving_time_s) > 0 ? (Number(a.distance_m) / 1000) / (Number(a.moving_time_s) / 3600) : null;
+export const speedSuspect = (a: Pick<Activity, 'distance_m' | 'moving_time_s' | 'sport_type'>) => {
+  const v = speedKmh(a); const max = SPEED_LIMITS[a.sport_type];
+  return v != null && max != null && v > max;
+};
+
 export function scoreActivities(acts: Activity[], settings: Settings, boosts: Boost[]): ScoredActivity[] {
   const allowed = new Set(settings.sport_types);
   const scored: ScoredActivity[] = acts.map((a) => {
@@ -202,6 +214,9 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     else if (day < settings.start_date || day > settings.end_date) { eligible = false; reason = 'Hors période du challenge'; }
     const manualReview = !!a.strava_manual && a.source === 'strava' && !!settings.manual_strava_from && day >= settings.manual_strava_from;
     if (eligible && manualReview && !a.manual_ok) { eligible = false; reason = 'Saisie manuelle dans Strava : ne compte pas sans validation de l’organisation'; }
+    const speedReview = speedSuspect(a);
+    if (eligible && speedReview && !a.speed_ok) { eligible = false; reason = `Vitesse suspecte (${Math.round(speedKmh(a)!)} km/h) : ne compte pas sans validation de l’organisation`; }
+    if (a.excluded) { eligible = false; reason = 'Exclue par l’organisation'; }
 
     let multiplier = 1;
     let boostName: string | undefined;
@@ -224,7 +239,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     }
     return {
       ...a, start_date_local: local, eligible, reason, day, week: weekOf(day, settings.start_date), slot,
-      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, manualReview, countedKm: 0, overCap: false, flag: flagOf(a),
+      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, manualReview, speedReview, countedKm: 0, overCap: false, flag: flagOf(a),
     };
   });
 

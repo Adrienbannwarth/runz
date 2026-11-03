@@ -145,6 +145,19 @@ export async function toggleManualOk(fd: FormData) {
   must(await db().from('activities').update({ manual_ok: s(fd, 'on') === '1' }).eq('id', s(fd, 'activity')));
   done('validations&v=saisies', s(fd, 'on') === '1' ? 'Saisie manuelle validée' : 'Validation retirée');
 }
+export async function toggleSpeedOk(fd: FormData) {
+  await guard();
+  must(await db().from('activities').update({ speed_ok: s(fd, 'on') === '1' }).eq('id', s(fd, 'activity')));
+  done('validations&v=vitesse', s(fd, 'on') === '1' ? 'Activité validée malgré la vitesse' : 'Validation retirée');
+}
+/** Exclut (ou réintègre) une activité : elle reste visible mais ne compte plus, même après une nouvelle synchro Strava. */
+export async function toggleExcluded(fd: FormData) {
+  await guard();
+  const on = s(fd, 'on') === '1';
+  must(await db().from('activities').update({ excluded: on }).eq('id', s(fd, 'activity')));
+  const back = s(fd, 'back') || 'activites';
+  done(back, on ? 'Activité exclue : elle ne compte plus' : 'Activité réintégrée');
+}
 /** Accorde (ou retire) un boost « à valider » à une activité. */
 export async function toggleBoostValidation(fd: FormData) {
   await guard();

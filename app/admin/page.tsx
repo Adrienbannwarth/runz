@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appCapacity, appUrl, stravaApps } from '@/lib/strava';
 import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, sportsLabel, windowLabel } from '@/lib/data';
-import { leadSentence } from '@/lib/scoring';
+import { leadSentence, speedKmh } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
 import CopyLink from './CopyLink';
@@ -197,7 +197,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <div className="card" style={{ overflowX: 'auto' }}>
               {rows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité pour l’instant.</p> : (
                 <table>
-                  <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th>Infos</th><th></th></tr></thead>
+                  <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th>Infos</th><th></th><th></th></tr></thead>
                   <tbody>
                     {rows.map((a) => {
                       const t = allTeams.find((x) => x.id === teamOf(a.participant_id));
@@ -217,6 +217,13 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                             {a.source === 'manual' && <div className="muted">Saisie admin</div>}
                           </td>
                           <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank" rel="noopener noreferrer">Voir sur Strava</a>}</td>
+                          <td>
+                            <form action={A.toggleExcluded}>
+                              <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value={a.excluded ? '0' : '1'} />
+                              <input type="hidden" name="back" value={sp.team ? `activites&team=${sp.team}` : 'activites'} />
+                              {a.excluded ? <button className="btn small">Réintégrer</button> : <button className="btn small danger" title="Ne plus compter cette activité (triche, erreur)">Exclure</button>}
+                            </form>
+                          </td>
                         </tr>
                       );
                     })}
@@ -363,13 +370,60 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         const manual = d.boosts.filter((b) => b.manual);
         const manualRows = d.scored.filter((a) => a.manualReview && a.sport_type && d.settings.sport_types.includes(a.sport_type) && a.day <= d.settings.end_date)
           .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
-        const showSaisies = !sp.boost || !manual.length; // par défaut : les saisies manuelles
+        const speedRows = d.scored.filter((a) => a.speedReview && !a.excluded && d.settings.sport_types.includes(a.sport_type) && a.day >= d.settings.start_date && a.day <= d.settings.end_date)
+          .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
+        const speedTodo = speedRows.filter((a) => !a.speed_ok).length;
+        const showVitesse = sp.v === 'vitesse';
+        const showSaisies = !showVitesse && (!sp.boost || !manual.length); // par défaut : les saisies manuelles
         const subnav = (
           <nav className="tabs sub">
+            <Link href="/admin?tab=validations&v=vitesse" className={showVitesse ? 'on' : ''}>Vitesse suspecte · {speedTodo} à vérifier</Link>
             <Link href="/admin?tab=validations&v=saisies" className={showSaisies ? 'on' : ''}>Saisies manuelles Strava · {manualRows.filter((a) => !a.manual_ok).length} non validée{manualRows.filter((a) => !a.manual_ok).length > 1 ? "s" : ""}</Link>
-            {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={!showSaisies && String(b.id) === (sp.boost ?? String(manual[0].id)) ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
+            {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={!showSaisies && !showVitesse && String(b.id) === (sp.boost ?? String(manual[0].id)) ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
           </nav>
         );
+        if (showVitesse) {
+          return (
+            <>
+              {subnav}
+              <p className="muted small">Une course à plus de 24 km/h de moyenne (moins de 2:30 min/km) ou une marche/rando à plus de 12 km/h est mise de côté : elle ne compte pas tant que vous ne la validez pas. C’est souvent un trajet en voiture, en vélo ou en transports enregistré en « course ». Validez si c’est une erreur de mesure, sinon excluez-la.</p>
+              <div className="card" style={{ overflowX: 'auto' }}>
+                {speedRows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité suspecte.</p> : (
+                  <table>
+                    <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Durée</th><th className="num">Vitesse</th><th></th><th></th></tr></thead>
+                    <tbody>
+                      {speedRows.map((a) => {
+                        const t = allTeams.find((x) => x.id === d.participants.find((p) => p.id === a.participant_id)?.team_id);
+                        const min = Math.round(Number(a.moving_time_s) / 60);
+                        return (
+                          <tr key={a.id} className={a.speed_ok ? '' : 'off'}>
+                            <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}><span className="dot" style={{ display: 'inline-block', background: t?.color }} /> {pName(a.participant_id)}</td>
+                            <td>{a.name || '—'} <span className="muted small">{SPORT_FR[a.sport_type] ?? a.sport_type}</span></td>
+                            <td className="num">{fmtKm(a.rawKm)} km</td>
+                            <td className="num">{min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`}</td>
+                            <td className="num" style={{ color: 'var(--red)' }}>{Math.round(speedKmh(a) ?? 0)} km/h</td>
+                            <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank" rel="noopener noreferrer">Voir sur Strava</a>}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              <form action={A.toggleSpeedOk} style={{ display: 'inline' }}>
+                                <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value={a.speed_ok ? '0' : '1'} />
+                                {a.speed_ok ? <button className="btn small">✓ Validée · retirer</button> : <button className="btn small primary">Valider</button>}
+                              </form>{' '}
+                              <form action={A.toggleExcluded} style={{ display: 'inline' }}>
+                                <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value="1" /><input type="hidden" name="back" value="validations&v=vitesse" />
+                                <button className="btn small danger">Exclure</button>
+                              </form>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          );
+        }
         if (showSaisies) {
           return (
             <>

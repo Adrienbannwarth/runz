@@ -69,6 +69,8 @@ create table if not exists activities (
   has_track           boolean,                         -- un tracé GPS existe (le tracé n'est pas stocké)
   validated_boosts    int[] not null default '{}',     -- boosts « à valider » accordés par un admin
   manual_ok           boolean not null default false,  -- saisie manuelle Strava validée par un admin
+  excluded            boolean not null default false,  -- exclue par un admin (triche, erreur)
+  speed_ok            boolean not null default false,  -- vitesse suspecte validée par un admin
   polyline            text,                            -- tracé, conservé seulement pour les activités taguées #TRACEZ
   test_polyline       text,                            -- mode test Battle (admins uniquement)
   created_at          timestamptz not null default now()
