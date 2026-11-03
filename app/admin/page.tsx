@@ -214,6 +214,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                             {a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="muted">×{x.multiplier} {x.name} à valider</div>)}
                             {a.eligible && a.overCap && <div style={{ color: 'var(--red)' }}>Plafond {d.settings.daily_cap_km} km dépassé ce jour</div>}
                             {a.flag && <div style={{ color: 'var(--red)' }}>⚠ {a.flag}</div>}
+                            {a.speedReview && a.speed_ok && (
+                              <form action={A.toggleSpeedOk} className="muted">
+                                <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value="0" />
+                                Vitesse validée par l’organisation · <button className="linkish">retirer</button>
+                              </form>
+                            )}
                             {a.source === 'manual' && <div className="muted">Saisie admin</div>}
                           </td>
                           <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank" rel="noopener noreferrer">Voir sur Strava</a>}</td>
@@ -370,9 +376,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         const manual = d.boosts.filter((b) => b.manual);
         const manualRows = d.scored.filter((a) => a.manualReview && a.sport_type && d.settings.sport_types.includes(a.sport_type) && a.day <= d.settings.end_date)
           .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
-        const speedRows = d.scored.filter((a) => a.speedReview && !a.excluded && d.settings.sport_types.includes(a.sport_type) && a.day >= d.settings.start_date && a.day <= d.settings.end_date)
+        const speedRows = d.scored.filter((a) => a.speedReview && !a.excluded && !a.speed_ok && d.settings.sport_types.includes(a.sport_type) && a.day >= d.settings.start_date && a.day <= d.settings.end_date)
           .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
-        const speedTodo = speedRows.filter((a) => !a.speed_ok).length;
+        const speedTodo = speedRows.length;
         const showVitesse = sp.v === 'vitesse';
         const showSaisies = !showVitesse && (!sp.boost || !manual.length); // par défaut : les saisies manuelles
         const subnav = (
@@ -386,7 +392,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           return (
             <>
               {subnav}
-              <p className="muted small">Une course à plus de 24 km/h de moyenne (moins de 2:30 min/km) ou une marche/rando à plus de 12 km/h est mise de côté : elle ne compte pas tant que vous ne la validez pas. C’est souvent un trajet en voiture, en vélo ou en transports enregistré en « course ». Validez si c’est une erreur de mesure, sinon excluez-la.</p>
+              <p className="muted small">Une course à plus de 24 km/h de moyenne (moins de 2:30 min/km) ou une marche/rando à plus de 12 km/h est mise de côté : elle ne compte pas tant que vous ne la validez pas. C’est souvent un trajet en voiture, en vélo ou en transports enregistré en « course ». Validez si c’est une erreur de mesure (elle compte et quitte la liste), sinon excluez-la. Une activité validée se retire ensuite depuis l’onglet Activités.</p>
               <div className="card" style={{ overflowX: 'auto' }}>
                 {speedRows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité suspecte.</p> : (
                   <table>
