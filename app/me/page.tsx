@@ -40,7 +40,7 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
 
       <h1>{me.display_name}</h1>
       <p className="muted">
-        {team ? <>Équipe <b>{team.team.emoji} {team.team.name}</b> · {team.rank}e au classement</> : 'Équipe pas encore attribuée'}
+        {team ? <>Équipe <b>{team.team.emoji} {team.team.name}</b>{data.today > data.settings.end_date && <> · {team.rank === 1 ? '🏆 équipe gagnante' : `${team.rank}e au classement`}</>}</> : 'Équipe pas encore attribuée'}
         {me.last_sync_at && <> · dernière synchro {new Date(me.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</>}
       </p>
 
