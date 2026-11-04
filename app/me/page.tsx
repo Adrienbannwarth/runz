@@ -29,6 +29,10 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
   const stats = data.people.find((p) => p.participant.id === pid)!;
   const team = data.teams.find((t) => t.team.id === me.team_id);
   const mine = data.scored.filter((s) => s.participant_id === pid);
+  const cap = Number(data.settings.daily_cap_km) || 10;
+  const inChallenge = data.today >= data.settings.start_date && data.today <= data.settings.end_date;
+  const todayKm = mine.filter((s) => s.eligible && s.day === data.today).reduce((t, s) => t + s.rawKm, 0);
+  const leftKm = Math.max(0, cap - todayKm);
 
   const capNote = data.settings.cap_mode === 'cap'
     ? `Plus de ${data.settings.daily_cap_km} km ce jour-là : seuls ${data.settings.daily_cap_km} km comptent (les plus boostés d’abord)`
@@ -43,6 +47,21 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
         {team ? <>Équipe <b>{team.team.emoji} {team.team.name}</b>{data.today > data.settings.end_date && <> · {team.rank === 1 ? '🏆 équipe gagnante' : `${team.rank}e au classement`}</>}</> : 'Équipe pas encore attribuée'}
         {me.last_sync_at && <> · dernière synchro {new Date(me.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</>}
       </p>
+
+      {inChallenge && (
+        <div className="card day-goal">
+          <div className="day-goal-head">
+            <span className="muted small">Aujourd’hui</span>
+            <b>{fmtKm(todayKm)} / {fmtKm(cap)} km</b>
+          </div>
+          <div className="progress"><div style={{ width: `${Math.min(100, (todayKm / cap) * 100)}%` }} /></div>
+          <p style={{ margin: '10px 0 0' }}>
+            {leftKm > 0
+              ? <>Encore <b>{fmtKm(leftKm)} km</b> pour atteindre le palier des {fmtKm(cap).replace(',00', '')} km du jour 💪</>
+              : <>Palier des {fmtKm(cap).replace(',00', '')} km atteint aujourd’hui ✅{data.settings.cap_mode === 'cap' ? ' Au-delà, les km ne comptent plus pour l’équipe.' : ''}</>}
+          </p>
+        </div>
+      )}
 
       <div className="grid">
         <div className="card"><div className="muted small">Km comptés (boosts inclus)</div><div className="team"><div className="score">{fmtKm(stats.countedKm)}</div></div></div>
