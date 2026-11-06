@@ -5,6 +5,8 @@ import NavProgress from './NavProgress';
 import '@fontsource-variable/figtree';
 import './globals.css';
 import { getSettings } from '@/lib/data';
+import { REWIND_PUBLIC } from '@/lib/rewind';
+import { isAdmin } from '@/lib/session';
 
 const longDate = (d: string) =>
   new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
@@ -18,6 +20,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dates = await getSettings()
     .then((s) => `du ${longDate(s.start_date)} au ${longDate(s.end_date)}`)
     .catch(() => '');
+  // Rewind : réservé aux admins tant que REWIND_PUBLIC est à false
+  const showRewind = REWIND_PUBLIC || (await isAdmin().catch(() => false));
   return (
     <html lang="fr">
       <body>
@@ -28,12 +32,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="top">
           <span aria-hidden="true" />
           <Link href="/" className="brand" aria-label="RunZ by Colorz, accueil"><img src="/logo.svg" alt="RunZ by Colorz" /></Link>
-          <Link href="/me" className="top-right" aria-label="Mon espace">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-              <circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-            </svg>
-            Mon espace
-          </Link>
+          <div className="top-actions">
+            {showRewind && <Link href="/rewind" className="rewind-btn" aria-label="Mon RunZ Rewind">⏪ Rewind</Link>}
+            <Link href="/me" className="top-right" aria-label="Mon espace">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+              </svg>
+              Mon espace
+            </Link>
+          </div>
         </header>
         <main>{children}</main>
         <footer>
