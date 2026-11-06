@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { loadAll } from '@/lib/data';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
@@ -55,27 +54,24 @@ export default async function RewindPage({ searchParams }: { searchParams: Promi
     gallery: shapes.map((x) => ({ participantId: x.participant_id, path: x.path, label: x.label, km: x.km })),
   });
 
+  const asOf = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
   return (
-    <>
-      {!REWIND_PUBLIC && (
-        <div className="alert">
-          Aperçu admin : le Rewind n’est visible que par les admins. Pour l’ouvrir à tous, passer <code>REWIND_PUBLIC</code> à <code>true</code> dans <code>lib/rewind.ts</code>.
-        </div>
-      )}
+    <RewindStories r={rewind} key={person.id}>
       {admin && (
-        <form className="rewind-pick" method="get">
-          <label className="muted small" htmlFor="p">Voir le Rewind de</label>
-          <select id="p" name="p" defaultValue={person.id}>
-            {data.participants.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
-          </select>
-          <button className="btn">Afficher</button>
-        </form>
+        <>
+          <form className="rewind-pick" method="get">
+            <label htmlFor="p">Voir le Rewind de</label>
+            <select id="p" name="p" defaultValue={person.id}>
+              {data.participants.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+            </select>
+            <button>Afficher</button>
+          </form>
+          <p>
+            {!REWIND_PUBLIC && 'Aperçu admin (REWIND_PUBLIC = false dans lib/rewind.ts). '}
+            {rewind.final ? 'Chiffres définitifs.' : `Chiffres provisoires au ${asOf(data.today)}, mis à jour jusqu’au ${asOf(data.settings.end_date)}.`}
+          </p>
+        </>
       )}
-      <RewindStories r={rewind} key={person.id} />
-      <p className="muted small" style={{ textAlign: 'center' }}>
-        {rewind.final ? 'Chiffres définitifs du challenge.' : `Chiffres provisoires au ${new Date(`${data.today}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}, le Rewind se met à jour jusqu’au ${new Date(`${data.settings.end_date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`}
-        {' '}<Link href="/me">Retour à Mon espace</Link>
-      </p>
-    </>
+    </RewindStories>
   );
 }

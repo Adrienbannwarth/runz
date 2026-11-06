@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { SCATTER_H, SCATTER_W, type Rewind } from '@/lib/rewind';
 import './rewind.css';
 
@@ -28,7 +29,13 @@ function Count({ to, dec = 0, on }: { to: number; dec?: number; on: boolean }) {
   return <>{nf(v, dec)}</>;
 }
 
-export default function RewindStories({ r }: { r: Rewind }) {
+/** Ferme le Rewind : retour à la page précédente du site, sinon l'accueil. */
+function closeRewind() {
+  if (document.referrer.startsWith(location.origin) && history.length > 1) history.back();
+  else location.href = '/';
+}
+
+export default function RewindStories({ r, children }: { r: Rewind; children?: React.ReactNode }) {
   const team = r.teamColor ?? '#fc5200';
   const teamInk = light(team) ? '#111' : '#fff';
   const first = r.name.split(' ')[0];
@@ -170,10 +177,7 @@ export default function RewindStories({ r }: { r: Rewind }) {
           </g>
         ))}
       </svg>
-      <div className="r rw-small" style={{ marginTop: 8 }}>
-        <span style={{ color: '#FC4C02' }}>●</span> course <span style={{ color: '#4c8a33', marginLeft: 8 }}>●</span> marche
-        {r.tracksTotal > r.tracks.length && <> · les {r.tracks.length} plus longues</>}
-      </div>
+      {r.tracksTotal > r.tracks.length && <div className="r rw-small" style={{ marginTop: 8 }}>Les {r.tracks.length} plus longues</div>}
       <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={() => shareImage(drawTracks(r), `runz-traces-${slug(r.name)}.png`)}>⬇ Télécharger mes tracés</button></div>
     </>) }] : []),
     ...(r.gallery.length ? [{ cls: 's-gallery', body: (on: boolean) => (<>
@@ -222,6 +226,7 @@ export default function RewindStories({ r }: { r: Rewind }) {
       if (e.key === 'ArrowRight') go(idx + 1);
       if (e.key === 'ArrowLeft') go(idx - 1);
       if (e.key === ' ') { e.preventDefault(); setPaused((p) => !p); }
+      if (e.key === 'Escape') closeRewind();
     };
     addEventListener('keydown', k); return () => removeEventListener('keydown', k);
   }, [idx, go]);
@@ -231,8 +236,12 @@ export default function RewindStories({ r }: { r: Rewind }) {
   const down = () => { held.current = false; hold.current = setTimeout(() => { held.current = true; setPaused(true); }, 250); };
   const up = (dir: number) => { if (hold.current) clearTimeout(hold.current); if (held.current) { setPaused(false); held.current = false; return; } go(idx + dir); };
 
-  return (
-    <div className="rw">
+  // Rendu dans <body> : plein écran au-dessus du site, quel que soit le conteneur de la page
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => setHost(document.body), []);
+  if (!host) return null;
+  return createPortal(
+    <div className={`rw-overlay${children ? ' has-admin' : ''}`} role="dialog" aria-modal="true" aria-label="Mon RunZ Rewind">
       <div className={`rw-phone${slides[idx].lt ? ' lt' : ''}`}>
         <div className="rw-bars">
           {slides.map((_, i) => <div key={i} className="rw-bar"><i ref={(el) => { bars.current[i] = el; }} /></div>)}
@@ -240,6 +249,9 @@ export default function RewindStories({ r }: { r: Rewind }) {
         <div className="rw-who">{r.avatar
           ? <img className="rw-av" src={r.avatar} alt="" referrerPolicy="no-referrer" />
           : <span className="rw-av" style={{ background: team, color: teamInk }}>{first[0]}</span>}{r.name}{r.teamName ? ` · ${r.teamName}` : ''}</div>
+        <button className="rw-close" onClick={closeRewind} aria-label="Fermer le Rewind">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
         <div className="rw-tap l" onPointerDown={down} onPointerUp={() => up(-1)} onPointerLeave={() => { if (hold.current) clearTimeout(hold.current); if (held.current) { setPaused(false); held.current = false; } }} />
         <div className="rw-tap r" onPointerDown={down} onPointerUp={() => up(1)} onPointerLeave={() => { if (hold.current) clearTimeout(hold.current); if (held.current) { setPaused(false); held.current = false; } }} />
         {slides.map((s, i) => (
@@ -248,12 +260,9 @@ export default function RewindStories({ r }: { r: Rewind }) {
           </section>
         ))}
       </div>
-      <div className="rw-ctrl">
-        <button className="btn" onClick={() => go(idx - 1)}>‹ Précédent</button>
-        <button className="btn" onClick={() => setPaused((p) => !p)}>{paused ? 'Lecture' : 'Pause'}</button>
-        <button className="btn" onClick={() => go(idx + 1)}>Suivant ›</button>
-      </div>
-    </div>
+      {children && <div className="rw-admin">{children}</div>}
+    </div>,
+    host,
   );
 }
 
@@ -294,7 +303,7 @@ function drawLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, W:
   g.filter = 'none';
 }
 
-const trackColor = (sport: string) => (['Walk', 'Hike'].includes(sport) ? '#4c8a33' : '#FC4C02');
+const trackColor = (_sport: string) => '#FC4C02'; // course et marche, tout en orange
 /** Ses tracés 1080×1920, fond blanc. */
 async function drawTracks(r: Rewind) {
   const { c, g, F, W, logo } = await canvasBase();
