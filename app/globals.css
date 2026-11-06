@@ -29,8 +29,10 @@ nav.links a:hover { text-decoration: underline; text-underline-offset: 6px; }
 .top-right { justify-self: end; font-size: 14px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px; }
 /* Bouton Rewind du header */
 .top-actions { justify-self: end; display: flex; align-items: center; gap: 14px; }
-.rewind-btn { font-size: 13px; font-weight: 800; text-decoration: none; padding: 6px 12px; border-radius: 99px; background: #111; color: #fff; white-space: nowrap; }
-@media (max-width: 640px) { .rewind-btn { padding: 5px 9px; font-size: 12px; } .top-actions { gap: 8px; } }
+.rewind-btn { background: #111; color: #fff; padding: 8px 14px; border-radius: 99px; white-space: nowrap; }
+.rewind-btn:hover { background: #333; }
+@media (max-width: 640px) { .top-actions .top-right { font-size: 13px; gap: 5px; white-space: nowrap; } .rewind-btn { padding: 6px 10px; } .top-actions { gap: 10px; } }
+@media (max-width: 400px) { .top-actions .top-right svg { display: none; } header.top { gap: 10px; } }
 
 
 h1 { font-size: 44px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; margin: 8px 0 8px; }

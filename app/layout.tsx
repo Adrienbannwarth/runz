@@ -33,7 +33,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span aria-hidden="true" />
           <Link href="/" className="brand" aria-label="RunZ by Colorz, accueil"><img src="/logo.svg" alt="RunZ by Colorz" /></Link>
           <div className="top-actions">
-            {showRewind && <Link href="/rewind" className="rewind-btn" aria-label="Mon RunZ Rewind">⏪ Rewind</Link>}
+            {showRewind && (
+              <Link href="/rewind" className="top-right rewind-btn" aria-label="Mon Rewind">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" />
+                </svg>
+                Mon Rewind
+              </Link>
+            )}
             <Link href="/me" className="top-right" aria-label="Mon espace">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                 <circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
