@@ -39,9 +39,9 @@ export async function loadAll() {
 export function activeBoost(boosts: Boost[], settings: Settings) {
   const now = nowParis();
   const b = boostActiveAt(boosts, now);
-  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: windowLabel(b) === 'toute la journée' ? 'Tous' : windowLabel(b), manual: !!b.manual, sports: sportsLabel(b.sport_types) };
+  if (b) return { name: b.name, multiplier: Number(b.multiplier), until: b.ends_at, slot: windowLabel(b) === 'toute la journée' ? 'Tous' : windowLabel(b), manual: !!b.manual, sports: sportsLabel(b.sport_types), tag: b.tag ?? null };
   if (now.slice(0, 10) === settings.end_date && Number(settings.sprint_multiplier) > 1)
-    return { name: 'Sprint final', multiplier: Number(settings.sprint_multiplier), until: `${settings.end_date}T23:59:59`, slot: 'Tous', manual: false, sports: '' };
+    return { name: 'Sprint final', multiplier: Number(settings.sprint_multiplier), until: `${settings.end_date}T23:59:59`, slot: 'Tous', manual: false, sports: '', tag: null };
   return null;
 }
 
@@ -67,9 +67,10 @@ export const fmtDate = (d: string) =>
 /** « ×2 », « ×1,5 » ou le texte du défi bonus. */
 const SPORT_LABEL: Record<string, string> = { Walk: 'marche', Hike: 'rando', Run: 'course', TrailRun: 'trail', VirtualRun: 'tapis' };
 /** « ×3 », « ×3 · marche et rando » ou le texte du défi bonus. */
-export const boostEffect = (b: Pick<Boost, 'multiplier' | 'bonus_note' | 'sport_types'>) => {
+export const boostEffect = (b: Pick<Boost, 'multiplier' | 'bonus_note' | 'sport_types'> & { tag?: string | null }) => {
   if (b.bonus_note) return b.bonus_note;
   const x = `×${Number(b.multiplier).toLocaleString('fr-FR')}`;
+  if (b.tag) return `${x} sur ta forme ${b.tag} (nom)`;
   const t = sportsLabel(b.sport_types);
   return t ? `${x} · ${t} uniquement` : x;
 };

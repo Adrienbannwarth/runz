@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import { battleResults, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
 import assert from 'node:assert/strict';
 import { decodePolyline, hasTraceTag, polylineToPath } from '../lib/polyline.ts';
-import { boostActiveAt, boostsOn, computeStandings, leadSentence, speedSuspect, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
+import { boostActiveAt, boostsOn, computeStandings, leadSentence, speedSuspect, longestGapM, strictShapeName, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 // Réglages du fichier RunZ-Suivi.xlsx (onglet Paramètres)
 const settings: Settings = {
@@ -360,4 +360,38 @@ test('vitesse suspecte et exclusion manuelle', () => {
   assert.equal(by('val').eligible, true);   // validée par un admin
   assert.equal(by('exc').eligible, false);  // exclue, même si tout est normal
   assert.equal(by('exc').reason, 'Exclue par l’organisation');
+});
+
+test('Tracé GPS automatique : nom « #TRACEZ (forme) », tracé sans ligne droite, une forme par personne', () => {
+  const enc = (pts: [number, number][]) => { let out = '', pl = 0, pg = 0; const e = (v: number) => { v = v < 0 ? ~(v << 1) : v << 1; let s = ''; while (v >= 0x20) { s += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; } return s + String.fromCharCode(v + 63); };
+    for (const [la, lo] of pts) { const a = Math.round(la * 1e5), b = Math.round(lo * 1e5); out += e(a - pl) + e(b - pg); pl = a; pg = b; } return out; };
+  const walk = enc(Array.from({ length: 40 }, (_, i) => [48.85 + i * 0.001, 2.35] as [number, number]));          // points tous les ~110 m
+  const metro = enc([[48.85, 2.35], [48.851, 2.35], [48.875, 2.35], [48.876, 2.35]]);                           // ligne droite de ~2,7 km
+  assert.ok(longestGapM(walk) < 200 && longestGapM(metro) > 2500);
+  assert.equal(strictShapeName('Sortie #TRACEZ (Cœur)'), true);
+  assert.equal(strictShapeName('#tracé(étoile)'), true);
+  assert.equal(strictShapeName('Sortie #TRACEZ'), false);
+  assert.equal(strictShapeName('#TRACEZ ()'), false);
+  const tb: Boost = { id: 7, name: 'Tracé GPS', starts_at: '2026-11-07T00:00:00', ends_at: '2026-11-08T23:59:59', multiplier: 4, tag: '#TRACEZ', manual: false };
+  const shape = (pid: string, when: string, km: number, name: string, polyline: string | null, extra: Partial<Activity> = {}): Activity =>
+    ({ ...act(pid, when, km, 'Walk'), name, polyline, has_track: true, moving_time_s: km * 600, ...extra });
+  const acts = [
+    shape('t1', '2026-11-07T10:00:00', 6, 'Matin #TRACEZ (Cœur)', walk),
+    shape('t1', '2026-11-08T10:00:00', 8, 'Dimanche #TRACEZ (Étoile)', walk),            // plus longue : retenue
+    shape('t2', '2026-11-07T10:00:00', 5, 'Sortie #TRACEZ', walk),                       // pas de (forme) → à valider
+    shape('t3', '2026-11-07T10:00:00', 4, 'Métro #TRACEZ (Escargot)', metro),             // ligne droite → à valider
+    shape('t4', '2026-11-07T10:00:00', 9, 'Vélo #TRACEZ (Z)', walk, { moving_time_s: 900 }), // 36 km/h → ne compte pas
+    shape('t5', '2026-11-07T10:00:00', 5, 'Choix admin #TRACEZ (Lune)', metro, { validated_boosts: [7] }),
+  ];
+  const s = scoreActivities(acts, settings, [tb]);
+  const by = (name: string) => s.find((x) => x.name?.startsWith(name))!;
+  assert.equal(by('Dimanche').multiplier, 4); assert.equal(by('Dimanche').tagWinner, 7);
+  assert.equal(by('Matin').multiplier, 1);
+  assert.equal(by('Sortie').multiplier, 1); assert.equal(by('Sortie').pendingBoosts[0]?.id, 7);
+  assert.equal(by('Métro').multiplier, 1); assert.equal(by('Métro').pendingBoosts[0]?.id, 7);
+  assert.equal(by('Vélo').eligible, false); assert.equal(by('Vélo').multiplier, 1);
+  assert.equal(by('Choix admin').multiplier, 4);
+  // une forme retenue exclue : la suivante prend le relais automatiquement
+  const s2 = scoreActivities(acts.map((a) => (a.name?.startsWith('Dimanche') ? { ...a, excluded: true } : a)), settings, [tb]);
+  assert.equal(s2.find((x) => x.name?.startsWith('Matin'))!.multiplier, 4);
 });

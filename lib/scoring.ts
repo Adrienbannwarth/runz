@@ -17,6 +17,8 @@
 // 5. Équipe : total = km réels + km gagnés via multiplicateurs + km bonus. Classement au « total »
 //    ou à la « moyenne » par personne (réglage).
 
+import { decodePolyline } from './polyline.ts';
+
 export type Slot = 'Avant 8h' | '12h-14h' | '19h-22h' | 'Autre';
 export type BoostSlot = Slot | 'Tous';
 
@@ -96,6 +98,9 @@ export type ScoredActivity = Activity & {
   multiplier: number;
   boostName?: string;
   pendingBoosts: { id: number; name: string; multiplier: number }[];
+  tagCandidates: number[]; // boosts à tag automatiques pour lesquels l'activité est éligible (une seule retenue par personne)
+  tagWinner?: number;      // boost à tag automatique effectivement appliqué à cette activité
+  gpsGapM?: number;        // plus longue ligne droite du tracé (m), si tracé conservé
   speedReview: boolean;  // vitesse moyenne anormale (course > 24 km/h, marche > 12 km/h) : comptée seulement si validée
   manualReview: boolean; // saisie manuelle Strava soumise à validation (comptée seulement si validée) // boosts « à valider » possibles, pas encore validés
   countedKm: number;
@@ -192,6 +197,23 @@ function boostApplies(b: Boost, local: string, slot: Slot) {
   return bs === slot;
 }
 
+/** Nom de forme strict : « #TRACEZ (nom) » (avec #TRACE / #TRACÉ acceptés). */
+export const strictShapeName = (name?: string | null) => !!name && /#\s*trac[eé]\s*z?\s*\(\s*[^)\s][^)]*\)/i.test(name);
+/** Ligne droite au-delà de laquelle une forme part en vérification (trajet en transports probable). */
+export const GPS_GAP_MAX_M = 1000;
+/** Plus longue ligne droite du tracé, en mètres (0 si pas de tracé). */
+export function longestGapM(polyline?: string | null): number {
+  if (!polyline) return 0;
+  const pts = decodePolyline(polyline); let max = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [la1, lo1] = pts[i - 1], [la2, lo2] = pts[i];
+    const p1 = la1 * Math.PI / 180, p2 = la2 * Math.PI / 180, dp = p2 - p1, dl = (lo2 - lo1) * Math.PI / 180;
+    const d = 2 * 6371000 * Math.asin(Math.sqrt(Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2));
+    if (d > max) max = d;
+  }
+  return max;
+}
+
 /** Vitesse moyenne au-delà de laquelle une activité est mise de côté « à vérifier » (km/h). */
 export const SPEED_LIMITS: Record<string, number> = { Run: 24, TrailRun: 24, VirtualRun: 24, Walk: 12, Hike: 12 };
 export const speedKmh = (a: Pick<Activity, 'distance_m' | 'moving_time_s'>) =>
@@ -221,12 +243,22 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     let multiplier = 1;
     let boostName: string | undefined;
     const pendingBoosts: ScoredActivity['pendingBoosts'] = [];
+    const tagCandidates: number[] = [];
+    const gpsGapM = a.polyline ? longestGapM(a.polyline) : undefined;
     if (eligible) {
       const validated = new Set((a.validated_boosts ?? []).map(Number));
       for (const b of boosts) {
         if (b.bonus_note || !boostApplies(b, local, slot)) continue;
         if (b.tag && !tagMatch(b.tag, a.name)) continue; // boost réservé aux activités taguées
         if (b.sport_types?.length && !b.sport_types.includes(a.sport_type)) continue; // boost réservé à certains types (ex. marche)
+        if (b.tag && !b.manual) {
+          // Forme automatique : nom « #TRACEZ (nom) », vrai tracé GPS sans grande ligne droite. Sinon, vérification par un admin.
+          const ok = validated.has(Number(b.id))
+            || (strictShapeName(a.name) && a.has_track !== false && !a.trainer && !!a.polyline && (gpsGapM ?? 0) <= GPS_GAP_MAX_M);
+          if (ok) tagCandidates.push(Number(b.id));
+          else pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
+          continue; // le multiplicateur n'est appliqué qu'à la forme retenue (une par personne), plus bas
+        }
         if (b.manual && !validated.has(Number(b.id))) {
           pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
           continue;
@@ -239,9 +271,24 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
     }
     return {
       ...a, start_date_local: local, eligible, reason, day, week: weekOf(day, settings.start_date), slot,
-      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, manualReview, speedReview, countedKm: 0, overCap: false, flag: flagOf(a),
+      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, tagCandidates, gpsGapM, manualReview, speedReview, countedKm: 0, overCap: false, flag: flagOf(a),
     };
   });
+
+  // Formes automatiques : une seule retenue par personne et par boost (celle choisie par un admin, sinon la plus longue)
+  for (const b of boosts.filter((x) => x.tag && !x.manual)) {
+    const byPerson = new Map<string, ScoredActivity[]>();
+    for (const s of scored) if (s.eligible && s.tagCandidates.includes(Number(b.id))) {
+      if (!byPerson.has(s.participant_id)) byPerson.set(s.participant_id, []);
+      byPerson.get(s.participant_id)!.push(s);
+    }
+    for (const list of byPerson.values()) {
+      const chosen = list.find((s) => (s.validated_boosts ?? []).map(Number).includes(Number(b.id)))
+        ?? [...list].sort((x, y) => y.rawKm - x.rawKm || x.start_date_local.localeCompare(y.start_date_local))[0];
+      chosen.tagWinner = Number(b.id);
+      if (Number(b.multiplier) > chosen.multiplier) { chosen.multiplier = Number(b.multiplier); chosen.boostName = b.name; }
+    }
+  }
 
   // Plafond journalier par personne
   const byDay = new Map<string, ScoredActivity[]>();

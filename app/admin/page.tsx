@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appCapacity, appUrl, stravaApps } from '@/lib/strava';
 import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, sportsLabel, windowLabel } from '@/lib/data';
-import { leadSentence, speedKmh } from '@/lib/scoring';
+import { GPS_GAP_MAX_M, leadSentence, speedKmh, strictShapeName, tagMatch } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
 import CopyLink from './CopyLink';
@@ -28,7 +28,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
   const d = await loadAll();
   const bb = battleBoost(d.boosts);
   const battle = bb && tab === 'mvp' ? await (async () => {
-    const shapes = battleShapes(bb, d.activities); const votes = await loadVotes();
+    const shapes = battleShapes(bb, d.scored); const votes = await loadVotes();
     const tShapes = testShapes(d.activities); const tVotes = await loadVotes(true);
     return { boost: bb, shapes, votes, results: battleResults(shapes, votes), test: { shapes: tShapes, votes: tVotes, results: battleResults(tShapes, tVotes) } };
   })() : null;
@@ -373,7 +373,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
       )}
 
       {tab === 'validations' && (() => {
-        const manual = d.boosts.filter((b) => b.manual);
+        const manual = d.boosts.filter((b) => b.manual || b.tag); // boosts à valider + formes (automatiques ou non)
         const manualRows = d.scored.filter((a) => a.manualReview && a.sport_type && d.settings.sport_types.includes(a.sport_type) && a.day <= d.settings.end_date)
           .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
         const speedRows = d.scored.filter((a) => a.speedReview && !a.excluded && !a.speed_ok && d.settings.sport_types.includes(a.sport_type) && a.day >= d.settings.start_date && a.day <= d.settings.end_date)
@@ -471,18 +471,22 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           );
         }
         const current = manual.find((b) => String(b.id) === sp.boost) ?? manual[0];
-        const rows = d.scored.filter((a) => a.eligible && (a.pendingBoosts.some((x) => x.id === current.id) || (a.validated_boosts ?? []).map(Number).includes(current.id)));
-        const isOn = (a: (typeof rows)[number]) => (a.validated_boosts ?? []).map(Number).includes(current.id);
+        const auto = !!current.tag && !current.manual; // forme comptée automatiquement
+        const rows = d.scored.filter((a) => (a.eligible || (auto && a.excluded && tagMatch(current.tag!, a.name) && a.day >= current.starts_at.slice(0, 10) && a.day <= current.ends_at.slice(0, 10)))
+          && (a.pendingBoosts.some((x) => x.id === current.id) || (a.validated_boosts ?? []).map(Number).includes(current.id) || a.tagCandidates.includes(current.id)));
+        const isOn = (a: (typeof rows)[number]) => auto ? a.tagWinner === current.id : (a.validated_boosts ?? []).map(Number).includes(current.id);
         const teamOf = (pid: string) => allTeams.find((t) => t.id === d.participants.find((p) => p.id === pid)?.team_id);
         return (
           <>
             {subnav}
-            <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {windowLabel(current)}. Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.
-              {current.tag && <> Seules les activités dont le titre contient <b>{current.tag}</b> apparaissent ici, et <b>une seule par personne</b> peut être validée (valider une autre remplace la précédente). Les formes validées participent au vote{current.vote_from ? ` du ${fmtDate(current.vote_from)} au ${fmtDate(current.vote_to ?? current.vote_from)}` : ''}</>}</p>
+            <p className="muted small">{current.name} : du {fmtDate(current.starts_at)} au {fmtDate(current.ends_at)}, créneau {windowLabel(current)}. {auto
+                ? <><b>Automatique</b> : une activité nommée « #TRACEZ (nom) » avec un vrai tracé GPS compte ×{current.multiplier} sans intervention (une par personne, la plus longue, sauf si vous en retenez une autre). Celles sans parenthèses ou avec une ligne droite de plus de {GPS_GAP_MAX_M / 1000} km (transports ?) attendent votre validation ; trop rapides (voiture, vélo), elles ne comptent pas du tout. Excluez toute forme douteuse. {rows.filter(isOn).length} retenue(s) sur {rows.length}.</>
+                : <>Tant qu’une activité n’est pas validée, elle compte sans ce multiplicateur. {rows.filter(isOn).length} validée(s) sur {rows.length}.</>}
+              {current.tag && !auto && <> Seules les activités dont le titre contient <b>{current.tag}</b> apparaissent ici, et <b>une seule par personne</b> peut être validée (valider une autre remplace la précédente). Les formes validées participent au vote{current.vote_from ? ` du ${fmtDate(current.vote_from)} au ${fmtDate(current.vote_to ?? current.vote_from)}` : ''}</>}</p>
             <div className="card" style={{ overflowX: 'auto' }}>
               {rows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune activité sur cette période pour l’instant.</p> : (
                 <table>
-                  <thead><tr>{current.tag && <th>Forme</th>}<th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th></th><th></th></tr></thead>
+                  <thead><tr>{current.tag && <th>Forme</th>}<th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Comptés</th><th></th><th></th><th></th></tr></thead>
                   <tbody>
                     {rows.map((a) => {
                       const t = teamOf(a.participant_id);
@@ -495,10 +499,30 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                           <td className="num">{fmtKm(a.rawKm)} km</td>
                           <td className="num">{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div className="small">×{a.multiplier}</div>}</td>
                           <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava</a>}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            {auto ? (
+                              a.excluded ? <span className="muted small">Exclue</span>
+                              : isOn(a) ? <span className="check">✓ ×{current.multiplier} {(a.validated_boosts ?? []).map(Number).includes(current.id) ? 'retenue' : 'auto'}</span>
+                              : (
+                                <form action={A.toggleBoostValidation}>
+                                  <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="boost" value={current.id} /><input type="hidden" name="on" value="1" />
+                                  {a.pendingBoosts.some((x) => x.id === current.id)
+                                    ? <><div className="small" style={{ color: 'var(--red)' }}>{!strictShapeName(a.name) ? 'Nom sans (forme)' : !a.polyline ? 'Pas de tracé' : `⚠ Ligne droite de ${fmtKm((a.gpsGapM ?? 0) / 1000)} km`}</div><button className="btn small primary">Valider ×{current.multiplier}</button></>
+                                    : <><div className="muted small">Une autre forme est retenue</div><button className="btn small">Retenir celle-ci</button></>}
+                                </form>
+                              )
+                            ) : (
+                              <form action={A.toggleBoostValidation}>
+                                <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="boost" value={current.id} /><input type="hidden" name="on" value={isOn(a) ? '0' : '1'} />
+                                {isOn(a) ? <button className="btn small">✓ Validé · retirer</button> : <button className="btn small primary">Valider ×{current.multiplier}</button>}
+                              </form>
+                            )}
+                          </td>
                           <td>
-                            <form action={A.toggleBoostValidation}>
-                              <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="boost" value={current.id} /><input type="hidden" name="on" value={isOn(a) ? '0' : '1'} />
-                              {isOn(a) ? <button className="btn small">✓ Validé · retirer</button> : <button className="btn small primary">Valider ×{current.multiplier}</button>}
+                            <form action={A.toggleExcluded}>
+                              <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value={a.excluded ? '0' : '1'} />
+                              <input type="hidden" name="back" value={`validations&boost=${current.id}`} />
+                              {a.excluded ? <button className="btn small">Réintégrer</button> : <button className="btn small danger">Exclure</button>}
                             </form>
                           </td>
                         </tr>

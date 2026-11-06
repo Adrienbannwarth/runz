@@ -17,7 +17,7 @@ export async function voteDuel(a: string, b: string, winner: string, test = fals
   } else {
     const boost = battleBoost(d.boosts);
     if (!boost || !voteOpen(boost, nowParis())) return { ok: false, error: 'Le vote est fermé.' };
-    shapes = battleShapes(boost, d.activities);
+    shapes = battleShapes(boost, d.scored);
   }
   // Règle « battle royale » : deux formes valides, différentes, jamais vues par ce votant (et pas la sienne hors test)
   const seen = new Set((await loadVotes(test)).filter((v) => v.voter_id === pid).flatMap((v) => [v.a, v.b]));

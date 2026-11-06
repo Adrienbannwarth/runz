@@ -45,7 +45,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const now = nowParis();
   const bBoost = battleBoost(boosts);
   const isOpen = !!bBoost && voteOpen(bBoost, now);
-  const shapes = bBoost ? battleShapes(bBoost, data.activities) : [];
+  const shapes = bBoost ? battleShapes(bBoost, data.scored) : [];
   const votes = bBoost && shapes.length > 1 && (isOpen || voteEnded(bBoost, now)) ? await loadVotes() : [];
   const pairsToVote = bBoost && me && isOpen ? remainingPairs(shapes, votes, me.id) : [];
   const podium = bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
@@ -134,7 +134,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </>
       )}
       {boost && (
-        <div className="banner">⚡ {boost.name} en cours : chaque km{boost.sports ? ` (${boost.sports} uniquement)` : ''} compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}{boost.manual ? ', après validation des organisateurs' : ''}</div>
+        <div className="banner">⚡ {boost.name} en cours : {boost.tag
+          ? <>ta forme nommée « {boost.tag} (nom) » compte ×{boost.multiplier} (une par personne, à pied ou en courant){boost.manual ? ', après validation des organisateurs' : ''}</>
+          : <>chaque km{boost.sports ? ` (${boost.sports} uniquement)` : ''} compte ×{boost.multiplier}{boost.slot !== 'Tous' ? ` (${boost.slot})` : ''}{boost.manual ? ', après validation des organisateurs' : ''}</>}</div>
       )}
 
       {view === 'admin' && (
