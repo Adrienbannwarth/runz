@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRewind } from '../lib/rewind.ts';
+import { buildRewind, scatter } from '../lib/rewind.ts';
 import { computeStandings, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 const settings: Settings = {
@@ -60,4 +60,16 @@ test('Rewind : km, répartition, série, créneaux, boosts, équipe', () => {
   assert.equal(r.teamRankInside, 1);
   assert.equal(r.final, true);
   assert.equal(r.podium.find((t) => t.mine)?.rank, 1);
+});
+
+test('Rewind : mosaïque des tracés sans chevauchement, dans la zone', () => {
+  const items = Array.from({ length: 36 }, (_, i) => ({ km: 1 + (i * 7) % 15 }));
+  const s = scatter(items, 100, 124, 'abc');
+  assert.equal(s.length, 36);
+  for (const a of s) {
+    assert.ok(a.x - a.size / 2 >= -1e-9 && a.x + a.size / 2 <= 100 + 1e-9 && a.y - a.size / 2 >= -1e-9 && a.y + a.size / 2 <= 124 + 1e-9);
+    for (const b of s) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= a.size / 2 + b.size / 2);
+  }
+  assert.deepEqual(scatter(items, 100, 124, 'abc'), s); // reproductible
+  assert.equal(scatter([{ km: 5 }], 100, 124, 'x').length, 1);
 });

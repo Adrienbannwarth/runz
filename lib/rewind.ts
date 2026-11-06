@@ -25,7 +25,9 @@ export type RewindDay = { day: string; km: number; level: 0 | 1 | 2 | 3; streak:
 export type RewindTeam = { id: number; name: string; emoji: string; color: string; rank: number; km: number; mine: boolean };
 
 export type GalleryShape = { path: string; label: string; km: number; mine: boolean };
-export type Track = { path: string; km: number; sport: string; day: string };
+export type Track = { path: string; km: number; sport: string; day: string; x: number; y: number; size: number; rot: number };
+/** Zone de la mosaïque « Ton mois en tracés » (unités SVG). */
+export const SCATTER_W = 100, SCATTER_H = 124;
 const MAX_TRACKS = 36;
 
 export type Rewind = {
@@ -185,6 +187,40 @@ export function buildRewind(input: {
     gallery: (input.gallery ?? [])
       .map((g) => ({ path: g.path, label: g.label, km: g.km, mine: g.participantId === participantId }))
       .sort((a, b) => Number(b.mine) - Number(a.mine)),
-    tracks: allTracks.slice(0, MAX_TRACKS), tracksTotal: allTracks.length,
+    tracks: scatter(allTracks.slice(0, MAX_TRACKS), SCATTER_W, SCATTER_H, participantId), tracksTotal: allTracks.length,
   };
+}
+
+/**
+ * Mosaïque « en vrac » : chaque tracé reçoit une position, une taille (plus grande pour les plus longues sorties)
+ * et une légère rotation, sans chevauchement (cercles englobants). Tirage reproductible (graine = participant).
+ */
+export function scatter<T extends { km: number }>(items: T[], w: number, h: number, seed: string): (T & { x: number; y: number; size: number; rot: number })[] {
+  let st = 2166136261;
+  for (const c of seed) st = Math.imul(st ^ c.charCodeAt(0), 16777619);
+  const rnd = () => { st = Math.imul(st ^ (st >>> 15), 2246822507); st = Math.imul(st ^ (st >>> 13), 3266489909); return ((st ^= st >>> 16) >>> 0) / 4294967296; };
+  const max = Math.max(1, ...items.map((t) => t.km));
+  const f = items.map((t) => 0.55 + 0.45 * Math.sqrt(t.km / max));
+  // taille de base : les cercles couvrent environ 60 % de la zone
+  let base = Math.sqrt((0.6 * w * h) / Math.max(1, f.reduce((a, x) => a + (Math.PI / 4) * x * x, 0)));
+  base = Math.min(base, Math.min(w, h) * 0.6);
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const placed: { x: number; y: number; r: number }[] = [];
+    const out: (T & { x: number; y: number; size: number; rot: number })[] = [];
+    let ok = true;
+    for (let i = 0; i < items.length && ok; i++) {
+      const size = base * f[i], r = size / 2;
+      let done = false;
+      for (let k = 0; k < 400 && !done; k++) {
+        const x = r + rnd() * (w - 2 * r), y = r + rnd() * (h - 2 * r);
+        if (placed.every((p) => Math.hypot(p.x - x, p.y - y) >= p.r + r + 1)) {
+          placed.push({ x, y, r }); out.push({ ...items[i], x, y, size, rot: Math.round((rnd() - 0.5) * 50) }); done = true;
+        }
+      }
+      ok = done;
+    }
+    if (ok) return out;
+    base *= 0.93; // trop serré : on réduit un peu et on recommence
+  }
+  return [];
 }
