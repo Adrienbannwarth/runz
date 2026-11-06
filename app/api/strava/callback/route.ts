@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { db, must } from '@/lib/db';
-import { appUrl, exchangeCode, stravaApps, syncParticipant } from '@/lib/strava';
+import { appUrl, avatarOf, exchangeCode, saveAvatar, stravaApps, syncParticipant } from '@/lib/strava';
 import { setUserSession } from '@/lib/session';
 import { getSettings } from '@/lib/data';
 
@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
     pid = created.id;
   }
 
+  await saveAvatar(pid, avatarOf(t.athlete));
   await setUserSession(pid);
   const id = pid;
   after(async () => {

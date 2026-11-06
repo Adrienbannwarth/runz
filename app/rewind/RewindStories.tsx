@@ -41,8 +41,13 @@ export default function RewindStories({ r }: { r: Rewind }) {
   ].filter((s) => s.v > 0);
   const maxSport = Math.max(1, ...sports.map((s) => s.v));
   const top = sports.slice().sort((a, b) => b.v - a.v)[0];
-  const slotTop = (['morning', 'lunch', 'evening'] as const).slice().sort((a, b) => r.slots[b] - r.slots[a])[0];
-  const slotTitle = { morning: 'Lève-tôt certifié ☀️', lunch: 'Roi·reine de la pause déj 🥪', evening: 'Oiseau de nuit 🌙' }[slotTop];
+  const SLOTS = [
+    { k: 'morning', e: '☀️', l: 'Le matin', d: 'avant 9h30', t: 'Team du matin ☀️' },
+    { k: 'lunch', e: '🥪', l: 'La pause déj', d: '11h30-14h', t: 'Team pause déj 🥪' },
+    { k: 'day', e: '🏙️', l: 'En journée', d: '9h30-11h30, 14h-18h', t: 'Team de la journée 🏙️' },
+    { k: 'evening', e: '🌙', l: 'Le soir', d: 'après 18h', t: 'Team du soir 🌙' },
+  ] as const;
+  const slotTop = SLOTS.slice().sort((a, b) => r.slots[b.k] - r.slots[a.k])[0];
 
   const slides: { cls: string; lt?: boolean; style?: React.CSSProperties; body: (on: boolean) => React.ReactNode }[] = [
     { cls: 's-intro', lt: true, body: () => (<>
@@ -101,24 +106,19 @@ export default function RewindStories({ r }: { r: Rewind }) {
       </div>
       {r.favDay && <div className="r rw-sub" style={{ fontSize: 14 }}>Jour préféré : <b>le {r.favDay.name}</b> ({r.favDay.count} fois)</div>}
     </>) },
-    { cls: 's-clock', lt: true, body: (on) => {
-      const C = 2 * Math.PI * 80; let acc = 0;
-      return (<>
-        <div className="r rw-kicker">Ton créneau</div>
-        <div className="r rw-mid">{slotTitle}</div>
-        <svg className="r rw-clock" viewBox="0 0 200 200">
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#1d3a1222" strokeWidth="22" />
-          {([['morning', '#FA8F18'], ['lunch', '#78AF5F'], ['evening', '#3847C4']] as const).map(([k, c], i) => {
-            const p = r.slots[k]; const rot = -90 + acc * 360; acc += p;
-            return p > 0 && <circle key={k} cx="100" cy="100" r="80" fill="none" stroke={c} strokeWidth="22"
-              strokeDasharray={`${Math.max(0, p * C - 3)} ${C}`} strokeDashoffset={on ? 0 : p * C}
-              transform={`rotate(${rot} 100 100)`} style={{ transition: `stroke-dashoffset 1.1s ${0.25 + i * 0.35}s cubic-bezier(.2,.8,.2,1)` }} />;
-          })}
-        </svg>
-        <div className="r rw-sub" style={{ textAlign: 'center' }}><b style={{ color: '#c86a00' }}>{pct(r.slots.morning)}</b> avant 9h30 · <b style={{ color: '#4c8a33' }}>{pct(r.slots.lunch)}</b> à la pause déj · <b style={{ color: '#3847C4' }}>{pct(r.slots.evening)}</b> le reste du temps</div>
-        {r.earliest && <div className="r rw-small" style={{ textAlign: 'center', marginTop: 6 }}>Départ le plus matinal : {r.earliest.time}, {dFr(r.earliest.day)}</div>}
-      </>);
-    } },
+    { cls: 's-clock', body: (on) => (<>
+      <div className="r rw-kicker">Ton créneau</div>
+      <div className="r rw-mid">{slotTop.t}</div>
+      <div className="r rw-slots">
+        {SLOTS.filter((x) => x.k !== 'day' || r.slots.day > 0).map((x, i) => (
+          <div key={x.k} className={`rw-slot${x.k === slotTop.k ? ' top' : ''}`}>
+            <div className="rw-slot-head"><span>{x.e} {x.l} <small>{x.d}</small></span><b><Count to={Math.round(r.slots[x.k] * 100)} on={on} /> %</b></div>
+            <div className="rw-slot-bar"><i style={{ width: on ? `${r.slots[x.k] * 100}%` : 0, transitionDelay: `${0.3 + i * 0.15}s` }} /></div>
+          </div>
+        ))}
+      </div>
+      {r.earliest && <div className="r rw-small" style={{ marginTop: 14 }}>Départ le plus matinal : {r.earliest.time}, {dFr(r.earliest.day)}</div>}
+    </>) },
     { cls: 's-boost', body: (on) => (<>
       <div className="r rw-kicker">Chasse aux boosts</div>
       <div className="r rw-big" style={{ color: '#FA8F18' }}>+<Count to={r.boostKm} dec={1} on={on} /><small> km</small></div>
@@ -136,19 +136,19 @@ export default function RewindStories({ r }: { r: Rewind }) {
       <div className="r rw-sub">« {r.shape!.label || 'Ma forme'} » · <b>{nf(r.shape!.km, 2)} km</b> · {dFr(r.shape!.day)}</div>
       {r.shape!.duels > 0 && <div className="r rw-small">🗳️ {r.shape!.wins} duel{r.shape!.wins > 1 ? 's' : ''} gagné{r.shape!.wins > 1 ? 's' : ''} sur {r.shape!.duels} à la Battle{r.shape!.rank ? ` · ${r.shape!.rank === 1 ? '1re' : `${r.shape!.rank}e`} forme` : ''}</div>}
     </>) }] : []),
-    { cls: 's-team', style: { background: team, color: teamInk }, body: (on) => {
+    { cls: 's-team', lt: true, body: (on) => {
       const max = Math.max(1, ...r.podium.map((t) => t.km));
       const order = [...r.podium].sort((a, b) => a.rank - b.rank);
       const D = 2 * Math.PI * 44;
       return (<>
         <div className="r rw-kicker">Ta part dans l’équipe</div>
         <div className="r rw-mid">Tu pèses <Count to={Math.round(r.teamShare * 100)} on={on} /> % de la team {r.teamName}</div>
-        <svg className="r rw-donut" viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" stroke={teamInk === '#fff' ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.15)'} />
-          <circle cx="60" cy="60" r="44" stroke={teamInk} strokeDasharray={on ? `${r.teamShare * D} ${D}` : `0 ${D}`} style={{ transition: 'stroke-dasharray 1.4s .3s cubic-bezier(.2,.8,.2,1)' }} /></svg>
+        <svg className="r rw-donut" viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" stroke="rgba(0,0,0,.1)" />
+          <circle cx="60" cy="60" r="44" stroke="#111" strokeDasharray={on ? `${r.teamShare * D} ${D}` : `0 ${D}`} style={{ transition: 'stroke-dasharray 1.4s .3s cubic-bezier(.2,.8,.2,1)' }} /></svg>
         {r.teamRankInside && <div className="r rw-small" style={{ textAlign: 'center' }}>{r.teamRankInside === 1 ? '1re' : `${r.teamRankInside}e`} contribution sur {r.teamMembers} · {nf(r.countedKm, 0)} km sur {nf(r.teamKm, 0)}</div>}
         <div className="r rw-podium">
           {order.map((t, i) => (
-            <div key={t.id} style={{ background: t.color, color: light(t.color) ? '#111' : '#fff', height: on ? `${30 + (t.km / max) * 70}%` : 0, transitionDelay: `${0.2 + i * 0.15}s`, outline: t.mine ? `3px solid ${teamInk}` : undefined }}>
+            <div key={t.id} style={{ background: t.color, color: light(t.color) ? '#111' : '#fff', height: on ? `${30 + (t.km / max) * 70}%` : 0, transitionDelay: `${0.2 + i * 0.15}s`, outline: t.mine ? '3px solid #111' : undefined }}>
               {t.rank}
             </div>
           ))}
@@ -160,29 +160,51 @@ export default function RewindStories({ r }: { r: Rewind }) {
         </div>
       </>);
     } },
-    { cls: 's-end', lt: true, body: () => (<>
-      <div className="r rw-kicker">Ton RunZ en une carte</div>
-      <div className="r rw-card" style={{ borderTopColor: team }}>
-        <div className="rw-card-name">{r.name}{r.teamName ? ` · ${r.teamName}` : ''}</div>
-        {endRows(r).map(([k, v]) => <div key={k} className="rw-row"><span>{k}</span><b>{v}</b></div>)}
+    { cls: 's-end', lt: true, body: (on) => (<>
+      <div className="r rw-kicker">Ton RunZ en 6 chiffres</div>
+      <div className="r rw-six">
+        {endStats(r).map(([v, l], i) => (
+          <div key={l} style={{ animationDelay: `${0.2 + i * 0.12}s` }} className={on ? 'pop' : ''}>
+            <b style={{ color: SIX_COLORS[i % 4] }}>{v}</b><span>{l}</span>
+          </div>
+        ))}
       </div>
-      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={(e) => { e.stopPropagation(); downloadCard(r, team, teamInk); }}>⬇ Télécharger ma story</button></div>
-      <div className="r rw-small" style={{ textAlign: 'center', marginTop: 8 }}>Merci d’avoir couru avec nous 🧡</div>
+      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={() => shareImage(drawRecap(r), `runz-rewind-${slug(r.name)}.png`)}>⬇ Télécharger ma story</button></div>
     </>) },
+    ...(r.gallery.length ? [{ cls: 's-gallery', body: (on: boolean) => (<>
+      <div className="r rw-kicker" style={{ color: '#FC4C02' }}>La galerie #TRACEZ</div>
+      <div className="r rw-mid">{r.gallery.length} forme{r.gallery.length > 1 ? 's' : ''} dessinée{r.gallery.length > 1 ? 's' : ''} par les Colorz</div>
+      <div className="r rw-gal" style={{ gridTemplateColumns: `repeat(${galCols(r.gallery.length)}, 1fr)` }}>
+        {r.gallery.map((g, i) => (
+          <svg key={i} viewBox="0 0 100 100" className={g.mine ? 'mine' : ''}>
+            <path d={g.path} pathLength={1} className={on ? 'draw' : ''} style={{ transitionDelay: `${0.3 + i * 0.06}s` }} />
+          </svg>
+        ))}
+      </div>
+      {r.gallery.some((g) => g.mine) && <div className="r rw-small" style={{ marginTop: 8 }}><span style={{ color: '#FC4C02' }}>●</span> ta forme</div>}
+      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn light" onClick={() => shareImage(drawGallery(r), 'runz-galerie-tracez.png')}>⬇ Télécharger la galerie</button></div>
+      <div className="r rw-small" style={{ textAlign: 'center', marginTop: 8 }}>Merci d’avoir marché et couru avec nous 🧡</div>
+    </>) }] : []),
   ];
 
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
-  const fill = useRef<HTMLElement | null>(null);
+  const bars = useRef<(HTMLElement | null)[]>([]);
   const elapsed = useRef(0);
   const go = useCallback((i: number) => { elapsed.current = 0; setIdx(Math.max(0, Math.min(slides.length - 1, i))); }, [slides.length]);
+
+  // Jauges : pleines avant la story en cours, vides après (aussi quand on revient en arrière)
+  useEffect(() => {
+    bars.current.forEach((b, i) => { if (b) b.style.width = i < idx ? '100%' : '0%'; });
+  }, [idx]);
 
   useEffect(() => {
     let raf = 0, last = performance.now();
     const tick = (n: number) => {
       if (!paused) elapsed.current += n - last;
       last = n;
-      if (fill.current) fill.current.style.width = `${Math.min(100, (elapsed.current / DUR) * 100)}%`;
+      const cur = bars.current[idx];
+      if (cur) cur.style.width = `${Math.min(100, (elapsed.current / DUR) * 100)}%`;
       if (elapsed.current >= DUR && idx < slides.length - 1) { go(idx + 1); return; }
       raf = requestAnimationFrame(tick);
     };
@@ -208,9 +230,11 @@ export default function RewindStories({ r }: { r: Rewind }) {
     <div className="rw">
       <div className={`rw-phone${slides[idx].lt ? ' lt' : ''}`}>
         <div className="rw-bars">
-          {slides.map((_, i) => <div key={i} className="rw-bar"><i ref={i === idx ? (el) => { fill.current = el; } : undefined} style={{ width: i < idx ? '100%' : 0 }} /></div>)}
+          {slides.map((_, i) => <div key={i} className="rw-bar"><i ref={(el) => { bars.current[i] = el; }} /></div>)}
         </div>
-        <div className="rw-who"><span className="rw-av" style={{ background: team, color: teamInk }}>{first[0]}</span>{r.name}{r.teamName ? ` · ${r.teamName}` : ''}</div>
+        <div className="rw-who">{r.avatar
+          ? <img className="rw-av" src={r.avatar} alt="" referrerPolicy="no-referrer" />
+          : <span className="rw-av" style={{ background: team, color: teamInk }}>{first[0]}</span>}{r.name}{r.teamName ? ` · ${r.teamName}` : ''}</div>
         <div className="rw-tap l" onPointerDown={down} onPointerUp={() => up(-1)} onPointerLeave={() => { if (hold.current) clearTimeout(hold.current); if (held.current) { setPaused(false); held.current = false; } }} />
         <div className="rw-tap r" onPointerDown={down} onPointerUp={() => up(1)} onPointerLeave={() => { if (hold.current) clearTimeout(hold.current); if (held.current) { setPaused(false); held.current = false; } }} />
         {slides.map((s, i) => (
@@ -228,50 +252,94 @@ export default function RewindStories({ r }: { r: Rewind }) {
   );
 }
 
-function endRows(r: Rewind): [string, string][] {
-  const rows: [string, string][] = [
-    ['Km parcourus', `${nf(r.totalKm, 1)} km`],
-    ['Km comptés pour l’équipe', `${nf(r.countedKm, 1)} km`],
-    ['Jours actifs', `${r.activeDays} / ${r.days}`],
-    ['Plus longue série', `${r.longestStreak} j`],
-    ['Bonus des boosts', `+${nf(r.boostKm, 1)} km`],
-  ];
+const SIX_COLORS = ['#9A1325', '#78AF5F', '#FA8F18', '#3847C4'];
+const slug = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const galCols = (n: number) => (n <= 4 ? 2 : n <= 9 ? 3 : n <= 20 ? 4 : n <= 30 ? 5 : 6);
+
+/** Les 6 chiffres de la carte finale : [valeur, libellé]. */
+function endStats(r: Rewind): [string, string][] {
   const m = r.podium.find((t) => t.mine);
-  if (m) rows.push([r.final ? 'Classement équipe' : 'Équipe (provisoire)', m.rank === 1 ? '1re 🏆' : `${m.rank}e`]);
-  return rows;
+  return [
+    [nf(r.totalKm, 1), 'km parcourus'],
+    [`${r.activeDays}`, `jours actifs sur ${r.days}`],
+    [`${r.activities}`, `sortie${r.activities > 1 ? 's' : ''}`],
+    [`${r.longestStreak} j`, 'plus longue série'],
+    [`+${nf(r.boostKm, 0)}`, 'km gagnés en boosts'],
+    m ? [m.rank === 1 ? '1re' : `${m.rank}e`, r.final ? `team ${m.name}${m.rank === 1 ? ' 🏆' : ''}` : `team ${m.name} (provisoire)`] : [`${nf(r.elevation)} m`, 'de dénivelé'],
+  ];
 }
 
-/** Carte finale en image 1080×1920 (format story). */
-async function downloadCard(r: Rewind, team: string, ink: string) {
+/** Partage (mobile : feuille de partage → story) ou téléchargement de l'image. */
+async function shareImage(canvasP: Promise<HTMLCanvasElement>, name: string) {
+  try {
+    const c = await canvasP;
+    const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/png'));
+    if (!blob) return;
+    const file = new File([blob], name, { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ files: [file] }); return; } catch (e) { if ((e as Error).name === 'AbortError') return; }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (e) { console.error('Rewind : image', e); alert('Impossible de créer l’image, réessaie.'); }
+}
+
+async function canvasBase() {
   const W = 1080, H = 1920, c = document.createElement('canvas');
   c.width = W; c.height = H;
   const g = c.getContext('2d')!;
   await document.fonts?.ready;
   const F = getComputedStyle(document.body).fontFamily;
-  g.fillStyle = '#F5F5F5'; g.fillRect(0, 0, W, H);
-  g.fillStyle = team; g.fillRect(0, 0, W, 560);
   const logo = await new Promise<HTMLImageElement | null>((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = '/logo.svg'; });
-  g.fillStyle = ink; g.textAlign = 'left';
-  g.font = `800 44px ${F}`; g.fillText('MON RUNZ REWIND', 80, 140);
-  g.font = `900 190px ${F}`; g.fillText(nf(r.totalKm, 1), 80, 360);
-  g.font = `700 56px ${F}`; g.fillText('km parcourus', 80, 450);
-  g.fillStyle = '#fff'; roundRect(g, 60, 620, W - 120, 1000, 36); g.fill();
-  g.fillStyle = '#111'; g.font = `800 52px ${F}`; g.fillText(`${r.name}${r.teamName ? ` · ${r.teamName}` : ''}`.slice(0, 32), 110, 720);
-  const rows = endRows(r).slice(1);
-  if (r.split.run || r.split.walk) rows.unshift(['Course / marche', `${nf(r.split.run + r.split.trail, 0)} / ${nf(r.split.walk + r.split.hike, 0)} km`]);
-  rows.forEach(([k, v], i) => {
-    const y = 840 + i * 118;
-    g.fillStyle = '#6f6f6f'; g.font = `500 40px ${F}`; g.textAlign = 'left'; g.fillText(k, 110, y);
-    g.fillStyle = '#111'; g.font = `800 48px ${F}`; g.textAlign = 'right'; g.fillText(v, W - 110, y);
-    if (i < rows.length - 1) { g.fillStyle = '#e5e5e5'; g.fillRect(110, y + 40, W - 220, 3); }
-  });
-  g.textAlign = 'left';
-  if (logo) { const h = 150, w = (logo.width / logo.height) * h || 300; g.drawImage(logo, (W - w) / 2, 1700, w, h); }
-  const a = document.createElement('a');
-  a.download = `runz-rewind-${r.name.toLowerCase().replace(/[^a-z0-9]+/gi, '-')}.png`;
-  a.href = c.toDataURL('image/png'); a.click();
+  return { c, g, F, W, H, logo };
 }
-function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, rr: number) {
-  g.beginPath(); g.moveTo(x + rr, y); g.arcTo(x + w, y, x + w, y + h, rr); g.arcTo(x + w, y + h, x, y + h, rr);
-  g.arcTo(x, y + h, x, y, rr); g.arcTo(x, y, x + w, y, rr); g.closePath();
+function drawLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, W: number, y: number, h: number, invert = false) {
+  if (!logo) return;
+  const w = (logo.naturalWidth && logo.naturalHeight ? logo.naturalWidth / logo.naturalHeight : 2.4) * h;
+  if (invert) g.filter = 'invert(1)';
+  g.drawImage(logo, (W - w) / 2, y, w, h);
+  g.filter = 'none';
+}
+
+/** Carte finale 1080×1920 : les 6 chiffres en grand, sur fond blanc. */
+async function drawRecap(r: Rewind) {
+  const { c, g, F, W, logo } = await canvasBase();
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, 1920);
+  g.fillStyle = '#111'; g.textAlign = 'left';
+  g.font = `800 40px ${F}`; g.fillText('MON RUNZ REWIND', 80, 150);
+  g.font = `900 64px ${F}`; g.fillText(r.name.slice(0, 26), 80, 230);
+  if (r.teamName) { g.fillStyle = '#6f6f6f'; g.font = `600 40px ${F}`; g.fillText(`Team ${r.teamName}`, 80, 290); }
+  endStats(r).forEach(([v, l], i) => {
+    const x = 80 + (i % 2) * 480, y = 520 + Math.floor(i / 2) * 400;
+    g.fillStyle = SIX_COLORS[i % 4]; g.font = `900 ${v.length > 6 ? 120 : 150}px ${F}`; g.fillText(v, x, y);
+    g.fillStyle = '#111'; g.font = `700 40px ${F}`; g.fillText(l.replace(' 🏆', ''), x, y + 64);
+  });
+  drawLogo(g, logo, W, 1680, 140);
+  return c;
+}
+
+/** Galerie 1080×1920 : toutes les formes #TRACEZ, la sienne en orange. */
+async function drawGallery(r: Rewind) {
+  const { c, g, F, W, logo } = await canvasBase();
+  g.fillStyle = '#111'; g.fillRect(0, 0, W, 1920);
+  g.fillStyle = '#FC4C02'; g.textAlign = 'center';
+  g.font = `900 44px ${F}`; g.fillText('LA GALERIE #TRACEZ', W / 2, 150);
+  g.fillStyle = '#fff'; g.font = `800 58px ${F}`; g.fillText(`${r.gallery.length} formes · RunZ by Colorz`, W / 2, 230);
+  const top = 300, bottom = 1640, pad = 60, n = r.gallery.length;
+  // nombre de colonnes qui donne les plus grandes formes
+  const cols = [1, 2, 3, 4, 5, 6, 7, 8].reduce((best, k) =>
+    Math.min((W - 2 * pad) / k, (bottom - top) / Math.ceil(n / k)) > Math.min((W - 2 * pad) / best, (bottom - top) / Math.ceil(n / best)) ? k : best, 1);
+  const rows = Math.ceil(n / cols);
+  const cell = Math.min((W - 2 * pad) / cols, (bottom - top) / rows);
+  const ox = (W - cell * cols) / 2, oy = top + (bottom - top - cell * rows) / 2;
+  r.gallery.forEach((s, i) => {
+    const x = ox + (i % cols) * cell, y = oy + Math.floor(i / cols) * cell;
+    g.save(); g.translate(x + cell * 0.08, y + cell * 0.08); g.scale(cell * 0.84 / 100, cell * 0.84 / 100);
+    g.strokeStyle = s.mine ? '#FC4C02' : '#fff'; g.lineWidth = s.mine ? 3.2 : 2.2; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.stroke(new Path2D(s.path)); g.restore();
+  });
+  drawLogo(g, logo, W, 1700, 120, true);
+  return c;
 }

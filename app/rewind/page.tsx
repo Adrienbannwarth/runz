@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { loadAll } from '@/lib/data';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
+import { db } from '@/lib/db';
 import { REWIND_PUBLIC, buildRewind } from '@/lib/rewind';
 import { getParticipantId, isAdmin } from '@/lib/session';
 import RewindStories from './RewindStories';
@@ -34,12 +35,17 @@ export default async function RewindPage({ searchParams }: { searchParams: Promi
   const votes = shapes.length > 1 ? await loadVotes() : [];
   const battle = votes.length ? battleResults(shapes, votes).map((r, i) => ({ activityId: r.shape.id, wins: r.wins, duels: r.duels, rank: i + 1 })) : [];
 
+  // Photo de profil Strava (colonne ajoutée par la migration 021 ; absente = initiale)
+  const avatar = await db().from('participants').select('avatar_url').eq('id', person.id).maybeSingle()
+    .then((r) => (r.error ? null : (r.data as { avatar_url?: string | null } | null)?.avatar_url ?? null), () => null);
+
   const rewind = buildRewind({
     participantId: person.id, name: person.display_name, teamId: person.team_id,
     scored: data.scored, teams: data.teams, boosts: data.boosts,
     counted: data.people.map((p) => ({ participantId: p.participant.id, teamId: p.participant.team_id, km: p.countedKm })),
     start: data.settings.start_date, end: data.settings.end_date, today: data.today,
-    cap: Number(data.settings.daily_cap_km) || 10, battle,
+    cap: Number(data.settings.daily_cap_km) || 10, battle, avatar,
+    gallery: shapes.map((x) => ({ participantId: x.participant_id, path: x.path, label: x.label, km: x.km })),
   });
 
   return (

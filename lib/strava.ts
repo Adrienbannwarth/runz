@@ -53,7 +53,7 @@ export function authorizeUrl(state: string, appKey = 'a') {
 
 type TokenResponse = {
   access_token: string; refresh_token: string; expires_at: number;
-  athlete?: { id: number; firstname: string; lastname: string };
+  athlete?: { id: number; firstname: string; lastname: string; profile?: string; profile_medium?: string };
 };
 
 async function tokenRequest(body: Record<string, string>, appKey?: string | null): Promise<TokenResponse> {
@@ -122,10 +122,26 @@ export async function upsertActivity(participantId: string, a: StravaActivity) {
 }
 
 /** Import complet des activités d'un participant depuis le début du challenge (veille incluse). */
+/** URL de la photo de profil Strava (vide si l'athlète n'en a pas : Strava renvoie alors une image par défaut). */
+export const avatarOf = (a?: { profile?: string; profile_medium?: string } | null) => {
+  const url = a?.profile_medium || a?.profile || '';
+  return /^https:\/\//.test(url) ? url : '';
+};
+/** Enregistre la photo de profil (sans effet si la colonne avatar_url n'existe pas encore). */
+export async function saveAvatar(participantId: string, url: string) {
+  await db().from('participants').update({ avatar_url: url }).eq('id', participantId).then(() => null, () => null);
+}
+
 export async function syncParticipant(participantId: string, startDate: string, endDate: string) {
   const p = must(await db().from('participants')
     .select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
   const token = await validToken(p);
+  // Photo de profil pour le Rewind : récupérée une seule fois (null = jamais récupérée)
+  const av = await db().from('participants').select('avatar_url').eq('id', participantId).maybeSingle();
+  if (!av.error && (av.data as { avatar_url?: string | null } | null)?.avatar_url == null) {
+    await api<{ profile?: string; profile_medium?: string }>(token, '/athlete')
+      .then((a) => saveAvatar(participantId, avatarOf(a)), () => null);
+  }
   const after = Math.floor(new Date(`${startDate}T00:00:00Z`).getTime() / 1000) - 86400;
   // Strava refuse (400) une fenêtre dans le futur : on borne la fin à maintenant
   const now = Math.floor(Date.now() / 1000);
@@ -201,4 +217,6 @@ export async function disconnect(participantId: string, revoke = true) {
     strava_athlete_id: null, access_token: null, refresh_token: null, token_expires_at: null, scope: null,
     ...(p.strava_athlete_id ? { strava_athlete_last: p.strava_athlete_id } : {}),
   }).eq('id', participantId));
+  // La photo de profil Strava est effacée avec le reste (null = sera récupérée à la reconnexion)
+  await db().from('participants').update({ avatar_url: null }).eq('id', participantId).then(() => null, () => null);
 }

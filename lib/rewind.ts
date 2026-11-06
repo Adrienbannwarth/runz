@@ -24,8 +24,11 @@ const TRIPS: [number, string][] = [
 export type RewindDay = { day: string; km: number; level: 0 | 1 | 2 | 3; streak: boolean };
 export type RewindTeam = { id: number; name: string; emoji: string; color: string; rank: number; km: number; mine: boolean };
 
+export type GalleryShape = { path: string; label: string; km: number; mine: boolean };
+
 export type Rewind = {
   name: string;
+  avatar: string | null;
   teamName: string | null;
   teamColor: string | null;
   start: string; end: string; final: boolean; days: number;
@@ -40,13 +43,14 @@ export type Rewind = {
   longest: { km: number; day: string } | null;
   bestDay: { km: number; day: string } | null;
   elevation: number; eiffel: number;
-  slots: { morning: number; lunch: number; evening: number }; // part des km (0-1)
+  slots: { morning: number; lunch: number; day: number; evening: number }; // part des km (0-1)
   earliest: { time: string; day: string } | null;
   favDay: { name: string; count: number } | null;
   boosts: { name: string; count: number }[]; boostsCaught: number; boostsTotal: number;
   shape: { path: string; label: string; km: number; day: string; wins: number; duels: number; rank: number | null } | null;
   teamShare: number; teamRankInside: number | null; teamMembers: number; teamKm: number;
   podium: RewindTeam[];
+  gallery: GalleryShape[]; // toutes les formes #TRACEZ retenues (sans lieu ni nom), la sienne en premier
 };
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -68,6 +72,8 @@ export function buildRewind(input: {
   counted: { participantId: string; teamId: number | null; km: number }[]; // km comptés de chaque participant
   start: string; end: string; today: string; cap: number;
   battle?: { activityId: string; wins: number; duels: number; rank: number }[];
+  avatar?: string | null;
+  gallery?: { participantId: string; path: string; label: string; km: number }[];
 }): Rewind {
   const { participantId, scored, teams, boosts, start, end, today, cap } = input;
   const mine = scored.filter((s) => s.participant_id === participantId && s.eligible)
@@ -104,11 +110,14 @@ export function buildRewind(input: {
   const dayEntries = [...byDay.entries()].sort((a, b) => b[1] - a[1]);
   const longest = [...mine].sort((a, b) => b.rawKm - a.rawKm)[0];
 
-  // Créneaux (heure de départ) : matin < 9h30, midi 11h30-14h, sinon soir
-  const slotKm = { morning: 0, lunch: 0, evening: 0 };
+  // Créneaux (heure de départ) : matin < 9h30, pause déj 11h30-14h, soir ≥ 18h, sinon en journée
+  const slotKm = { morning: 0, lunch: 0, day: 0, evening: 0 };
   for (const s of mine) {
     const t = hm(s.start_date_local);
-    if (t < '09:30') slotKm.morning += s.rawKm; else if (t >= '11:30' && t < '14:00') slotKm.lunch += s.rawKm; else slotKm.evening += s.rawKm;
+    if (t < '09:30') slotKm.morning += s.rawKm;
+    else if (t >= '11:30' && t < '14:00') slotKm.lunch += s.rawKm;
+    else if (t >= '18:00') slotKm.evening += s.rawKm;
+    else slotKm.day += s.rawKm;
   }
   const tot = totalKm || 1;
   const earliest = [...mine].sort((a, b) => hm(a.start_date_local).localeCompare(hm(b.start_date_local)))[0];
@@ -134,7 +143,7 @@ export function buildRewind(input: {
   const myIdx = mates.findIndex((c) => c.participantId === participantId);
 
   return {
-    name: input.name, teamName: team?.team.name ?? null, teamColor: team?.team.color ?? null,
+    name: input.name, avatar: input.avatar || null, teamName: team?.team.name ?? null, teamColor: team?.team.color ?? null,
     start, end, final: today > end, days: days.length,
     totalKm: r1(totalKm), countedKm: r1(countedKm), boostKm: r1(boostKm),
     trip: trip ? { label: trip[1], km: trip[0] } : null,
@@ -148,7 +157,7 @@ export function buildRewind(input: {
     bestDay: dayEntries[0] ? { km: r1(dayEntries[0][1]), day: dayEntries[0][0] } : null,
     elevation: Math.round(mine.reduce((t, s) => t + Number(s.elevation_gain_m ?? 0), 0)),
     eiffel: r1(mine.reduce((t, s) => t + Number(s.elevation_gain_m ?? 0), 0) / EIFFEL_M),
-    slots: { morning: slotKm.morning / tot, lunch: slotKm.lunch / tot, evening: slotKm.evening / tot },
+    slots: { morning: slotKm.morning / tot, lunch: slotKm.lunch / tot, day: slotKm.day / tot, evening: slotKm.evening / tot },
     earliest: earliest ? { time: hm(earliest.start_date_local).replace(':', 'h'), day: earliest.day } : null,
     favDay: fav ? { name: DAYS_FR[fav[0]], count: fav[1] } : null,
     boosts: [...boosted.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
@@ -160,5 +169,8 @@ export function buildRewind(input: {
     teamShare: teamKm ? countedKm / teamKm : 0,
     teamRankInside: myIdx >= 0 ? myIdx + 1 : null, teamMembers: mates.length, teamKm: r1(teamKm),
     podium: teams.map((t) => ({ id: t.team.id, name: t.team.name, emoji: t.team.emoji, color: t.team.color, rank: t.rank, km: r1(t.totalKm), mine: t.team.id === input.teamId })),
+    gallery: (input.gallery ?? [])
+      .map((g) => ({ path: g.path, label: g.label, km: g.km, mine: g.participantId === participantId }))
+      .sort((a, b) => Number(b.mine) - Number(a.mine)),
   };
 }

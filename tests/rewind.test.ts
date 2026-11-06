@@ -32,6 +32,7 @@ test('Rewind : km, répartition, série, créneaux, boosts, équipe', () => {
     participantId: 'a', name: 'Camille D.', teamId: 1, scored: st.scored, teams: st.teams, boosts,
     counted: st.people.map((p) => ({ participantId: p.participant.id, teamId: p.participant.team_id, km: p.countedKm })),
     start: settings.start_date, end: settings.end_date, today: '2026-11-28', cap: 10,
+    gallery: [{ participantId: 'b', path: 'M0 0L1 1', label: 'Cœur', km: 8 }, { participantId: 'a', path: 'M0 0L2 2', label: 'Étoile', km: 10 }],
   });
   assert.equal(r.totalKm, 25);
   assert.deepEqual(r.split, { run: 18, walk: 7, trail: 0, hike: 0 });
@@ -49,6 +50,10 @@ test('Rewind : km, répartition, série, créneaux, boosts, équipe', () => {
   assert.equal(r.earliest?.time, '07h00');
   assert.equal(r.trip?.label, 'Paris → Versailles');
   assert.ok(Math.abs(r.slots.morning - 6 / 25) < 1e-9);
+  assert.ok(Math.abs(r.slots.lunch - 4 / 25) < 1e-9);
+  assert.ok(Math.abs(r.slots.evening - 15 / 25) < 1e-9);
+  assert.equal(r.slots.day, 0);
+  assert.deepEqual(r.gallery.map((g) => [g.label, g.mine]), [['Étoile', true], ['Cœur', false]]);
   assert.equal(r.teamRankInside, 1);
   assert.equal(r.final, true);
   assert.equal(r.podium.find((t) => t.mine)?.rank, 1);
