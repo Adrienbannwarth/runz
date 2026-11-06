@@ -5,6 +5,7 @@ import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battl
 import { db } from '@/lib/db';
 import { REWIND_PUBLIC, buildRewind } from '@/lib/rewind';
 import { getParticipantId, isAdmin } from '@/lib/session';
+import { fetchTracks } from '@/lib/strava';
 import RewindStories from './RewindStories';
 
 export const dynamic = 'force-dynamic';
@@ -39,12 +40,18 @@ export default async function RewindPage({ searchParams }: { searchParams: Promi
   const avatar = await db().from('participants').select('avatar_url').eq('id', person.id).maybeSingle()
     .then((r) => (r.error ? null : (r.data as { avatar_url?: string | null } | null)?.avatar_url ?? null), () => null);
 
+  // Tracés de ses sorties, lus chez Strava au moment de l'affichage (jamais enregistrés)
+  const tracks = person.strava_athlete_id
+    ? await fetchTracks(person.id, data.settings.start_date, data.settings.end_date).catch((e) => { console.error('Rewind : tracés', e); return []; })
+    : [];
+
   const rewind = buildRewind({
     participantId: person.id, name: person.display_name, teamId: person.team_id,
     scored: data.scored, teams: data.teams, boosts: data.boosts,
     counted: data.people.map((p) => ({ participantId: p.participant.id, teamId: p.participant.team_id, km: p.countedKm })),
     start: data.settings.start_date, end: data.settings.end_date, today: data.today,
     cap: Number(data.settings.daily_cap_km) || 10, battle, avatar,
+    tracks,
     gallery: shapes.map((x) => ({ participantId: x.participant_id, path: x.path, label: x.label, km: x.km })),
   });
 

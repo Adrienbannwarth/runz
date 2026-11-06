@@ -25,6 +25,8 @@ export type RewindDay = { day: string; km: number; level: 0 | 1 | 2 | 3; streak:
 export type RewindTeam = { id: number; name: string; emoji: string; color: string; rank: number; km: number; mine: boolean };
 
 export type GalleryShape = { path: string; label: string; km: number; mine: boolean };
+export type Track = { path: string; km: number; sport: string; day: string };
+const MAX_TRACKS = 36;
 
 export type Rewind = {
   name: string;
@@ -51,6 +53,8 @@ export type Rewind = {
   teamShare: number; teamRankInside: number | null; teamMembers: number; teamKm: number;
   podium: RewindTeam[];
   gallery: GalleryShape[]; // toutes les formes #TRACEZ retenues (sans lieu ni nom), la sienne en premier
+  tracks: Track[];          // ses propres sorties avec tracé, les plus longues d'abord (36 max)
+  tracksTotal: number;      // nombre de sorties avec tracé
 };
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -74,6 +78,7 @@ export function buildRewind(input: {
   battle?: { activityId: string; wins: number; duels: number; rank: number }[];
   avatar?: string | null;
   gallery?: { participantId: string; path: string; label: string; km: number }[];
+  tracks?: { stravaId: number; polyline: string }[]; // tracés lus chez Strava (non stockés)
 }): Rewind {
   const { participantId, scored, teams, boosts, start, end, today, cap } = input;
   const mine = scored.filter((s) => s.participant_id === participantId && s.eligible)
@@ -136,6 +141,14 @@ export function buildRewind(input: {
   const path = shapeAct ? polylineToPath(shapeAct.polyline) : null;
   const res = shapeAct ? input.battle?.find((b) => b.activityId === shapeAct.id) : undefined;
 
+  // Ses tracés : uniquement les activités qui comptent, les plus longues d'abord
+  const poly = new Map((input.tracks ?? []).map((t) => [Number(t.stravaId), t.polyline]));
+  const allTracks = mine
+    .filter((s) => s.strava_activity_id != null && poly.has(Number(s.strava_activity_id)))
+    .map((s) => ({ path: polylineToPath(poly.get(Number(s.strava_activity_id))) ?? '', km: Math.round(s.rawKm * 10) / 10, sport: s.sport_type, day: s.day }))
+    .filter((t) => t.path)
+    .sort((a, b) => b.km - a.km);
+
   // Équipe
   const team = teams.find((t) => t.team.id === input.teamId);
   const mates = input.counted.filter((c) => c.teamId != null && c.teamId === input.teamId).sort((a, b) => b.km - a.km);
@@ -172,5 +185,6 @@ export function buildRewind(input: {
     gallery: (input.gallery ?? [])
       .map((g) => ({ path: g.path, label: g.label, km: g.km, mine: g.participantId === participantId }))
       .sort((a, b) => Number(b.mine) - Number(a.mine)),
+    tracks: allTracks.slice(0, MAX_TRACKS), tracksTotal: allTracks.length,
   };
 }

@@ -32,6 +32,7 @@ test('Rewind : km, répartition, série, créneaux, boosts, équipe', () => {
     participantId: 'a', name: 'Camille D.', teamId: 1, scored: st.scored, teams: st.teams, boosts,
     counted: st.people.map((p) => ({ participantId: p.participant.id, teamId: p.participant.team_id, km: p.countedKm })),
     start: settings.start_date, end: settings.end_date, today: '2026-11-28', cap: 10,
+    tracks: [{ stravaId: activities[0].strava_activity_id!, polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }, { stravaId: activities[2].strava_activity_id!, polyline: '_p~iF~ps|U_ulLnnqC' }, { stravaId: 424242, polyline: '_p~iF~ps|U_ulLnnqC' }],
     gallery: [{ participantId: 'b', path: 'M0 0L1 1', label: 'Cœur', km: 8 }, { participantId: 'a', path: 'M0 0L2 2', label: 'Étoile', km: 10 }],
   });
   assert.equal(r.totalKm, 25);
@@ -53,6 +54,8 @@ test('Rewind : km, répartition, série, créneaux, boosts, équipe', () => {
   assert.ok(Math.abs(r.slots.lunch - 4 / 25) < 1e-9);
   assert.ok(Math.abs(r.slots.evening - 15 / 25) < 1e-9);
   assert.equal(r.slots.day, 0);
+  assert.deepEqual(r.tracks.map((x) => x.km), [12, 6]); // plus longue d'abord, activité inconnue ignorée
+  assert.equal(r.tracksTotal, 2);
   assert.deepEqual(r.gallery.map((g) => [g.label, g.mine]), [['Étoile', true], ['Cœur', false]]);
   assert.equal(r.teamRankInside, 1);
   assert.equal(r.final, true);

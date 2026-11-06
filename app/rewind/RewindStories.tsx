@@ -160,16 +160,29 @@ export default function RewindStories({ r }: { r: Rewind }) {
         </div>
       </>);
     } },
-    { cls: 's-end', lt: true, body: (on) => (<>
-      <div className="r rw-kicker">Ton RunZ en 6 chiffres</div>
-      <div className="r rw-six">
+    ...(r.tracks.length ? [{ cls: 's-tracks', lt: true, body: (on: boolean) => (<>
+      <div className="r rw-kicker">Ton mois en tracés</div>
+      <div className="r rw-mid">{r.tracksTotal} sortie{r.tracksTotal > 1 ? 's' : ''}, {r.tracksTotal > 1 ? 'autant de dessins' : 'un dessin'}</div>
+      <div className="r rw-tracks" style={{ gridTemplateColumns: `repeat(${galCols(r.tracks.length)}, 1fr)` }}>
+        {r.tracks.map((t, i) => (
+          <svg key={i} viewBox="0 0 100 100"><path d={t.path} pathLength={1} stroke={trackColor(t.sport)} className={on ? 'draw' : ''} style={{ transitionDelay: `${0.2 + i * 0.05}s` }} /></svg>
+        ))}
+      </div>
+      <div className="r rw-small" style={{ marginTop: 8 }}>
+        <span style={{ color: '#FC4C02' }}>●</span> course <span style={{ color: '#4c8a33', marginLeft: 8 }}>●</span> marche
+        {r.tracksTotal > r.tracks.length && <> · les {r.tracks.length} plus longues</>}
+      </div>
+      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={() => shareImage(drawTracks(r), `runz-traces-${slug(r.name)}.png`)}>⬇ Télécharger mes tracés</button></div>
+    </>) }] : []),
+    { cls: 's-end', body: (on) => (<>
+      <div className="rw-bands">
         {endStats(r).map(([v, l], i) => (
-          <div key={l} style={{ animationDelay: `${0.2 + i * 0.12}s` }} className={on ? 'pop' : ''}>
-            <b style={{ color: SIX_COLORS[i % 4] }}>{v}</b><span>{l}</span>
+          <div key={l} className={on ? 'in' : ''} style={{ background: BAND_COLORS[i], color: inkOn(BAND_COLORS[i]), animationDelay: `${0.1 + i * 0.12}s` }}>
+            <b>{v}</b><span>{l}</span>
           </div>
         ))}
       </div>
-      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={() => shareImage(drawRecap(r), `runz-rewind-${slug(r.name)}.png`)}>⬇ Télécharger ma story</button></div>
+      <button className="rw-btn rw-btn-float" onClick={() => shareImage(drawRecap(r), `runz-rewind-${slug(r.name)}.png`)}>⬇ Ma story</button>
     </>) },
     ...(r.gallery.length ? [{ cls: 's-gallery', body: (on: boolean) => (<>
       <div className="r rw-kicker" style={{ color: '#FC4C02' }}>La galerie #TRACEZ</div>
@@ -252,7 +265,15 @@ export default function RewindStories({ r }: { r: Rewind }) {
   );
 }
 
-const SIX_COLORS = ['#9A1325', '#78AF5F', '#FA8F18', '#3847C4'];
+/** Bandes du récap : couleurs des équipes + rose de la bannière + noir. */
+const BAND_COLORS = ['#9A1325', '#78AF5F', '#FA8F18', '#3847C4', '#f5bcc4', '#111111'];
+/** Texte noir ou blanc, celui qui contraste le plus avec le fond (luminance relative WCAG). */
+function inkOn(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (L + 0.05) / 0.05 > 1.05 / (L + 0.05) ? '#111' : '#fff';
+}
 const slug = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const galCols = (n: number) => (n <= 4 ? 2 : n <= 9 ? 3 : n <= 20 ? 4 : n <= 30 ? 5 : 6);
 
@@ -303,20 +324,56 @@ function drawLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, W:
   g.filter = 'none';
 }
 
-/** Carte finale 1080×1920 : les 6 chiffres en grand, sur fond blanc. */
+/** Carte finale 1080×1920 : bandeau blanc puis 6 bandes pleines, un chiffre par bande. */
 async function drawRecap(r: Rewind) {
+  const { c, g, F, W, logo } = await canvasBase();
+  const head = 240, bh = (1920 - head) / 6;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, head);
+  g.fillStyle = '#111'; g.textAlign = 'left';
+  g.font = `800 36px ${F}`; g.fillText('MON RUNZ REWIND', 70, 105);
+  const lh = 110, lw = logo ? (logo.naturalWidth && logo.naturalHeight ? logo.naturalWidth / logo.naturalHeight : 2.4) * lh : 0;
+  g.font = `900 54px ${F}`; g.fillText(`${r.name}${r.teamName ? ` · ${r.teamName}` : ''}`, 70, 180, W - 140 - lw - 40);
+  if (logo) g.drawImage(logo, W - 70 - lw, 65, lw, lh);
+  endStats(r).forEach(([v, l], i) => {
+    const y = head + i * bh;
+    g.fillStyle = BAND_COLORS[i]; g.fillRect(0, y, W, bh + 1);
+    g.fillStyle = inkOn(BAND_COLORS[i]);
+    g.font = `900 ${v.length > 5 ? 150 : 170}px ${F}`; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText(v, 70, y + bh / 2 + 8);
+    const vw = g.measureText(v).width;
+    g.font = `800 46px ${F}`; g.fillText(l.replace(' 🏆', ''), 70 + vw + 40, y + bh / 2 + 8, W - 140 - vw - 40);
+  });
+  g.textBaseline = 'alphabetic';
+  return c;
+}
+
+const trackColor = (sport: string) => (['Walk', 'Hike'].includes(sport) ? '#4c8a33' : '#FC4C02');
+/** Grille de formes dans un rectangle : nombre de colonnes qui donne les plus grandes cases. */
+function fitGrid(n: number, w: number, h: number) {
+  let best = 1;
+  for (let k = 2; k <= 8; k++) if (Math.min(w / k, h / Math.ceil(n / k)) > Math.min(w / best, h / Math.ceil(n / best))) best = k;
+  return { cols: best, rows: Math.ceil(n / best), cell: Math.min(w / best, h / Math.ceil(n / best)) };
+}
+
+/** Ses tracés 1080×1920, fond blanc. */
+async function drawTracks(r: Rewind) {
   const { c, g, F, W, logo } = await canvasBase();
   g.fillStyle = '#fff'; g.fillRect(0, 0, W, 1920);
   g.fillStyle = '#111'; g.textAlign = 'left';
-  g.font = `800 40px ${F}`; g.fillText('MON RUNZ REWIND', 80, 150);
-  g.font = `900 64px ${F}`; g.fillText(r.name.slice(0, 26), 80, 230);
-  if (r.teamName) { g.fillStyle = '#6f6f6f'; g.font = `600 40px ${F}`; g.fillText(`Team ${r.teamName}`, 80, 290); }
-  endStats(r).forEach(([v, l], i) => {
-    const x = 80 + (i % 2) * 480, y = 520 + Math.floor(i / 2) * 400;
-    g.fillStyle = SIX_COLORS[i % 4]; g.font = `900 ${v.length > 6 ? 120 : 150}px ${F}`; g.fillText(v, x, y);
-    g.fillStyle = '#111'; g.font = `700 40px ${F}`; g.fillText(l.replace(' 🏆', ''), x, y + 64);
+  g.font = `800 40px ${F}`; g.fillText('MON MOIS EN TRACÉS', 80, 150);
+  g.font = `900 64px ${F}`; g.fillText(`${r.tracksTotal} sorties · ${nf(r.totalKm, 0)} km`, 80, 230);
+  const top = 300, bottom = 1620, pad = 60;
+  const { cols, rows, cell } = fitGrid(r.tracks.length, W - 2 * pad, bottom - top);
+  const ox = (W - cell * cols) / 2, oy = top + (bottom - top - cell * rows) / 2;
+  r.tracks.forEach((t, i) => {
+    const x = ox + (i % cols) * cell, y = oy + Math.floor(i / cols) * cell;
+    g.save(); g.translate(x + cell * 0.08, y + cell * 0.08); g.scale(cell * 0.84 / 100, cell * 0.84 / 100);
+    g.strokeStyle = trackColor(t.sport); g.lineWidth = 2.6; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.stroke(new Path2D(t.path)); g.restore();
   });
-  drawLogo(g, logo, W, 1680, 140);
+  g.textAlign = 'center'; g.fillStyle = '#6f6f6f'; g.font = `600 34px ${F}`;
+  g.fillText(`${r.name} · RunZ Challenge`, W / 2, 1660);
+  drawLogo(g, logo, W, 1720, 120);
   return c;
 }
 

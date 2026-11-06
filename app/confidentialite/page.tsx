@@ -11,7 +11,9 @@ export default function Privacy() {
         <ul>
           <li>Ton identifiant Strava, ton prénom et l’initiale de ton nom (pour t’associer à ton équipe), et ta photo de profil Strava (affichée seulement dans ton Rewind de fin de challenge).</li>
           <li>Pour chaque activité de la période du challenge : nom, type, date et heure de départ, distance, durée, dénivelé.</li>
-          <li>Aucun tracé GPS, aucune position, aucune donnée de santé (fréquence cardiaque, poids…) n’est récupéré.</li>
+          <li>Aucun tracé GPS, aucune position, aucune donnée de santé (fréquence cardiaque, poids…) n’est enregistré.</li>
+          <li>Pour ton Rewind de fin de challenge, les tracés de tes sorties sont lus chez Strava au moment où tu l’ouvres, pour dessiner
+            leurs formes (sans fond de carte). Ils ne sont pas enregistrés et toi seul·e les vois.</li>
           <li><b>Exception, sur ton choix :</b> si tu ajoutes <b>#TRACEZ</b> au titre d’une activité (jeu des formes), son tracé est conservé
             pour dessiner la forme. Elle est affichée sans fond de carte (on ne voit ni rue ni lieu), de façon anonyme pendant le vote,
             puis avec ton prénom si elle est sur le podium. À la fin, toutes les formes sont réunies dans la galerie du Rewind, toujours sans nom ni lieu. Retire le tag du titre sur Strava pour que le tracé soit effacé.</li>

@@ -172,6 +172,25 @@ export async function syncParticipant(participantId: string, startDate: string, 
   return all.length;
 }
 
+/**
+ * Rewind : tracés (polyline simplifiée) des activités de la période, lus à la volée chez Strava pour dessiner
+ * les formes du participant. Rien n'est enregistré en base. 1 à 2 appels API.
+ */
+export async function fetchTracks(participantId: string, startDate: string, endDate: string) {
+  const p = must(await db().from('participants').select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
+  if (!p.refresh_token) return [];
+  const token = await validToken(p);
+  const after = Math.floor(new Date(`${startDate}T00:00:00Z`).getTime() / 1000) - 86400;
+  const before = Math.min(Math.floor(new Date(`${endDate}T23:59:59Z`).getTime() / 1000) + 86400, Math.floor(Date.now() / 1000));
+  const out: { stravaId: number; polyline: string }[] = [];
+  for (let page = 1; page <= 3; page++) {
+    const batch = await api<StravaActivity[]>(token, `/athlete/activities?after=${after}&before=${before}&per_page=200&page=${page}`);
+    for (const a of batch) if (a.map?.summary_polyline) out.push({ stravaId: a.id, polyline: a.map.summary_polyline });
+    if (batch.length < 200) break;
+  }
+  return out;
+}
+
 /** Mode test Battle (admins) : récupère les tracés des dernières activités déjà en base et les range dans test_polyline. */
 export async function fetchTestPolylines(participantId: string, max = 8) {
   const p = must(await db().from('participants').select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
