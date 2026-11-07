@@ -68,7 +68,7 @@ export default function BattleModal({ pairs, shapes, until, preview }: { pairs: 
     <div className="battle-overlay" role="dialog" aria-modal="true" aria-labelledby="battle-title" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
       <div className="battle">
         <button className="battle-close" aria-label="Fermer" title="Fermer" onClick={() => setOpen(false)}>
-          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>
         <p className="eyebrow">{preview ? <><b style={{ color: 'var(--red)' }}>Aperçu admins</b> · ouverture à tous le {preview} · les votes comptent (à supprimer dans l’admin après les tests)</> : <>Tracé GPS · vote jusqu’au {until}</>}</p>
         {done ? (

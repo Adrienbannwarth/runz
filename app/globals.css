@@ -216,7 +216,7 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .battle-overlay { position: fixed; inset: 0; z-index: 90; background: rgba(17,17,17,.6); display: grid; place-items: center; padding: 16px; }
 .battle { position: relative; background: #fff; border-radius: 12px; padding: 28px; width: min(720px, 100%); max-height: calc(100vh - 32px); overflow: auto; text-align: center; }
 .battle h2 { margin: 4px 0 18px; }
-.battle-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 0; padding: 0; margin: 0; background: #efefec; color: #111;
+.battle-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; margin: 0; background: #efefec; color: #111;
   display: grid; place-items: center; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .battle-close svg { display: block; }
 .battle-duel { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
