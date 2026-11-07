@@ -46,7 +46,7 @@ body:has(.rw-overlay) { overflow: hidden; }
 @keyframes rw-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 
 .s-intro { background: var(--beige); color: var(--noir); align-items: flex-start; }
-.rw-year { display: flex; align-items: baseline; gap: .25em; margin: 18px 0 14px; font-size: 52px; font-weight: 500; letter-spacing: -.03em; line-height: 1; }
+.rw-year { display: flex; align-items: baseline; gap: .25em; margin: 18px 0 14px; font-size: 36px; font-weight: 500; letter-spacing: -.03em; line-height: 1; }
 .rw-year b { font-weight: 500; color: var(--orange); }
 .rw-intro-q { font-size: 26px; margin-top: 18px; }
 .rw-logo { width: 70%; max-width: 260px; height: auto; }
@@ -96,8 +96,10 @@ body:has(.rw-overlay) { overflow: hidden; }
 
 .s-boost { background: var(--rose); color: var(--noir); }
 .rw-chip { display: inline-block; background: var(--noir); color: var(--creme); font-weight: 500; font-size: 13px; padding: 5px 11px; border-radius: 99px; margin: 6px 6px 0 0; }
-.rw-gauge { height: 14px; border-radius: 99px; background: rgba(39,39,39,.18); overflow: hidden; margin-top: 8px; }
-.rw-gauge i { display: block; height: 100%; background: var(--noir); transition: width 1.4s .3s cubic-bezier(.2,.8,.2,1); }
+.rw-gauge { display: flex; gap: 5px; margin-top: 8px; }
+.rw-gauge i { flex: 1; height: 7px; border-radius: 99px; box-shadow: inset 0 0 0 1.5px var(--noir); background: transparent; transition: background .4s ease; }
+.rw-gauge i.on { background: var(--noir); }
+.rw-orange { color: var(--orange) !important; opacity: 1 !important; font-weight: 500 !important; }
 
 .s-shape { background: var(--creme); color: var(--noir); }
 .rw-shape { width: 100%; height: 230px; margin-top: 10px; }

@@ -12,6 +12,14 @@ const WALK = ['Walk'];
 const TRAIL = ['TrailRun'];
 const HIKE = ['Hike'];
 const EIFFEL_M = 330;
+/** Équivalences du dénivelé : la plus grande référence atteinte (au moins la moitié de la tour Eiffel). */
+const CLIMBS: [number, string, string][] = [[4808, 'Mont Blanc', 'Monts Blancs'], [1910, 'mont Ventoux', 'monts Ventoux'], [330, 'tour Eiffel', 'tours Eiffel']];
+export function climbLabel(m: number): string | null {
+  const [h, one, many] = CLIMBS.find(([x]) => m >= x) ?? CLIMBS[CLIMBS.length - 1];
+  const n = Math.round((m / h) * 10) / 10;
+  if (n < 0.5) return null;
+  return `soit ${n.toLocaleString('fr-FR')} ${n >= 2 ? many : one}`;
+}
 const DAYS_FR = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 
 /** Distances depuis Paris, pour l'équivalence ludique. */
@@ -46,7 +54,7 @@ export type Rewind = {
   calendar: RewindDay[];
   longest: { km: number; day: string } | null;
   bestDay: { km: number; day: string } | null;
-  elevation: number; eiffel: number;
+  elevation: number; eiffel: number; climb: string | null; // « soit 3,2 tours Eiffel », « soit 1,1 Mont Blanc »
   slots: { morning: number; lunch: number; day: number; evening: number }; // part des km (0-1)
   earliest: { time: string; day: string } | null;
   favDay: { name: string; count: number } | null;
@@ -172,6 +180,7 @@ export function buildRewind(input: {
     bestDay: dayEntries[0] ? { km: r1(dayEntries[0][1]), day: dayEntries[0][0] } : null,
     elevation: Math.round(mine.reduce((t, s) => t + Number(s.elevation_gain_m ?? 0), 0)),
     eiffel: r1(mine.reduce((t, s) => t + Number(s.elevation_gain_m ?? 0), 0) / EIFFEL_M),
+    climb: climbLabel(mine.reduce((t, s) => t + Number(s.elevation_gain_m ?? 0), 0)),
     slots: { morning: slotKm.morning / tot, lunch: slotKm.lunch / tot, day: slotKm.day / tot, evening: slotKm.evening / tot },
     earliest: earliest ? { time: hm(earliest.start_date_local).replace(':', 'h'), day: earliest.day } : null,
     favDay: fav ? { name: DAYS_FR[fav[0]], count: fav[1] } : null,

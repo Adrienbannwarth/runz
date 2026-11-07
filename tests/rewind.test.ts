@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRewind, scatter } from '../lib/rewind.ts';
+import { buildRewind, climbLabel, scatter } from '../lib/rewind.ts';
 import { computeStandings, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 const settings: Settings = {
@@ -72,4 +72,13 @@ test('Rewind : mosaïque des tracés sans chevauchement, dans la zone', () => {
   }
   assert.deepEqual(scatter(items, 100, 124, 'abc'), s); // reproductible
   assert.equal(scatter([{ km: 5 }], 100, 124, 'x').length, 1);
+});
+
+test('Rewind : équivalences du dénivelé', () => {
+  assert.equal(climbLabel(100), null);
+  assert.equal(climbLabel(200), 'soit 0,6 tour Eiffel');
+  assert.equal(climbLabel(1056), 'soit 3,2 tours Eiffel');
+  assert.equal(climbLabel(2000), 'soit 1 mont Ventoux');
+  assert.equal(climbLabel(5300), 'soit 1,1 Mont Blanc');
+  assert.equal(climbLabel(10000), 'soit 2,1 Monts Blancs');
 });

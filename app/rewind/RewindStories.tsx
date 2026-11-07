@@ -115,7 +115,7 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
         {r.longest && <div><b><Count to={r.longest.km} dec={1} on={on} /><small> km</small></b><span>ta plus longue sortie · {dFr(r.longest.day)}</span></div>}
         {r.bestDay && <div><b><Count to={r.bestDay.km} dec={1} on={on} /><small> km</small></b><span>ta plus grosse journée · {dFr(r.bestDay.day)}</span></div>}
         {r.bestPace && <div><b><Count to={paceSec(r.bestPace)} on={on} fmt={fmtPace} /><small> /km</small></b><span>ta meilleure allure en course</span></div>}
-        <div><b><Count to={r.elevation} on={on} /><small> m D+</small></b><span>{r.eiffel >= 0.5 ? `soit ${nf(r.eiffel, 1)} tour${r.eiffel >= 2 ? 's' : ''} Eiffel` : 'de dénivelé cumulé'}</span></div>
+        <div><b><Count to={r.elevation} on={on} /><small> m D+</small></b>{r.climb ? <span className="rw-orange">{r.climb}</span> : <span>de dénivelé cumulé</span>}</div>
       </div>
       {r.favDay && <div className="r rw-sub" style={{ fontSize: 14 }}>Jour préféré : <b>le {r.favDay.name}</b> ({r.favDay.count} fois)</div>}
     </>) },
@@ -138,8 +138,11 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
       <div className="r rw-sub">gagnés grâce aux boosts pour {r.teamName ? `la team ${r.teamName}` : 'ton équipe'}</div>
       <div className="r">{r.boosts.map((b) => <span key={b.name} className="rw-chip">{b.name}{b.count > 1 ? ` ×${b.count} sorties` : ''}</span>)}</div>
       {r.boostsTotal > 0 && <div className="r" style={{ marginTop: 16 }}>
-        <div className="rw-small">Boosts attrapés : {r.boostsCaught} sur {r.boostsTotal}</div>
-        <div className="rw-gauge"><i style={{ width: on ? `${(r.boostsCaught / r.boostsTotal) * 100}%` : 0 }} /></div>
+        <div className="rw-small">{r.boostsCaught === r.boostsTotal ? <>Boosts attrapés : <b>{r.boostsTotal} sur {r.boostsTotal}, tous !</b> 🎯</> : <>Boosts attrapés : {r.boostsCaught} sur {r.boostsTotal}</>}</div>
+        {/* une case par boost : pleine = attrapé, contour seul = raté */}
+        <div className="rw-gauge">
+          {Array.from({ length: r.boostsTotal }, (_, i) => <i key={i} className={i < r.boostsCaught && on ? 'on' : ''} style={{ transitionDelay: `${0.3 + i * 0.15}s` }} />)}
+        </div>
       </div>}
     </>) },
     ...(r.shape ? [{ cls: 's-shape', lt: true, body: (on: boolean) => (<>
