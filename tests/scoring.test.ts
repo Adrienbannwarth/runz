@@ -335,7 +335,7 @@ test('On vient à pied Days : ×3 sur la marche et la rando seulement', () => {
 test('nom de la forme et variantes du tag', async () => {
   const { shapeLabel } = await import('../lib/polyline.ts');
   assert.equal(shapeLabel('#TRACEZ (Cœur de Colorz)'), 'Cœur de Colorz');
-  assert.equal(shapeLabel('Licorne #TRACEZ'), 'Licorne');
+  assert.equal(shapeLabel('Licorne #TRACEZ'), ''); // sans parenthèses : pas de nom affiché
   assert.equal(shapeLabel('#tracé (Étoile)'), 'Étoile');
   assert.equal(shapeLabel('#TRACEZ'), '');
   for (const t of ['#TRACEZ (Cœur)', '#tracez', '# Tracé (Z)', '#TRACE (Chat)']) assert.ok(hasTraceTag(t) && tagMatch('#TRACEZ', t), t);

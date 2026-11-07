@@ -5,12 +5,11 @@
 export const TRACE_TAG = /#\s*trac[eé]\s*z?(?![a-zà-ÿ])/i;
 export const hasTraceTag = (name?: string | null) => !!name && TRACE_TAG.test(name);
 
-/** Nom de la forme : le texte entre parenthèses (« #TRACEZ (Cœur) » → « Cœur »), sinon le reste du titre. */
+/** Nom de la forme : uniquement le texte entre parenthèses (« #TRACEZ (Cœur) » → « Cœur ») ; rien sans parenthèses. */
 export function shapeLabel(title?: string | null): string {
   if (!title) return '';
   const paren = title.match(/\(([^)]+)\)/);
-  if (paren) return paren[1].trim().slice(0, 40);
-  return title.replace(TRACE_TAG, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  return paren ? paren[1].replace(/\s+/g, ' ').trim().slice(0, 60) : '';
 }
 
 /** Décode un polyline encodé (algorithme Google, précision 1e-5) en [lat, lng][]. */
