@@ -11,7 +11,7 @@ import { voteDuel } from './battle-actions';
 type Info = { path: string; km: number; label: string };
 const km = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
 
-export default function BattleModal({ pairs, shapes, until, test = false }: { pairs: [string, string][]; shapes: Record<string, Info>; until: string; test?: boolean }) {
+export default function BattleModal({ pairs, shapes, until, preview }: { pairs: [string, string][]; shapes: Record<string, Info>; until: string; preview?: string }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const [err, setErr] = useState('');
@@ -30,7 +30,7 @@ export default function BattleModal({ pairs, shapes, until, test = false }: { pa
   }, [open]);
 
   const pick = (w: string) => start(async () => {
-    const r = await voteDuel(a, b, w, test);
+    const r = await voteDuel(a, b, w);
     setErr(!r.ok && r.error ? r.error : '');
     setI((n) => n + 1);
   });
@@ -39,7 +39,7 @@ export default function BattleModal({ pairs, shapes, until, test = false }: { pa
     <div className="battle-overlay" role="dialog" aria-modal="true" aria-labelledby="battle-title" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
       <div className="battle">
         <button className="battle-close" aria-label="Fermer" title="Fermer" onClick={() => setOpen(false)}>×</button>
-        <p className="eyebrow">{test ? <><b style={{ color: 'var(--red)' }}>Mode test · admins</b> · ouverture à tous le {until}</> : <>Tracé GPS · vote jusqu’au {until}</>}</p>
+        <p className="eyebrow">{preview ? <><b style={{ color: 'var(--red)' }}>Aperçu admins</b> · ouverture à tous le {preview} · les votes comptent (à supprimer dans l’admin après les tests)</> : <>Tracé GPS · vote jusqu’au {until}</>}</p>
         {done ? (
           <>
             <h2 id="battle-title">Merci pour tes votes ! 🙌</h2>

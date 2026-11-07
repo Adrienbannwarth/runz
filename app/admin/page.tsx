@@ -9,7 +9,8 @@ import TeamSelect from './TeamSelect';
 import CopyLink from './CopyLink';
 import ShapeSvg from '../ShapeSvg';
 import { polylineToPath } from '@/lib/polyline';
-import { battleBoost, battleResults, battleShapes, loadVotes, testShapes } from '@/lib/battle';
+import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
+import ConfirmButton from './ConfirmButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
   const bb = battleBoost(d.boosts);
   const battle = bb && tab === 'mvp' ? await (async () => {
     const shapes = battleShapes(bb, d.scored); const votes = await loadVotes();
-    const tShapes = testShapes(d.activities); const tVotes = await loadVotes(true);
-    return { boost: bb, shapes, votes, results: battleResults(shapes, votes), test: { shapes: tShapes, votes: tVotes, results: battleResults(tShapes, tVotes) } };
+    return { boost: bb, shapes, votes, results: battleResults(shapes, votes) };
   })() : null;
   const teamsAll = d.teamList;                       // toutes les équipes (y compris inactives)
   const allTeams = teamsAll.filter((t) => t.active); // équipes en jeu
@@ -549,36 +549,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           <>
             {battle && (
               <>
-                <h2>Battle TraceZ · mode test admins</h2>
-                <p className="muted small">
-                  Avant l’ouverture ({fmtDate(battle.boost.vote_from!)} à 14h), les admins connectés à Strava voient la fenêtre de vote sur l’accueil avec leurs propres tracés récents.
-                  Ces votes sont marqués « test » et ne comptent jamais dans le vrai classement. {battle.test.shapes.length} tracé{battle.test.shapes.length > 1 ? 's' : ''} · {battle.test.votes.length} vote{battle.test.votes.length > 1 ? 's' : ''} de test.
-                </p>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <form action={A.prepareBattleTest}><button className="btn small primary">{battle.test.shapes.length ? 'Rafraîchir les tracés de test' : 'Préparer le test'}</button></form>
-                  {(battle.test.shapes.length > 0 || battle.test.votes.length > 0) && <form action={A.clearBattleTest}><button className="btn small danger">Effacer le test</button></form>}
-                </div>
-                {battle.test.results.length > 0 && (
-                  <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
-                    <table>
-                      <thead><tr><th>#</th><th>Forme</th><th>Admin</th><th className="num">Victoires</th><th className="num">Duels</th><th className="num">% gagnés</th></tr></thead>
-                      <tbody>
-                        {battle.test.results.map((r, k) => (
-                          <tr key={r.shape.id}>
-                            <td>{k + 1}</td><td><ShapeSvg path={r.shape.path} size={48} /></td><td>{pName(r.shape.participant_id)}<div className="muted small">{r.shape.label ? `${r.shape.label} · ` : ''}{fmtKm(r.shape.km)} km</div></td>
-                            <td className="num">{r.wins}</td><td className="num">{r.duels}</td><td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </>
-            )}
-            {battle && (
-              <>
                 <h2>Battle TraceZ · {battle.shapes.length} forme{battle.shapes.length > 1 ? 's' : ''} validée{battle.shapes.length > 1 ? 's' : ''} · {battle.votes.length} vote{battle.votes.length > 1 ? 's' : ''}</h2>
                 <p className="muted small">Vote du {fmtDate(battle.boost.vote_from!)} au {fmtDate(battle.boost.vote_to ?? battle.boost.vote_from!)} · classement au % de duels gagnés (visible par les participants seulement après la fin du vote).</p>
+                <p className="muted small">Avant l’ouverture à tous ({fmtDate(battle.boost.vote_from!)} à 14h), les admins voient déjà la fenêtre de vote sur l’accueil, avec leurs propres formes. Ces votes comptent : supprime-les après vos tests.</p>
+                {battle.votes.length > 0 && (
+                  <form action={A.clearVotes} style={{ marginBottom: 12 }}>
+                    <ConfirmButton className="btn small danger" message={`Supprimer les ${battle.votes.length} votes ? Le vote repartira de zéro (irréversible).`}>Supprimer les votes</ConfirmButton>
+                  </form>
+                )}
                 <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
                   {battle.results.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune forme validée pour l’instant (onglet Validations › {battle.boost.name}).</p> : (
                     <table>

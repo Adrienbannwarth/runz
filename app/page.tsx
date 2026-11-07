@@ -3,7 +3,7 @@ import { activeBoost, boostEffect, fmtDate, fmtKm, loadAll, nowParis, windowLabe
 import { boostsOn } from '@/lib/scoring';
 import { getParticipantId, isAdmin } from '@/lib/session';
 import type { TeamStats } from '@/lib/scoring';
-import { battleBoost, battleResults, battleShapes, loadVotes, remainingPairs, testShapes, voteEnded, voteOpen } from '@/lib/battle';
+import { VOTE_OPEN_HOUR, battleBoost, battleResults, battleShapes, loadVotes, remainingPairs, voteEnded, voteOpen } from '@/lib/battle';
 import BattleModal from './BattleModal';
 import ShapeSvg from './ShapeSvg';
 
@@ -46,12 +46,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const bBoost = battleBoost(boosts);
   const isOpen = !!bBoost && voteOpen(bBoost, now);
   const shapes = bBoost ? battleShapes(bBoost, data.scored) : [];
-  const votes = bBoost && shapes.length > 1 && (isOpen || voteEnded(bBoost, now)) ? await loadVotes() : [];
-  const pairsToVote = bBoost && me && isOpen ? remainingPairs(shapes, votes, me.id) : [];
+  // Aperçu admins : la fenêtre de vote s'affiche dès maintenant pour les admins (votes réels, à supprimer après les tests)
+  const adminEarly = !!bBoost && !!me?.is_admin && !isOpen && !voteEnded(bBoost, now);
+  const votes = bBoost && shapes.length > 1 && (isOpen || adminEarly || voteEnded(bBoost, now)) ? await loadVotes() : [];
+  const pairsToVote = bBoost && me && (isOpen || adminEarly) ? remainingPairs(shapes, votes, me.id, { allowOwn: adminEarly }) : [];
   const podium = bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
-  // Mode test : avant l'ouverture, les admins participants votent sur leurs propres tracés (votes « test »)
-  const tShapes = bBoost && me?.is_admin && !isOpen && !voteEnded(bBoost, now) ? testShapes(data.activities) : [];
-  const testPairs = tShapes.length > 1 ? remainingPairs(tShapes, await loadVotes(true), me!.id, { allowOwn: true }) : [];
 
   const card = (t: TeamStats, big = false) => (
     <div className={`card team${big ? ' big' : ''}`} key={t.team.id}>
@@ -110,11 +109,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           </ol>
         </details>
       )}
-      {bBoost && me && isOpen && pairsToVote.length > 0 && (
-        <BattleModal pairs={pairsToVote} shapes={Object.fromEntries(shapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)} />
-      )}
-      {bBoost && testPairs.length > 0 && (
-        <BattleModal test pairs={testPairs} shapes={Object.fromEntries(tShapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={`${fmtDate(bBoost.vote_from!)} à 14h`} />
+      {bBoost && me && (isOpen || adminEarly) && pairsToVote.length > 0 && (
+        <BattleModal pairs={pairsToVote} shapes={Object.fromEntries(shapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)}
+          preview={adminEarly ? `${fmtDate(bBoost.vote_from!)} à ${VOTE_OPEN_HOUR.replace(':00', 'h')}` : undefined} />
       )}
 
       {podium.length > 0 && view !== 'visitor' && (
