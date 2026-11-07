@@ -51,7 +51,6 @@ export default async function RewindPage({ searchParams }: { searchParams: Promi
     start: data.settings.start_date, end: data.settings.end_date, today: data.today,
     cap: Number(data.settings.daily_cap_km) || 10, battle, avatar,
     tracks,
-    gallery: shapes.map((x) => ({ participantId: x.participant_id, path: x.path, label: x.label, km: x.km })),
   });
 
   const asOf = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });

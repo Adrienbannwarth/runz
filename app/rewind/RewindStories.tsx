@@ -180,21 +180,7 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
         ))}
       </svg>
       {r.tracksTotal > r.tracks.length && <div className="r rw-small" style={{ marginTop: 8 }}>Les {r.tracks.length} plus longues</div>}
-      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={() => shareImage(drawTracks(r), `runz-traces-${slug(r.name)}.png`)}>⬇ Télécharger mes tracés</button></div>
-    </>) }] : []),
-    ...(r.gallery.length ? [{ cls: 's-gallery', body: (on: boolean) => (<>
-      <div className="r rw-kicker" style={{ color: '#FC4C02' }}>La galerie #TRACEZ</div>
-      <div className="r rw-mid">{r.gallery.length} forme{r.gallery.length > 1 ? 's' : ''} dessinée{r.gallery.length > 1 ? 's' : ''} par les Colorz</div>
-      <div className="r rw-gal" style={{ gridTemplateColumns: `repeat(${galCols(r.gallery.length)}, 1fr)` }}>
-        {r.gallery.map((g, i) => (
-          <svg key={i} viewBox="0 0 100 100" className={g.mine ? 'mine' : ''}>
-            <path d={g.path} pathLength={1} className={on ? 'draw' : ''} style={{ transitionDelay: `${0.3 + i * 0.06}s` }} />
-          </svg>
-        ))}
-      </div>
-      {r.gallery.some((g) => g.mine) && <div className="r rw-small" style={{ marginTop: 8 }}><span style={{ color: '#FC4C02' }}>●</span> ta forme</div>}
-      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn light" onClick={() => shareImage(drawGallery(r), 'runz-galerie-tracez.png')}>⬇ Télécharger la galerie</button></div>
-      <div className="r rw-small" style={{ textAlign: 'center', marginTop: 8 }}>Merci d’avoir marché et couru avec nous 🧡</div>
+      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={() => shareImage(drawTracks(r), `runz-traces-${slug(r.name)}.png`)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Télécharger mes tracés</button></div>
     </>) }] : []),
   ];
 
@@ -274,7 +260,6 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
 }
 
 const slug = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-const galCols = (n: number) => (n <= 4 ? 2 : n <= 9 ? 3 : n <= 20 ? 4 : n <= 30 ? 5 : 6);
 
 /** Partage (mobile : feuille de partage → story) ou téléchargement de l'image. */
 async function shareImage(canvasP: Promise<HTMLCanvasElement>, name: string) {
@@ -316,8 +301,8 @@ async function drawTracks(r: Rewind) {
   const { c, g, F, W, logo } = await canvasBase();
   g.fillStyle = '#fff'; g.fillRect(0, 0, W, 1920);
   g.fillStyle = '#111'; g.textAlign = 'left';
-  g.font = `800 40px ${F}`; g.fillText('MON MOIS EN TRACÉS', 80, 150);
-  g.font = `900 64px ${F}`; g.fillText(`${r.tracksTotal} sorties · ${nf(r.totalKm, 0)} km`, 80, 230);
+  g.font = `500 40px ${F}`; g.fillText('Mon mois en tracés', 80, 150);
+  g.font = `600 66px ${F}`; g.fillText(`${r.tracksTotal} sorties · ${nf(r.totalKm, 0)} km`, 80, 230);
   const k = 960 / SCATTER_W, ox = 60, oy = 300 + (1340 - SCATTER_H * k) / 2;
   r.tracks.forEach((t) => {
     g.save(); g.translate(ox + t.x * k, oy + t.y * k); g.rotate((t.rot * Math.PI) / 180);
@@ -331,26 +316,3 @@ async function drawTracks(r: Rewind) {
   return c;
 }
 
-/** Galerie 1080×1920 : toutes les formes #TRACEZ, la sienne en orange. */
-async function drawGallery(r: Rewind) {
-  const { c, g, F, W, logo } = await canvasBase();
-  g.fillStyle = '#111'; g.fillRect(0, 0, W, 1920);
-  g.fillStyle = '#FC4C02'; g.textAlign = 'center';
-  g.font = `900 44px ${F}`; g.fillText('LA GALERIE #TRACEZ', W / 2, 150);
-  g.fillStyle = '#fff'; g.font = `800 58px ${F}`; g.fillText(`${r.gallery.length} formes · RunZ by Colorz`, W / 2, 230);
-  const top = 300, bottom = 1640, pad = 60, n = r.gallery.length;
-  // nombre de colonnes qui donne les plus grandes formes
-  const cols = [1, 2, 3, 4, 5, 6, 7, 8].reduce((best, k) =>
-    Math.min((W - 2 * pad) / k, (bottom - top) / Math.ceil(n / k)) > Math.min((W - 2 * pad) / best, (bottom - top) / Math.ceil(n / best)) ? k : best, 1);
-  const rows = Math.ceil(n / cols);
-  const cell = Math.min((W - 2 * pad) / cols, (bottom - top) / rows);
-  const ox = (W - cell * cols) / 2, oy = top + (bottom - top - cell * rows) / 2;
-  r.gallery.forEach((s, i) => {
-    const x = ox + (i % cols) * cell, y = oy + Math.floor(i / cols) * cell;
-    g.save(); g.translate(x + cell * 0.08, y + cell * 0.08); g.scale(cell * 0.84 / 100, cell * 0.84 / 100);
-    g.strokeStyle = s.mine ? '#FC4C02' : '#fff'; g.lineWidth = s.mine ? 3.2 : 2.2; g.lineCap = 'round'; g.lineJoin = 'round';
-    g.stroke(new Path2D(s.path)); g.restore();
-  });
-  drawLogo(g, logo, W, 1700, 120, true);
-  return c;
-}

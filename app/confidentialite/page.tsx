@@ -16,7 +16,7 @@ export default function Privacy() {
             leurs formes (sans fond de carte). Ils ne sont pas enregistrés et toi seul·e les vois.</li>
           <li><b>Exception, sur ton choix :</b> si tu ajoutes <b>#TRACEZ</b> au titre d’une activité (jeu des formes), son tracé est conservé
             pour dessiner la forme. Elle est affichée sans fond de carte (on ne voit ni rue ni lieu), de façon anonyme pendant le vote,
-            puis avec ton prénom si elle est sur le podium. À la fin, toutes les formes sont réunies dans la galerie du Rewind, toujours sans nom ni lieu. Retire le tag du titre sur Strava pour que le tracé soit effacé.</li>
+            puis avec ton prénom si elle est sur le podium. Retire le tag du titre sur Strava pour que le tracé soit effacé.</li>
         </ul>
         <h2>Qui voit quoi</h2>
         <ul>
