@@ -362,7 +362,7 @@ test('vitesse suspecte et exclusion manuelle', () => {
   assert.equal(by('exc').reason, 'Exclue par l’organisation');
 });
 
-test('Tracé GPS automatique : nom « #TRACEZ (forme) », tracé sans ligne droite, une forme par personne', () => {
+test('Tracé GPS automatique : titre avec #TRACEZ, tracé sans ligne droite, une forme par personne (la plus longue)', () => {
   const enc = (pts: [number, number][]) => { let out = '', pl = 0, pg = 0; const e = (v: number) => { v = v < 0 ? ~(v << 1) : v << 1; let s = ''; while (v >= 0x20) { s += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; } return s + String.fromCharCode(v + 63); };
     for (const [la, lo] of pts) { const a = Math.round(la * 1e5), b = Math.round(lo * 1e5); out += e(a - pl) + e(b - pg); pl = a; pg = b; } return out; };
   const walk = enc(Array.from({ length: 40 }, (_, i) => [48.85 + i * 0.001, 2.35] as [number, number]));          // points tous les ~110 m
@@ -378,7 +378,7 @@ test('Tracé GPS automatique : nom « #TRACEZ (forme) », tracé sans ligne droi
   const acts = [
     shape('t1', '2026-11-07T10:00:00', 6, 'Matin #TRACEZ (Cœur)', walk),
     shape('t1', '2026-11-08T10:00:00', 8, 'Dimanche #TRACEZ (Étoile)', walk),            // plus longue : retenue
-    shape('t2', '2026-11-07T10:00:00', 5, 'Sortie #TRACEZ', walk),                       // pas de (forme) → à valider
+    shape('t2', '2026-11-07T10:00:00', 2.64, 'Colorz Runz Challenge Stravart #TRACEZ', walk), // sans (forme) : ×4 quand même
     shape('t3', '2026-11-07T10:00:00', 4, 'Métro #TRACEZ (Escargot)', metro),             // ligne droite → à valider
     shape('t4', '2026-11-07T10:00:00', 9, 'Vélo #TRACEZ (Z)', walk, { moving_time_s: 900 }), // 36 km/h → ne compte pas
     shape('t5', '2026-11-07T10:00:00', 5, 'Choix admin #TRACEZ (Lune)', metro, { validated_boosts: [7] }),
@@ -387,7 +387,7 @@ test('Tracé GPS automatique : nom « #TRACEZ (forme) », tracé sans ligne droi
   const by = (name: string) => s.find((x) => x.name?.startsWith(name))!;
   assert.equal(by('Dimanche').multiplier, 4); assert.equal(by('Dimanche').tagWinner, 7);
   assert.equal(by('Matin').multiplier, 1);
-  assert.equal(by('Sortie').multiplier, 1); assert.equal(by('Sortie').pendingBoosts[0]?.id, 7);
+  assert.equal(by('Colorz').multiplier, 4); assert.equal(by('Colorz').countedKm, 10.56);
   assert.equal(by('Métro').multiplier, 1); assert.equal(by('Métro').pendingBoosts[0]?.id, 7);
   assert.equal(by('Vélo').eligible, false); assert.equal(by('Vélo').multiplier, 1);
   assert.equal(by('Choix admin').multiplier, 4);

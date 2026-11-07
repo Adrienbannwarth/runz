@@ -252,9 +252,10 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
         if (b.tag && !tagMatch(b.tag, a.name)) continue; // boost réservé aux activités taguées
         if (b.sport_types?.length && !b.sport_types.includes(a.sport_type)) continue; // boost réservé à certains types (ex. marche)
         if (b.tag && !b.manual) {
-          // Forme automatique : nom « #TRACEZ (nom) », vrai tracé GPS sans grande ligne droite. Sinon, vérification par un admin.
+          // Forme automatique : titre avec #TRACEZ (le « (nom) » est conseillé, pas obligatoire), vrai tracé GPS
+          // sans grande ligne droite (transport). Sinon, vérification par un admin.
           const ok = validated.has(Number(b.id))
-            || (strictShapeName(a.name) && a.has_track !== false && !a.trainer && !!a.polyline && (gpsGapM ?? 0) <= GPS_GAP_MAX_M);
+            || (a.has_track !== false && !a.trainer && !!a.polyline && (gpsGapM ?? 0) <= GPS_GAP_MAX_M);
           if (ok) tagCandidates.push(Number(b.id));
           else pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
           continue; // le multiplicateur n'est appliqué qu'à la forme retenue (une par personne), plus bas

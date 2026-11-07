@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appCapacity, appUrl, stravaApps } from '@/lib/strava';
 import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, sportsLabel, windowLabel } from '@/lib/data';
-import { GPS_GAP_MAX_M, leadSentence, speedKmh, strictShapeName, tagMatch } from '@/lib/scoring';
+import { GPS_GAP_MAX_M, leadSentence, speedKmh, tagMatch } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
 import CopyLink from './CopyLink';
@@ -507,7 +507,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                                 <form action={A.toggleBoostValidation}>
                                   <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="boost" value={current.id} /><input type="hidden" name="on" value="1" />
                                   {a.pendingBoosts.some((x) => x.id === current.id)
-                                    ? <><div className="small" style={{ color: 'var(--red)' }}>{!strictShapeName(a.name) ? 'Nom sans (forme)' : !a.polyline ? 'Pas de tracé' : `⚠ Ligne droite de ${fmtKm((a.gpsGapM ?? 0) / 1000)} km`}</div><button className="btn small primary">Valider ×{current.multiplier}</button></>
+                                    ? <><div className="small" style={{ color: 'var(--red)' }}>{a.trainer ? 'Tapis / home trainer' : !a.polyline ? 'Pas de tracé' : `⚠ Ligne droite de ${fmtKm((a.gpsGapM ?? 0) / 1000)} km`}</div><button className="btn small primary">Valider ×{current.multiplier}</button></>
                                     : <><div className="muted small">Une autre forme est retenue</div><button className="btn small">Retenir celle-ci</button></>}
                                 </form>
                               )
