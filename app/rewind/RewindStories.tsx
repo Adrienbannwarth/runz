@@ -38,16 +38,19 @@ function closeRewind() {
   else location.href = '/';
 }
 
+/** Palette du Rewind : on alterne beige, rose et noir ; jamais de blanc pur (blanc cassé). Codes à ajuster ici. */
+export const PAL = { noir: '#272727', beige: '#EEEFE8', creme: '#EEEFE8', rose: '#F5BCC4', orange: '#FC4C02' };
+
 export default function RewindStories({ r, children }: { r: Rewind; children?: React.ReactNode }) {
   const team = r.teamColor ?? '#fc5200';
   const teamInk = light(team) ? '#111' : '#fff';
   const first = r.name.split(' ')[0];
   const sportTotal = Math.max(1, r.split.run + r.split.walk + r.split.trail + r.split.hike);
   const sports = [
-    { k: 'Course', e: '🏃', v: r.split.run, c: '#FA8F18' },
-    { k: 'Marche', e: '🚶', v: r.split.walk, c: '#78AF5F' },
-    { k: 'Trail', e: '⛰️', v: r.split.trail, c: '#3847C4' },
-    { k: 'Rando', e: '🥾', v: r.split.hike, c: '#9A1325' },
+    { k: 'Course', e: '🏃', v: r.split.run, c: PAL.orange },
+    { k: 'Marche', e: '🚶', v: r.split.walk, c: PAL.rose },
+    { k: 'Trail', e: '⛰️', v: r.split.trail, c: PAL.beige },
+    { k: 'Rando', e: '🥾', v: r.split.hike, c: PAL.creme },
   ].filter((s) => s.v > 0);
   const maxSport = Math.max(1, ...sports.map((s) => s.v));
   const top = sports.slice().sort((a, b) => b.v - a.v)[0];
@@ -62,15 +65,16 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
   const slides: { cls: string; lt?: boolean; style?: React.CSSProperties; body: (on: boolean) => React.ReactNode }[] = [
     { cls: 's-intro', lt: true, body: () => (<>
       <img className="r rw-logo" src="/logo.svg" alt="RunZ by Colorz" />
-      <div className="r rw-kicker" style={{ marginTop: 18 }}>{dFr(r.start)} → {dFr(r.end)}</div>
-      <div className="r rw-mid" style={{ marginTop: 22 }}>{r.days} jours.<br />{r.podium.length} équipes.<br />Et toi, {first} ?</div>
+      <div className="r rw-year"><span>Rewind</span><b>{r.end.slice(0, 4)}</b></div>
+      <div className="r rw-kicker">{dFr(r.start)} → {dFr(r.end)}</div>
+      <div className="r rw-mid rw-intro-q">{r.days} jours. {r.podium.length} équipes.<br />Et toi, {first} ?</div>
       <div className="r rw-small" style={{ marginTop: 22 }}>Touche à droite pour avancer →</div>
     </>) },
-    { cls: 's-km', style: { background: team, color: teamInk }, body: (on) => (<>
+    { cls: 's-km', lt: true, body: (on) => (<>
       <div className="r rw-kicker">Au total, tu as parcouru</div>
       <div className="r rw-big"><Count to={r.totalKm} dec={1} on={on} /><small> km</small></div>
       {r.trip && <div className="r rw-sub">Soit {r.trip.label.includes('→') ? 'un ' : ''}<b>{r.trip.label}</b> à la force des mollets.</div>}
-      <div className="r rw-road"><i style={{ background: teamInk }} /><span className={on ? 'go' : ''}>🏃</span></div>
+      <div className="r rw-road"><i /><span className={on ? 'go' : ''}>🏃</span></div>
       <div className="r rw-sub" style={{ fontSize: 14 }}><b>{nf(r.countedKm, 1)} km</b> comptés pour l’équipe (plafond et boosts inclus)</div>
     </>) },
     ...(sports.length ? [{ cls: 's-split', body: (on: boolean) => (<>
@@ -90,7 +94,7 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
         {r.walkSpeed && <>en marche : <b>{r.walkSpeed} km/h</b></>}
       </div>}
     </>) }] : []),
-    { cls: 's-days', body: (on) => (<>
+    { cls: 's-days', lt: true, body: (on) => (<>
       <div className="r rw-kicker">Ta régularité</div>
       <div className="r rw-mid"><Count to={r.activeDays} on={on} /> jour{r.activeDays > 1 ? 's' : ''} actif{r.activeDays > 1 ? 's' : ''} sur {r.days}</div>
       <div className="r rw-cal">
@@ -101,11 +105,11 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
             style={{ animationDelay: `${i * 35}ms` }} />
         ))}
       </div>
-      <div className="r rw-legend"><span>Plus la case est claire, plus tu as fait de km</span><span style={{ color: '#FA8F18' }}>▢ ta série</span></div>
+      <div className="r rw-legend"><span>Plus la case est claire, plus tu as fait de km</span><span style={{ color: PAL.orange }}>▢ ta série</span></div>
       <div className="r rw-sub">🔥 Plus longue série : <b>{r.longestStreak} jour{r.longestStreak > 1 ? 's' : ''} d’affilée</b><br />
         📌 <b>{r.activities} sortie{r.activities > 1 ? 's' : ''}</b>{r.capDays > 0 && <>, dont {r.capDays} jour{r.capDays > 1 ? 's' : ''} au palier des 10 km</>}</div>
     </>) },
-    { cls: 's-rec', body: (on) => (<>
+    { cls: 's-rec', lt: true, body: (on) => (<>
       <div className="r rw-kicker">Tes records</div>
       <div className="r rw-records">
         {r.longest && <div><b><Count to={r.longest.km} dec={1} on={on} /><small> km</small></b><span>ta plus longue sortie · {dFr(r.longest.day)}</span></div>}
@@ -128,9 +132,9 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
       </div>
       {r.earliest && <div className="r rw-small" style={{ marginTop: 14 }}>Départ le plus matinal : {r.earliest.time}, {dFr(r.earliest.day)}</div>}
     </>) },
-    { cls: 's-boost', body: (on) => (<>
+    { cls: 's-boost', lt: true, body: (on) => (<>
       <div className="r rw-kicker">Chasse aux boosts</div>
-      <div className="r rw-big" style={{ color: '#FA8F18' }}>+<Count to={r.boostKm} dec={1} on={on} /><small> km</small></div>
+      <div className="r rw-big">+<Count to={r.boostKm} dec={1} on={on} /><small> km</small></div>
       <div className="r rw-sub">gagnés grâce aux boosts pour {r.teamName ? `la team ${r.teamName}` : 'ton équipe'}</div>
       <div className="r">{r.boosts.map((b) => <span key={b.name} className="rw-chip">{b.name}{b.count > 1 ? ` ×${b.count} sorties` : ''}</span>)}</div>
       {r.boostsTotal > 0 && <div className="r" style={{ marginTop: 16 }}>
@@ -139,7 +143,7 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
       </div>}
     </>) },
     ...(r.shape ? [{ cls: 's-shape', lt: true, body: (on: boolean) => (<>
-      <div className="r rw-kicker" style={{ color: '#FC4C02' }}>#TRACEZ</div>
+      <div className="r rw-kicker" style={{ color: PAL.orange, opacity: 1 }}>#TRACEZ</div>
       <div className="r rw-mid">Ton œuvre d’art GPS</div>
       <svg className="r rw-shape" viewBox="0 0 100 100"><path d={r.shape!.path} pathLength={1} className={on ? 'draw' : ''} /></svg>
       <div className="r rw-sub">« {r.shape!.label || 'Ma forme'} » · <b>{nf(r.shape!.km, 2)} km</b> · {dFr(r.shape!.day)}</div>
@@ -153,11 +157,11 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
         <div className="r rw-kicker">Ta part dans l’équipe</div>
         <div className="r rw-mid">Tu pèses <Count to={Math.round(r.teamShare * 100)} on={on} /> % de la team {r.teamName}</div>
         <svg className="r rw-donut" viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" stroke="rgba(0,0,0,.1)" />
-          <circle cx="60" cy="60" r="44" stroke="#111" strokeDasharray={on ? `${r.teamShare * D} ${D}` : `0 ${D}`} style={{ transition: 'stroke-dasharray 1.4s .3s cubic-bezier(.2,.8,.2,1)' }} /></svg>
+          <circle cx="60" cy="60" r="44" stroke={PAL.noir} strokeDasharray={on ? `${r.teamShare * D} ${D}` : `0 ${D}`} style={{ transition: 'stroke-dasharray 1.4s .3s cubic-bezier(.2,.8,.2,1)' }} /></svg>
         {r.teamRankInside && <div className="r rw-small" style={{ textAlign: 'center' }}>{r.teamRankInside === 1 ? '1re' : `${r.teamRankInside}e`} contribution sur {r.teamMembers} · {nf(r.countedKm, 0)} km sur {nf(r.teamKm, 0)}</div>}
         <div className="r rw-podium">
           {order.map((t, i) => (
-            <div key={t.id} style={{ background: t.color, color: light(t.color) ? '#111' : '#fff', height: on ? `${30 + (t.km / max) * 70}%` : 0, transitionDelay: `${0.2 + i * 0.15}s`, outline: t.mine ? '3px solid #111' : undefined }}>
+            <div key={t.id} style={{ background: t.color, color: light(t.color) ? '#111' : '#fff', height: on ? `${30 + (t.km / max) * 70}%` : 0, transitionDelay: `${0.2 + i * 0.15}s`, outline: t.mine ? `3px solid ${PAL.noir}` : undefined }}>
               {t.rank}
             </div>
           ))}
@@ -235,7 +239,7 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
   if (!host) return null;
   return createPortal(
     <div className={`rw-overlay${children ? ' has-admin' : ''}`} role="dialog" aria-modal="true" aria-label="Mon RunZ Rewind">
-      <div className={`rw-phone${slides[idx].lt ? ' lt' : ''}`}>
+      <div className={`rw-phone${slides[idx].lt ? ' lt' : ''}`} style={{ ['--noir' as string]: PAL.noir, ['--beige' as string]: PAL.beige, ['--creme' as string]: PAL.creme, ['--rose' as string]: PAL.rose, ['--orange' as string]: PAL.orange }}>
         <div className="rw-bars">
           {slides.map((_, i) => <div key={i} className="rw-bar"><i ref={(el) => { bars.current[i] = el; }} /></div>)}
         </div>
@@ -295,12 +299,12 @@ function drawLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, W:
   g.filter = 'none';
 }
 
-const trackColor = (_sport: string) => '#FC4C02'; // course et marche, tout en orange
+const trackColor = (_sport: string) => PAL.orange; // course et marche, tout en orange
 /** Ses tracés 1080×1920, fond blanc. */
 async function drawTracks(r: Rewind) {
   const { c, g, F, W, logo } = await canvasBase();
-  g.fillStyle = '#fff'; g.fillRect(0, 0, W, 1920);
-  g.fillStyle = '#111'; g.textAlign = 'left';
+  g.fillStyle = PAL.creme; g.fillRect(0, 0, W, 1920);
+  g.fillStyle = PAL.noir; g.textAlign = 'left';
   g.font = `500 40px ${F}`; g.fillText('Mon mois en tracés', 80, 150);
   g.font = `600 66px ${F}`; g.fillText(`${r.tracksTotal} sorties · ${nf(r.totalKm, 0)} km`, 80, 230);
   const k = 960 / SCATTER_W, ox = 60, oy = 300 + (1340 - SCATTER_H * k) / 2;
