@@ -16,7 +16,10 @@ const light = (hex: string | null) => {
 };
 
 /** Compteur animé (de 0 à `to`) à chaque fois que la story devient visible. */
-function Count({ to, dec = 0, on }: { to: number; dec?: number; on: boolean }) {
+const paceSec = (p: string) => { const m = p.match(/(\d+)'(\d+)/); return m ? Number(m[1]) * 60 + Number(m[2]) : 0; };
+const fmtPace = (v: number) => { const s = Math.round(v); return `${Math.floor(s / 60)}'${String(s % 60).padStart(2, '0')}"`; };
+
+function Count({ to, dec = 0, on, fmt }: { to: number; dec?: number; on: boolean; fmt?: (v: number) => string }) {
   const [v, setV] = useState(0);
   useEffect(() => {
     if (!on) { setV(0); return; }
@@ -26,7 +29,7 @@ function Count({ to, dec = 0, on }: { to: number; dec?: number; on: boolean }) {
     raf = requestAnimationFrame(f);
     return () => cancelAnimationFrame(raf);
   }, [on, to]);
-  return <>{nf(v, dec)}</>;
+  return <>{fmt ? fmt(v) : nf(v, dec)}</>;
 }
 
 /** Ferme le Rewind : retour à la page précédente du site, sinon l'accueil. */
@@ -102,14 +105,13 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
       <div className="r rw-sub">🔥 Plus longue série : <b>{r.longestStreak} jour{r.longestStreak > 1 ? 's' : ''} d’affilée</b><br />
         📌 <b>{r.activities} sortie{r.activities > 1 ? 's' : ''}</b>{r.capDays > 0 && <>, dont {r.capDays} jour{r.capDays > 1 ? 's' : ''} au palier des 10 km</>}</div>
     </>) },
-    { cls: 's-rec', body: () => (<>
+    { cls: 's-rec', body: (on) => (<>
       <div className="r rw-kicker">Tes records</div>
-      <div className="r rw-mid">Le jour où tu as tout donné</div>
-      <div className="r rw-rec">
-        {r.longest && <div><b>{nf(r.longest.km, 1)} km</b><span>Plus longue sortie · {dFr(r.longest.day)}</span></div>}
-        {r.bestDay && <div><b>{nf(r.bestDay.km, 1)} km</b><span>Plus grosse journée · {dFr(r.bestDay.day)}</span></div>}
-        {r.bestPace && <div><b>{r.bestPace}</b><span>Meilleure allure moyenne en course</span></div>}
-        <div><b>{nf(r.elevation)} m</b><span>D+ cumulé{r.eiffel >= 0.5 ? ` · ${nf(r.eiffel, 1)} tour${r.eiffel >= 2 ? 's' : ''} Eiffel` : ''}</span></div>
+      <div className="r rw-records">
+        {r.longest && <div><b><Count to={r.longest.km} dec={1} on={on} /><small> km</small></b><span>ta plus longue sortie · {dFr(r.longest.day)}</span></div>}
+        {r.bestDay && <div><b><Count to={r.bestDay.km} dec={1} on={on} /><small> km</small></b><span>ta plus grosse journée · {dFr(r.bestDay.day)}</span></div>}
+        {r.bestPace && <div><b><Count to={paceSec(r.bestPace)} on={on} fmt={fmtPace} /><small> /km</small></b><span>ta meilleure allure en course</span></div>}
+        <div><b><Count to={r.elevation} on={on} /><small> m D+</small></b><span>{r.eiffel >= 0.5 ? `soit ${nf(r.eiffel, 1)} tour${r.eiffel >= 2 ? 's' : ''} Eiffel` : 'de dénivelé cumulé'}</span></div>
       </div>
       {r.favDay && <div className="r rw-sub" style={{ fontSize: 14 }}>Jour préféré : <b>le {r.favDay.name}</b> ({r.favDay.count} fois)</div>}
     </>) },
@@ -223,7 +225,7 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') go(idx + 1);
+      if (e.key === 'ArrowRight') { if (idx === slides.length - 1) closeRewind(); else go(idx + 1); }
       if (e.key === 'ArrowLeft') go(idx - 1);
       if (e.key === ' ') { e.preventDefault(); setPaused((p) => !p); }
       if (e.key === 'Escape') closeRewind();
@@ -234,7 +236,12 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
   const held = useRef(false);
   const down = () => { held.current = false; hold.current = setTimeout(() => { held.current = true; setPaused(true); }, 250); };
-  const up = (dir: number) => { if (hold.current) clearTimeout(hold.current); if (held.current) { setPaused(false); held.current = false; return; } go(idx + dir); };
+  const up = (dir: number) => {
+    if (hold.current) clearTimeout(hold.current);
+    if (held.current) { setPaused(false); held.current = false; return; }
+    if (dir > 0 && idx === slides.length - 1) { closeRewind(); return; } // après la dernière story : on ferme
+    go(idx + dir);
+  };
 
   // Rendu dans <body> : plein écran au-dessus du site, quel que soit le conteneur de la page
   const [host, setHost] = useState<HTMLElement | null>(null);

@@ -73,11 +73,10 @@ body:has(.rw-overlay) { overflow: hidden; }
 .rw-legend { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; opacity: .8; margin-top: 6px; }
 
 .s-rec { background: #9A1325; color: #CFE9FA; }
-.rw-rec { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-.rw-rec div { background: rgba(255,255,255,.1); border-radius: 14px; padding: 12px; }
-.rw-rec b { display: block; font-size: 24px; font-weight: 900; line-height: 1.1; }
-.rw-rec span { font-size: 12px; opacity: .85; }
-
+.rw-records { display: grid; gap: 16px; margin-top: 18px; }
+.rw-records b { display: block; font-size: 54px; font-weight: 900; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.rw-records b small { font-size: 22px; letter-spacing: 0; font-weight: 800; }
+.rw-records span { display: block; font-size: 14px; font-weight: 600; opacity: .85; margin-top: 3px; }
 .s-clock { background: #78AF5F; color: #fff; }
 .rw-slots { display: grid; gap: 14px; margin-top: 22px; }
 .rw-slot-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 700; font-size: 15px; }
