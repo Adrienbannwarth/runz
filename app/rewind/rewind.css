@@ -19,7 +19,7 @@ body:has(.rw-overlay) { overflow: hidden; }
   .rw-admin { display: none; }
 }
 .rw-bars { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; gap: 4px; z-index: 7; pointer-events: none; }
-.rw-bar { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.32); overflow: hidden; }
+.rw-bar { flex: 1; height: 2px; border-radius: 1px; background: rgba(255,255,255,.32); overflow: hidden; }
 .rw-bar i { display: block; height: 100%; width: 0; background: var(--creme); }
 .rw-who { position: absolute; top: 24px; left: 14px; right: 50px; z-index: 7; pointer-events: none; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
 .rw-av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 13px; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
