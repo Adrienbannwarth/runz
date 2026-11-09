@@ -1,5 +1,5 @@
 import { test } from 'node:test';
-import { battleResults, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
+import { battleResults, battleShapes, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
 import assert from 'node:assert/strict';
 import { decodePolyline, hasTraceTag, polylineToPath } from '../lib/polyline.ts';
 import { boostActiveAt, boostsOn, computeStandings, leadSentence, speedSuspect, longestGapM, strictShapeName, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
@@ -394,4 +394,19 @@ test('Tracé GPS automatique : titre avec #TRACEZ, tracé sans ligne droite, une
   // une forme retenue exclue : la suivante prend le relais automatiquement
   const s2 = scoreActivities(acts.map((a) => (a.name?.startsWith('Dimanche') ? { ...a, excluded: true } : a)), settings, [tb]);
   assert.equal(s2.find((x) => x.name?.startsWith('Matin'))!.multiplier, 4);
+});
+
+test('Battle : une forme exclue du vote garde son ×4 mais sort des duels', () => {
+  const tb: Boost = { id: 9, name: 'Tracé GPS', starts_at: '2026-11-07T00:00:00', ends_at: '2026-11-08T23:59:59', multiplier: 4, tag: '#TRACEZ', manual: false, vote_from: '2026-11-09' };
+  const enc = (pts: [number, number][]) => { let out = '', pl = 0, pg = 0; const e = (v: number) => { v = v < 0 ? ~(v << 1) : v << 1; let s = ''; while (v >= 0x20) { s += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; } return s + String.fromCharCode(v + 63); };
+    for (const [la, lo] of pts) { const a = Math.round(la * 1e5), b = Math.round(lo * 1e5); out += e(a - pl) + e(b - pg); pl = a; pg = b; } return out; };
+  const pl = enc(Array.from({ length: 30 }, (_, i) => [48.85 + i * 0.001, 2.35] as [number, number]));
+  const acts: Activity[] = [
+    { ...act('v1', '2026-11-07T10:00:00', 3, 'Walk'), name: '#TRACEZ (A)', polyline: pl, has_track: true, moving_time_s: 1800 },
+    { ...act('v2', '2026-11-07T10:00:00', 3, 'Walk'), name: '#TRACEZ (B)', polyline: pl, has_track: true, moving_time_s: 1800, vote_excluded: true },
+  ];
+  const s = scoreActivities(acts, settings, [tb]);
+  assert.deepEqual(s.map((x) => x.multiplier), [4, 4]);
+  assert.deepEqual(battleShapes(tb, s).map((x) => x.label), ['A']);
+  assert.deepEqual(battleShapes(tb, s, { includeExcluded: true }).filter((x) => x.excluded).map((x) => x.label), ['B']);
 });

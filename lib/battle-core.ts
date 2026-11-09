@@ -3,7 +3,7 @@ import { polylineToPath, shapeLabel } from './polyline.ts';
 import type { Activity, Boost, ScoredActivity } from './scoring.ts';
 
 export type Vote = { voter_id: string; a: string; b: string; winner: string; test?: boolean | null };
-export type Shape = { id: string; participant_id: string; path: string; km: number; label: string };
+export type Shape = { id: string; participant_id: string; path: string; km: number; label: string; excluded?: boolean };
 
 export const VOTE_OPEN_HOUR = '14:00'; // la fenêtre de vote s'ouvre le premier jour à 14h (matinée laissée aux validations)
 
@@ -12,10 +12,11 @@ export const battleBoost = (boosts: Boost[]) =>
   boosts.filter((b) => b.tag && b.vote_from).sort((x, y) => String(y.starts_at).localeCompare(String(x.starts_at)))[0];
 
 /** Formes en compétition : la forme retenue de chaque personne (automatique ou validée), avec un tracé. */
-export function battleShapes(boost: Boost, scored: ScoredActivity[]): Shape[] {
+export function battleShapes(boost: Boost, scored: ScoredActivity[], opts: { includeExcluded?: boolean } = {}): Shape[] {
   return scored
     .filter((a) => a.eligible && a.polyline && (a.tagWinner === Number(boost.id) || (!!boost.manual && (a.validated_boosts ?? []).map(Number).includes(Number(boost.id)))))
-    .map((a) => ({ id: a.id, participant_id: a.participant_id, path: polylineToPath(a.polyline)!, km: Math.round(Number(a.distance_m) / 10) / 100, label: shapeLabel(a.name) }))
+    .filter((a) => opts.includeExcluded || !a.vote_excluded) // formes retirées du vote par un admin
+    .map((a) => ({ id: a.id, participant_id: a.participant_id, path: polylineToPath(a.polyline)!, km: Math.round(Number(a.distance_m) / 10) / 100, label: shapeLabel(a.name), excluded: !!a.vote_excluded }))
     .filter((s) => s.path);
 }
 

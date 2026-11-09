@@ -30,7 +30,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
   const bb = battleBoost(d.boosts);
   const battle = bb && tab === 'mvp' ? await (async () => {
     const shapes = battleShapes(bb, d.scored); const votes = await loadVotes();
-    return { boost: bb, shapes, votes, results: battleResults(shapes, votes) };
+    const excluded = battleShapes(bb, d.scored, { includeExcluded: true }).filter((x) => x.excluded);
+    return { boost: bb, shapes, votes, results: battleResults(shapes, votes), excluded };
   })() : null;
   const teamsAll = d.teamList;                       // toutes les équipes (y compris inactives)
   const allTeams = teamsAll.filter((t) => t.active); // équipes en jeu
@@ -560,7 +561,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                 <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
                   {battle.results.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune forme validée pour l’instant (onglet Validations › {battle.boost.name}).</p> : (
                     <table>
-                      <thead><tr><th>#</th><th>Forme</th><th>Participant</th><th className="num">Victoires</th><th className="num">Duels</th><th className="num">% gagnés</th></tr></thead>
+                      <thead><tr><th>#</th><th>Forme</th><th>Participant</th><th className="num">Victoires</th><th className="num">Duels</th><th className="num">% gagnés</th><th></th></tr></thead>
                       <tbody>
                         {battle.results.map((r, k) => (
                           <tr key={r.shape.id}>
@@ -569,12 +570,41 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                             <td>{pName(r.shape.participant_id)}<div className="muted small">{r.shape.label ? `${r.shape.label} · ` : ''}{fmtKm(r.shape.km)} km</div></td>
                             <td className="num">{r.wins}</td><td className="num">{r.duels}</td>
                             <td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
+                            <td>
+                              <form action={A.toggleVoteExcluded}>
+                                <input type="hidden" name="activity" value={r.shape.id} /><input type="hidden" name="on" value="1" />
+                                <ConfirmButton className="btn small" message={`Retirer la forme de ${pName(r.shape.participant_id)} du vote ? Elle n’apparaîtra plus dans les duels (son ×4 reste acquis).`}>Exclure du vote</ConfirmButton>
+                              </form>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   )}
                 </div>
+                {battle.excluded.length > 0 && (
+                  <>
+                    <h3 style={{ margin: '0 0 8px' }}>Exclues du vote · {battle.excluded.length}</h3>
+                    <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
+                      <table>
+                        <tbody>
+                          {battle.excluded.map((x) => (
+                            <tr key={x.id} className="off">
+                              <td><ShapeSvg path={x.path} size={48} /></td>
+                              <td>{pName(x.participant_id)}<div className="muted small">{x.label ? `${x.label} · ` : ''}{fmtKm(x.km)} km · le ×4 compte toujours</div></td>
+                              <td>
+                                <form action={A.toggleVoteExcluded}>
+                                  <input type="hidden" name="activity" value={x.id} /><input type="hidden" name="on" value="0" />
+                                  <button className="btn small">Remettre dans le vote</button>
+                                </form>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </>
             )}
             <h2>Prix calculés</h2>

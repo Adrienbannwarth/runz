@@ -53,6 +53,7 @@ export type Activity = {
   polyline?: string | null;           // tracé, conservé seulement pour les activités #TRACEZ
   excluded?: boolean | null;          // exclue par un admin (triche, erreur) : ne compte jamais
   speed_ok?: boolean | null;          // vitesse suspecte vérifiée et validée par un admin
+  vote_excluded?: boolean | null;     // forme retirée du vote TraceZ par un admin (l'activité et son ×4 comptent toujours)
 };
 export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null;
   from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
