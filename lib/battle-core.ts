@@ -51,13 +51,32 @@ function seeded(seed: string) {
  * gagnante ou perdante, et ne revient jamais. 16 formes = 8 duels. Hors test, sa propre forme est exclue.
  */
 export function remainingPairs(shapes: Shape[], votes: Vote[], voterId: string, opts: { allowOwn?: boolean; seed?: string } = {}): [string, string][] {
-  const seen = new Set(votes.filter((v) => v.voter_id === voterId).flatMap((v) => [v.a, v.b]));
-  const pool = shapes.filter((s) => !seen.has(s.id) && (opts.allowOwn || s.participant_id !== voterId)).map((s) => s.id).sort();
+  const mine = votes.filter((v) => v.voter_id === voterId);
+  const seen = new Set(mine.flatMap((v) => [v.a, v.b]));
+  const votable = shapes.filter((s) => opts.allowOwn || s.participant_id !== voterId).map((s) => s.id).sort();
+  const pool = votable.filter((id) => !seen.has(id));
   const rnd = seeded(opts.seed ?? voterId);
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   const pairs: [string, string][] = [];
   for (let i = 0; i + 1 < pool.length; i += 2) pairs.push([pool[i], pool[i + 1]]);
+  // Nombre impair : la forme restante joue quand même, contre une forme déjà tirée (jamais un duel déjà voté)
+  if (pool.length % 2 === 1) {
+    const last = pool[pool.length - 1];
+    const done = new Set(mine.map((v) => [v.a, v.b].sort().join('|')));
+    const partners = votable.filter((id) => id !== last && !done.has([id, last].sort().join('|')));
+    if (partners.length) pairs.push([last, partners[Math.floor(rnd() * partners.length)]]);
+  }
   return pairs;
+}
+
+/** Duel autorisé pour ce votant : deux formes valides et différentes, au moins une jamais vue, duel jamais voté. */
+export function duelAllowed(shapes: Shape[], votes: Vote[], voterId: string, a: string, b: string, opts: { allowOwn?: boolean } = {}) {
+  const ok = (id: string) => shapes.some((x) => x.id === id && (opts.allowOwn || x.participant_id !== voterId));
+  if (a === b || !ok(a) || !ok(b)) return false;
+  const mine = votes.filter((v) => v.voter_id === voterId);
+  const seen = new Set(mine.flatMap((v) => [v.a, v.b]));
+  const key = [a, b].sort().join('|');
+  return (!seen.has(a) || !seen.has(b)) && !mine.some((v) => [v.a, v.b].sort().join('|') === key);
 }
 
 /** Classement : % de duels gagnés = victoires ÷ duels joués (puis nombre de victoires). */

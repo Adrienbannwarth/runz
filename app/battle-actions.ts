@@ -1,7 +1,7 @@
 'use server';
 import { getParticipantId } from '@/lib/session';
 import { loadAll, nowParis } from '@/lib/data';
-import { battleBoost, battleShapes, castVote, loadVotes, voteEnded, voteOpen } from '@/lib/battle';
+import { battleBoost, battleShapes, castVote, duelAllowed, loadVotes, voteEnded, voteOpen } from '@/lib/battle';
 
 /** Enregistre un duel. Tout est revérifié côté serveur (fenêtre de vote, formes valides, pas sa propre forme, pas de doublon). */
 export async function voteDuel(a: string, b: string, winner: string): Promise<{ ok: boolean; error?: string }> {
@@ -16,10 +16,8 @@ export async function voteDuel(a: string, b: string, winner: string): Promise<{ 
   const early = !voteOpen(boost, now) && !voteEnded(boost, now) && !!d.participants.find((p) => p.id === pid)?.is_admin;
   if (!voteOpen(boost, now) && !early) return { ok: false, error: 'Le vote est fermé.' };
   const shapes = battleShapes(boost, d.scored);
-  // Règle « battle royale » : deux formes valides, différentes, jamais vues par ce votant (et pas la sienne, sauf aperçu admin)
-  const seen = new Set((await loadVotes()).filter((v) => v.voter_id === pid).flatMap((v) => [v.a, v.b]));
-  const ok = (id: string) => shapes.some((x) => x.id === id && (early || x.participant_id !== pid)) && !seen.has(id);
-  if (a === b || !ok(a) || !ok(b)) return { ok: false, error: 'Duel déjà voté ou non disponible.' };
+  // Règle « battle royale » : formes valides, au moins une jamais vue (dernière forme d'un nombre impair), duel jamais voté, pas la sienne (sauf aperçu admin)
+  if (!duelAllowed(shapes, await loadVotes(), pid, a, b, { allowOwn: early })) return { ok: false, error: 'Duel déjà voté ou non disponible.' };
   await castVote(pid, a, b, winner);
   return { ok: true };
 }

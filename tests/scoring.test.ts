@@ -1,5 +1,5 @@
 import { test } from 'node:test';
-import { battleResults, battleShapes, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
+import { battleResults, battleShapes, duelAllowed, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
 import assert from 'node:assert/strict';
 import { decodePolyline, hasTraceTag, polylineToPath } from '../lib/polyline.ts';
 import { boostActiveAt, boostsOn, computeStandings, leadSentence, speedSuspect, longestGapM, strictShapeName, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
@@ -304,11 +304,25 @@ test('Battle TraceZ : ouverture lundi 14h, duels, % de victoires', () => {
   const after = remainingPairs(sixteen, [{ voter_id: 'me', a: x0, b: y0, winner: x0 }], 'me', { allowOwn: true });
   assert.equal(after.length, 7);
   assert.ok(after.every(([x, y]) => ![x0, y0].includes(x) && ![x0, y0].includes(y)));
-  // hors test, jamais sa propre forme ; nombre impair → une forme ne joue pas
+  // jamais sa propre forme ; nombre impair → la dernière forme joue quand même contre une forme déjà tirée
   const sh = mk(4, (i) => (i === 3 ? 'me' : `p${i}`));
   const pairs = remainingPairs(sh, [], 'me');
-  assert.equal(pairs.length, 1);
+  assert.equal(pairs.length, 2);
   assert.ok(pairs.every(([x, y]) => x !== 'S03' && y !== 'S03'));
+  assert.equal(new Set(pairs.flat()).size, 3);                     // les 3 formes votables jouent toutes
+  // 14 formes dont la sienne → 13 votables → 7 duels ; on peut tous les voter, puis plus rien
+  const fourteen = mk(14, (i) => (i === 0 ? 'me' : `p${i}`));
+  let vs: Vote[] = [];
+  const all = remainingPairs(fourteen, vs, 'me');
+  assert.equal(all.length, 7);
+  for (let k = 0; k < 7; k++) {
+    const [x, y] = remainingPairs(fourteen, vs, 'me')[0];
+    assert.ok(duelAllowed(fourteen, vs, 'me', x, y));
+    vs = [...vs, { voter_id: 'me', a: x, b: y, winner: x }];
+  }
+  assert.equal(remainingPairs(fourteen, vs, 'me').length, 0);
+  assert.equal(new Set(vs.flatMap((v) => [v.a, v.b])).size, 13);
+  assert.ok(!duelAllowed(fourteen, vs, 'me', vs[0].a, vs[0].b));   // pas deux fois le même duel
   // % = victoires ÷ duels
   const votes: Vote[] = [
     { voter_id: 'x', a: 'A', b: 'B', winner: 'A' }, { voter_id: 'y', a: 'A', b: 'C', winner: 'A' },
