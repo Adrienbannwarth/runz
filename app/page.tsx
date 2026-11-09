@@ -3,7 +3,7 @@ import { activeBoost, boostEffect, fmtDate, fmtKm, loadAll, nowParis, windowLabe
 import { boostsOn } from '@/lib/scoring';
 import { getParticipantId, isAdmin } from '@/lib/session';
 import type { TeamStats } from '@/lib/scoring';
-import { VOTE_OPEN_HOUR, battleBoost, battleResults, battleShapes, loadVotes, remainingPairs, voteEnded, voteOpen } from '@/lib/battle';
+import { SHOW_BATTLE_PODIUM, VOTE_OPEN_HOUR, battleBoost, battleResults, battleShapes, loadVotes, remainingPairs, voteEnded, voteOpen } from '@/lib/battle';
 import BattleModal from './BattleModal';
 import ShapeSvg from './ShapeSvg';
 
@@ -48,9 +48,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const shapes = bBoost ? battleShapes(bBoost, data.scored) : [];
   // Aperçu admins : la fenêtre de vote s'affiche dès maintenant pour les admins (votes réels, à supprimer après les tests)
   const adminEarly = !!bBoost && !!me?.is_admin && !isOpen && !voteEnded(bBoost, now);
-  const votes = bBoost && shapes.length > 1 && (isOpen || adminEarly || voteEnded(bBoost, now)) ? await loadVotes() : [];
+  const votes = bBoost && shapes.length > 1 && (isOpen || adminEarly || (SHOW_BATTLE_PODIUM && voteEnded(bBoost, now))) ? await loadVotes() : [];
   const pairsToVote = bBoost && me && (isOpen || adminEarly) ? remainingPairs(shapes, votes, me.id, { allowOwn: adminEarly }) : [];
-  const podium = bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
+  const podium = SHOW_BATTLE_PODIUM && bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
 
   const card = (t: TeamStats, big = false) => (
     <div className={`card team${big ? ' big' : ''}`} key={t.team.id}>

@@ -74,7 +74,7 @@ export default function BattleModal({ pairs, shapes, until, preview }: { pairs: 
         {done ? (
           <>
             <h2 id="battle-title">Merci pour tes votes ! 🙌</h2>
-            <p className="muted">Tu as voté pour tous tes duels. Résultats à la fin du vote.</p>
+            <p className="muted">Tu as voté pour tous tes duels. Les résultats seront annoncés par l’organisation.</p>
             <button className="btn primary" onClick={() => setOpen(false)}>Fermer</button>
           </>
         ) : (

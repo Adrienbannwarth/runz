@@ -5,6 +5,8 @@ import type { Activity, Boost, ScoredActivity } from './scoring.ts';
 export type Vote = { voter_id: string; a: string; b: string; winner: string; test?: boolean | null };
 export type Shape = { id: string; participant_id: string; path: string; km: number; label: string; excluded?: boolean };
 
+/** Podium de la Battle sur l'accueil après la fin du vote : masqué, l'organisation annonce les résultats elle-même (passer à true pour l'afficher). */
+export const SHOW_BATTLE_PODIUM = false;
 export const VOTE_OPEN_HOUR = '14:00'; // la fenêtre de vote s'ouvre le premier jour à 14h (matinée laissée aux validations)
 
 /** Le boost « forme » qui porte un vote (le plus récent), s'il existe. */
