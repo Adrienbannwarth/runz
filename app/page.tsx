@@ -260,14 +260,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   );
 }
 
-/** Photos de démo (Lorem Picsum) pour l'aperçu admin, tant qu'il n'y a pas de vraies photos #COULEURZ. */
-const DEMO_PHOTOS: SwipeEntry[] = [
-  ['Porte rouge du marché', 'Repérée au km 3, impossible de ne pas s’arrêter. Fan de portes anciennes et de sorties du dimanche.'],
-  ['Le vélo orange', 'Il attendait sagement contre un lampadaire. Moi, je marchais, promis.'],
-  ['Feuilles d’automne', 'Team Orange jusqu’au bout des feuilles. Cherche coéquipier pour ramasser des marrons.'],
-  ['Banc vert du parc', 'Pause de 30 secondes, pas plus. Aime les bancs, les parcs et les km.'],
-  ['Façade bleue', 'Trouvée en détour sur le chemin du bureau. Le ×2 du matin vaut bien un détour.'],
-  ['Boîte aux lettres', 'Rouge, ronde, rétro. On s’écrit ?'],
-  ['Kayak au bord du canal', 'Bleu, mais je l’ai laissé là. Le RunZ, c’est à pied.'],
-  ['Graffiti du pont', 'Street art + footing = combo parfait.'],
-].map(([title, caption], k) => ({ id: `demo-${k}`, url: `https://picsum.photos/seed/runz-couleur-${k}/600/800`, title, caption: k === 5 ? '' : caption, km: 3 + k * 0.85, sport: k % 2 ? 'Run' : 'Walk' }));
+/** Photos de démo (Unsplash, licence libre, personnes en extérieur) pour l'aperçu admin, tant qu'il n'y a pas de vraies photos #COULEURZ. */
+const DEMO_PHOTOS: SwipeEntry[] = ([
+  ['photo-1588401116670-ef741728128b', 'Veste bleue', 'Team Bleu jusqu’au bout des manches. Fan de balades au soleil et de pauses photo.'],
+  ['photo-1774423066277-01742038ea5b', 'Feuilles d’automne', 'J’ai ramassé tout l’orange du parc. Cherche coéquipier pour la suite.'],
+  ['photo-1760403394128-cf004f29b1e6', 'Mur de feuilles', 'Repéré au km 3, impossible de ne pas s’arrêter.'],
+  ['photo-1763256648231-cef7c8bccd96', 'Chemise arc-en-ciel', 'Toutes les équipes à la fois, pour ne vexer personne.'],
+  ['photo-1551053393-277f953f0426', 'Le chapeau ballon', 'Pas pratique pour courir, mais très couleur.'],
+  ['photo-1513710890654-dfe3421f857d', 'Sur la route', 'Le ×2 du matin vaut bien un détour.'],
+  ['photo-1718873921432-eee69bec74c8', 'Bandeau bleu', 'Coordonné avec mon équipe, évidemment.'],
+  ['photo-1786052919159-c0def2db87e1', 'Lunettes noires', ''],
+] as const).map(([photo, title, caption], k) => ({ id: `demo-${k}`, url: `https://images.unsplash.com/${photo}?w=600&h=800&fit=crop&auto=format&q=75`, title, caption, km: 3 + k * 0.85, sport: k % 2 ? 'Run' : 'Walk' }));
