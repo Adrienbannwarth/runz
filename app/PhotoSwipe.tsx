@@ -89,9 +89,7 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
               {next && <Card key={next.id} e={next} back />}
               {/* key : la carte suivante arrive sans animation (elle était déjà visible derrière) */}
               <div key={cur.id} className="swipe-card-wrap" style={style} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-                <Card e={cur} />
-                <span className="swipe-stamp yes" style={{ opacity: Math.max(0, p) }}>OUI</span>
-                <span className="swipe-stamp no" style={{ opacity: Math.max(0, -p) }}>NON</span>
+                <Card e={cur} tint={p} />
               </div>
             </div>
             <div className="swipe-actions">
@@ -100,7 +98,7 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
               </button>
               <span className="swipe-count">{i + 1} / {entries.length}</span>
               <button className="swipe-btn yes" aria-label="Oui, j’aime" onClick={() => choose(true)}>
-                <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" fill="currentColor" /></svg>
+                <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" fill="currentColor" /></svg>
               </button>
             </div>
             {err && <p className="swipe-err">{err}</p>}
@@ -123,10 +121,14 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
   );
 }
 
-function Card({ e, back }: { e: SwipeEntry; back?: boolean }) {
+function Card({ e, back, tint = 0 }: { e: SwipeEntry; back?: boolean; tint?: number }) {
   return (
     <div className={`swipe-card${back ? ' back' : ''}`} aria-hidden={back}>
-      <div className="swipe-photo"><img src={e.url} alt={e.title || 'Photo couleur'} draggable={false} /></div>
+      <div className="swipe-photo">
+        <img src={e.url} alt={e.title || 'Photo couleur'} draggable={false} />
+        {/* voile vert (oui) ou rouge (non) pendant le glissé */}
+        {tint !== 0 && <span className="swipe-tint" style={{ background: tint > 0 ? `rgba(46,160,67,${tint * 0.5})` : `rgba(200,49,47,${-tint * 0.5})` }} />}
+      </div>
       <div className="swipe-prompt">
         {e.title && <b>{e.title}</b>}
         {e.caption && <p>{e.caption}</p>}
