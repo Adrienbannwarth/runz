@@ -13,8 +13,8 @@ create table if not exists photo_votes (
 );
 alter table photo_votes enable row level security; -- accès uniquement via la clé service (serveur)
 
--- Réglage du boost (dates et vote modifiables ensuite dans l'admin › Boosts ou ici)
-update boosts set tag = '#COULEURZ', bonus_km = 25, team_bonus_km = 50,
-  bonus_note = '+25 km par personne avec sa photo #COULEURZ · +50 km si toute l''équipe joue',
-  vote_from = '2026-11-16', vote_to = '2026-11-20'
-where name = 'Photo couleur';
+-- Boost photo : week-end du 21-22/11, vote du 23/11 (14h) au 27/11 (déjà appliqué en prod le 10/11)
+insert into boosts (name, starts_at, ends_at, multiplier, slot, tag, bonus_km, team_bonus_km, bonus_note, vote_from, vote_to)
+select 'Photo couleur', '2026-11-21T00:00:00', '2026-11-22T23:59:59', 1, 'Tous', '#COULEURZ', 25, 50,
+  '+25 km par personne avec sa photo #COULEURZ · +50 km si toute l''équipe joue', '2026-11-23', '2026-11-27'
+where not exists (select 1 from boosts where name = 'Photo couleur');
