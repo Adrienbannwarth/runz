@@ -11,7 +11,8 @@ export const VOTE_OPEN_HOUR = '14:00'; // la fenêtre de vote s'ouvre le premier
 
 /** Le boost « forme » qui porte un vote (le plus récent), s'il existe. */
 export const battleBoost = (boosts: Boost[]) =>
-  boosts.filter((b) => b.tag && b.vote_from).sort((x, y) => String(y.starts_at).localeCompare(String(x.starts_at)))[0];
+  boosts.filter((b) => b.tag && b.vote_from && !(Number(b.bonus_km) > 0)) // le boost photo a son propre vote
+    .sort((x, y) => String(y.starts_at).localeCompare(String(x.starts_at)))[0];
 
 /** Formes en compétition : la forme retenue de chaque personne (automatique ou validée), avec un tracé. */
 export function battleShapes(boost: Boost, scored: ScoredActivity[], opts: { includeExcluded?: boolean } = {}): Shape[] {

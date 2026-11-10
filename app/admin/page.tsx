@@ -11,6 +11,9 @@ import ShapeSvg from '../ShapeSvg';
 import { polylineToPath } from '@/lib/polyline';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
 import ConfirmButton from './ConfirmButton';
+import { loadPhotoVotes, photoBoost, photoEntries, photoResults, photoTeamBonus } from '@/lib/photo';
+import { testActivityPhotos } from '@/lib/strava';
+import { getParticipantId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +36,17 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
     const excluded = battleShapes(bb, d.scored, { includeExcluded: true }).filter((x) => x.excluded);
     return { boost: bb, shapes, votes, results: battleResults(shapes, votes), excluded };
   })() : null;
+  const pb = photoBoost(d.boosts);
+  const photo = pb && tab === 'mvp' ? await (async () => {
+    const all = photoEntries(pb, d.scored, { includeExcluded: true }); const votes = await loadPhotoVotes();
+    return { boost: pb, results: photoResults(all.filter((e) => !e.excluded), votes), excluded: all.filter((e) => e.excluded), votes, teams: photoTeamBonus(pb, all, d.participants) };
+  })() : null;
+  // Test : photos d'une activité Strava de l'admin connecté (?photoTest=<id ou lien Strava>)
+  const testId = Number(String(sp.photoTest ?? '').match(/(\d{6,})/)?.[1] ?? 0);
+  const myPid = await getParticipantId();
+  const photoTest = tab === 'mvp' && testId && myPid
+    ? await testActivityPhotos(myPid, testId).catch((e) => ({ error: (e as Error).message }))
+    : null;
   const teamsAll = d.teamList;                       // toutes les équipes (y compris inactives)
   const allTeams = teamsAll.filter((t) => t.active); // équipes en jeu
   const pName = (id: string | null) => d.participants.find((p) => p.id === id)?.display_name ?? '';
@@ -374,7 +388,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
       )}
 
       {tab === 'validations' && (() => {
-        const manual = d.boosts.filter((b) => b.manual || b.tag); // boosts à valider + formes (automatiques ou non)
+        const manual = d.boosts.filter((b) => (b.manual || b.tag) && !(Number(b.bonus_km) > 0)); // le boost photo a sa propre section (MVP) // boosts à valider + formes (automatiques ou non)
         const manualRows = d.scored.filter((a) => a.manualReview && a.sport_type && d.settings.sport_types.includes(a.sport_type) && a.day <= d.settings.end_date)
           .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
         const speedRows = d.scored.filter((a) => a.speedReview && !a.excluded && !a.speed_ok && d.settings.sport_types.includes(a.sport_type) && a.day >= d.settings.start_date && a.day <= d.settings.end_date)
@@ -662,6 +676,87 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                   </>
                 )}
               </>
+            )}
+            {photo && (
+              <>
+                <h2>Photo couleur · {photo.results.length} photo{photo.results.length > 1 ? 's' : ''} · {photo.votes.length} vote{photo.votes.length > 1 ? 's' : ''}</h2>
+                <p className="muted small">
+                  {fmtDate(photo.boost.starts_at)} → {fmtDate(photo.boost.ends_at)} : une sortie nommée « #COULEURZ (nom) » avec une photo Strava = +{Number(photo.boost.bonus_km)} km pour l’équipe (une par personne, la plus longue), +{Number(photo.boost.team_bonus_km ?? 0)} km si toute l’équipe joue. Automatique, avec les contrôles habituels (vrai tracé, pas de saisie manuelle, vitesse).
+                  {photo.boost.vote_from && <> Vote du {fmtDate(photo.boost.vote_from)} à 14h au {fmtDate(photo.boost.vote_to ?? photo.boost.vote_from)} ; MVP = le plus de « oui ». Les admins voient le vote dès maintenant (photos de démo tant qu’il y a moins de 2 vraies photos).</>}
+                </p>
+                <div className="card" style={{ marginBottom: 12 }}>
+                  <table>
+                    <thead><tr><th>Équipe</th><th className="num">Avec photo</th><th className="num">Km bonus</th></tr></thead>
+                    <tbody>
+                      {allTeams.map((t) => { const x = photo.teams.get(t.id); return (
+                        <tr key={t.id}><td><span className="dot" style={{ background: t.color }} /> {t.name}</td>
+                          <td className="num">{x?.people ?? 0} / {x?.members ?? 0}{x?.all ? ' ✓ toute l’équipe' : ''}</td><td className="num">+{fmtKm(x?.km ?? 0)} km</td></tr>
+                      ); })}
+                    </tbody>
+                  </table>
+                </div>
+                {photo.votes.length > 0 && (
+                  <form action={A.clearPhotoVotes} style={{ marginBottom: 12 }}>
+                    <ConfirmButton className="btn small danger" message={`Supprimer les ${photo.votes.length} votes photo ? Le vote repartira de zéro (irréversible).`}>Supprimer les votes photo</ConfirmButton>
+                  </form>
+                )}
+                <div className="card" style={{ overflowX: 'auto', marginBottom: 12 }}>
+                  {photo.results.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune photo #COULEURZ pour l’instant.</p> : (
+                    <table>
+                      <thead><tr><th>#</th><th>Photo</th><th>Participant</th><th className="num">Oui</th><th className="num">Votes</th><th className="num">% oui</th><th></th></tr></thead>
+                      <tbody>
+                        {photo.results.map((r, k) => (
+                          <tr key={r.entry.id}>
+                            <td>{k + 1}</td>
+                            <td><img src={r.entry.url} alt="" width={56} height={70} style={{ objectFit: 'cover', borderRadius: 6, display: 'block' }} /></td>
+                            <td>{pName(r.entry.participant_id)}<div className="muted small">{r.entry.title || 'Sans titre'} · {fmtKm(r.entry.km)} km</div>{r.entry.caption && <div className="muted small" style={{ maxWidth: 360 }}>« {r.entry.caption} »</div>}</td>
+                            <td className="num">{r.likes}</td><td className="num">{r.votes}</td><td className="num">{r.votes ? `${Math.round(r.pct * 100)} %` : '—'}</td>
+                            <td>
+                              <form action={A.toggleVoteExcluded}>
+                                <input type="hidden" name="activity" value={r.entry.id} /><input type="hidden" name="on" value="1" />
+                                <ConfirmButton className="btn small" message={`Retirer la photo de ${pName(r.entry.participant_id)} du vote ? Son bonus reste acquis.`}>Exclure du vote</ConfirmButton>
+                              </form>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+                {photo.excluded.length > 0 && (
+                  <div className="card" style={{ marginBottom: 12 }}>
+                    <p className="muted small" style={{ marginTop: 0 }}>Exclues du vote (bonus conservé)</p>
+                    {photo.excluded.map((e) => (
+                      <form key={e.id} action={A.toggleVoteExcluded} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 6 }}>
+                        <img src={e.url} alt="" width={40} height={50} style={{ objectFit: 'cover', borderRadius: 4 }} /> {pName(e.participant_id)} · {e.title || 'Sans titre'}
+                        <input type="hidden" name="activity" value={e.id} /><input type="hidden" name="on" value="0" />
+                        <button className="btn small">Remettre dans le vote</button>
+                      </form>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            <h2>Test : photos d’une activité Strava</h2>
+            <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+              <input type="hidden" name="tab" value="mvp" />
+              <input name="photoTest" defaultValue={sp.photoTest ?? ''} placeholder="Lien ou numéro d’une de TES activités Strava" style={{ flex: 1, minWidth: 260, font: 'inherit', padding: '8px 12px', border: '1px solid var(--line)', borderRadius: 99 }} />
+              <button className="btn small primary">Récupérer les photos</button>
+            </form>
+            {photoTest && (
+              <div className="card" style={{ marginBottom: 24 }}>
+                {'error' in photoTest ? <p style={{ margin: 0, color: 'var(--red)' }}>Erreur : {photoTest.error}</p> : (
+                  <>
+                    <p style={{ marginTop: 0 }}><b>{photoTest.name}</b> · {photoTest.count} photo{photoTest.count > 1 ? 's' : ''} selon Strava · photo principale {photoTest.primary ? 'trouvée' : 'absente'}{photoTest.description ? <> · description : « {photoTest.description} »</> : ' · pas de description'}</p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {[photoTest.primary, ...photoTest.photos.filter((u) => u !== photoTest.primary)].filter(Boolean).slice(0, 12).map((u, k) => (
+                        <img key={k} src={u!} alt="" width={140} height={140} style={{ objectFit: 'cover', borderRadius: 8, outline: k === 0 && photoTest.primary ? '3px solid var(--strava)' : undefined }} />
+                      ))}
+                    </div>
+                    <p className="muted small" style={{ marginBottom: 0 }}>Contour orange : la photo principale, celle qui serait utilisée pour le vote.</p>
+                  </>
+                )}
+              </div>
             )}
             <h2>Prix calculés</h2>
             <div className="card" style={{ overflowX: 'auto' }}>

@@ -146,13 +146,19 @@ export async function toggleExcluded(fd: FormData) {
   const back = s(fd, 'back') || 'activites';
   done(back, on ? 'Activité exclue : elle ne compte plus' : 'Activité réintégrée');
 }
+/** Photo couleur : supprime tous les votes photo (après les tests des admins). */
+export async function clearPhotoVotes() {
+  await guard();
+  must(await db().from('photo_votes').delete().not('voter_id', 'is', null));
+  done('mvp', 'Votes photo supprimés : le vote repart de zéro');
+}
 /** Retire (ou remet) une forme du vote TraceZ, sans toucher à l'activité ni à son ×4. */
 export async function toggleVoteExcluded(fd: FormData) {
   await guard();
   const on = s(fd, 'on') === '1';
   const { error } = await db().from('activities').update({ vote_excluded: on }).eq('id', s(fd, 'activity'));
   if (error) done('mvp', 'Impossible : lancer la migration 022 (colonne vote_excluded) dans Supabase');
-  done('mvp', on ? 'Forme retirée du vote' : 'Forme remise dans le vote');
+  done('mvp', on ? 'Retirée du vote' : 'Remise dans le vote');
 }
 /** Accorde (ou retire) un boost « à valider » à une activité. */
 export async function toggleBoostValidation(fd: FormData) {

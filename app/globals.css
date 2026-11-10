@@ -247,3 +247,38 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 @media (max-width: 520px) { .shape-tags { right: 6px; bottom: 6px; left: 6px; gap: 4px; } .shape-tag { font-size: 10.5px; padding: 2px 7px; } }
 .linkish { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
 .day-goal { margin: 16px 0; } .day-goal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+
+/* Vote « Photo couleur » façon appli de rencontre (beige / noir de la DA du Rewind) */
+.swipe-overlay { position: fixed; inset: 0; z-index: 1000; background: #EEEFE8; color: #272727; }
+.swipe { height: 100dvh; max-width: 460px; margin: 0 auto; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 10px; user-select: none; -webkit-user-select: none; }
+.swipe-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.swipe-eyebrow { margin: 0; font-size: 13px; color: #6f6f6f; }
+.swipe-eyebrow b { color: #c8312f; font-weight: 600; }
+.swipe-close { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 0; padding: 0; background: rgba(39,39,39,.08); color: #272727;
+  display: grid; place-items: center; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.swipe-stack { position: relative; flex: 1; min-height: 0; }
+.swipe-card-wrap { position: absolute; inset: 0; touch-action: none; cursor: grab; z-index: 2; }
+.swipe-card-wrap:active { cursor: grabbing; }
+.swipe-card { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; }
+.swipe-card.back { transform: scale(.95) translateY(10px); opacity: .6; z-index: 1; }
+.swipe-photo { flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; background: #272727; }
+.swipe-photo img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.swipe-prompt { background: #272727; color: #EEEFE8; border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.swipe-label { font-size: 12px; opacity: .7; }
+.swipe-prompt b { font-size: 24px; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; }
+.swipe-prompt p { margin: 2px 0 0; font-size: 14px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.swipe-km { font-size: 12px; opacity: .6; }
+.swipe-stamp { position: absolute; top: 22px; padding: 4px 12px; border: 3px solid; border-radius: 8px; font-size: 28px; font-weight: 700; letter-spacing: .04em; pointer-events: none; }
+.swipe-stamp.yes { left: 18px; color: #FC4C02; border-color: #FC4C02; transform: rotate(-14deg); background: rgba(238,239,232,.85); }
+.swipe-stamp.no { right: 18px; color: #272727; border-color: #272727; transform: rotate(14deg); background: rgba(238,239,232,.85); }
+.swipe-actions { display: flex; align-items: center; justify-content: center; gap: 28px; }
+.swipe-btn { width: 64px; height: 64px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer; -webkit-appearance: none; appearance: none;
+  -webkit-tap-highlight-color: transparent; box-shadow: 0 6px 18px rgba(39,39,39,.18); transition: transform .12s; }
+.swipe-btn:active { transform: scale(.92); }
+.swipe-btn.no { background: #EEEFE8; color: #272727; box-shadow: inset 0 0 0 1.5px #272727, 0 6px 18px rgba(39,39,39,.12); }
+.swipe-btn.yes { background: #272727; color: #FC4C02; }
+.swipe-count { font-size: 13px; color: #6f6f6f; min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+.swipe-err { margin: 0; text-align: center; font-size: 13px; color: #c8312f; }
+.swipe-done { margin: auto 0; text-align: center; }
+.swipe-done h2 { margin: 0 0 8px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

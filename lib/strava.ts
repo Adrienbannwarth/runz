@@ -1,6 +1,7 @@
 import 'server-only';
 import { db, must } from './db';
 import { hasTraceTag } from './polyline';
+import { hasPhotoTag } from './photo-core';
 
 const API = 'https://www.strava.com/api/v3';
 const OAUTH = 'https://www.strava.com/oauth';
@@ -94,6 +95,13 @@ type StravaActivity = {
   id: number; name: string; sport_type: string; type: string; start_date_local: string;
   distance: number; moving_time: number; total_elevation_gain: number;
   manual?: boolean; trainer?: boolean; map?: { summary_polyline?: string | null; polyline?: string | null } | null;
+  total_photo_count?: number; description?: string | null;               // description : seulement dans le détail d'une activité
+  photos?: { count?: number; primary?: { urls?: Record<string, string> } | null } | null;
+};
+/** URL de la photo principale d'une activité (détail Strava), la plus grande taille disponible. */
+const primaryPhoto = (a: StravaActivity) => {
+  const urls = a.photos?.primary?.urls ?? {};
+  return urls['600'] || urls['1000'] || urls['2048'] || Object.values(urls).pop() || null;
 };
 
 function toRow(participantId: string, a: StravaActivity) {
@@ -113,6 +121,10 @@ function toRow(participantId: string, a: StravaActivity) {
     has_track: !!(a.map?.summary_polyline || a.map?.polyline),
     // Tracé conservé UNIQUEMENT pour les activités que la personne a taguées #TRACEZ (jeu des formes)
     polyline: hasTraceTag(a.name) ? (a.map?.summary_polyline || a.map?.polyline || null) : null,
+    // Photo + description conservées UNIQUEMENT pour les activités taguées #COULEURZ (boost photo et son vote).
+    // Le résumé d'une liste n'a ni photo ni description : on ne les écrase alors pas (voir withPhotos).
+    ...(!hasPhotoTag(a.name) ? { photo_url: null, photo_caption: null }
+      : a.photos !== undefined || a.description !== undefined ? { photo_url: primaryPhoto(a), photo_caption: a.description ?? null } : {}),
   };
 }
 
@@ -159,6 +171,12 @@ export async function syncParticipant(participantId: string, startDate: string, 
     if (batch.length < 100) break;
   }
   if (all.length) {
+    // Activités #COULEURZ avec photo : le détail (photo + description) remplace le résumé de la liste
+    for (let i = 0; i < all.length; i++) {
+      if (hasPhotoTag(all[i].name) && (all[i].total_photo_count ?? 0) > 0) {
+        try { all[i] = await api<StravaActivity>(token, `/activities/${all[i].id}`); } catch (e) { console.error('détail photo', e); }
+      }
+    }
     must(await db().from('activities').upsert(all.map((a) => toRow(participantId, a)), { onConflict: 'strava_activity_id' }));
   }
   // Supprime les activités effacées sur Strava depuis le dernier import
@@ -189,6 +207,16 @@ export async function fetchTracks(participantId: string, startDate: string, endD
     if (batch.length < 200) break;
   }
   return out;
+}
+
+/** Test admin : photos d'une activité Strava de l'admin connecté (détail + toutes les photos). */
+export async function testActivityPhotos(participantId: string, activityId: number) {
+  const p = must(await db().from('participants').select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
+  const token = await validToken(p);
+  const a = await api<StravaActivity>(token, `/activities/${activityId}`);
+  const all = await api<{ urls?: Record<string, string>; caption?: string }[]>(token, `/activities/${activityId}/photos?size=600&photo_sources=true`).catch(() => []);
+  return { name: a.name, count: a.total_photo_count ?? a.photos?.count ?? 0, primary: primaryPhoto(a), description: a.description ?? null,
+    photos: all.map((x) => x.urls?.['600'] || Object.values(x.urls ?? {})[0]).filter(Boolean) as string[] };
 }
 
 /** Mode test Battle (admins) : récupère les tracés des dernières activités déjà en base et les range dans test_polyline. */

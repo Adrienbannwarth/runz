@@ -5,6 +5,8 @@ import { getParticipantId, isAdmin } from '@/lib/session';
 import type { TeamStats } from '@/lib/scoring';
 import { SHOW_BATTLE_PODIUM, VOTE_OPEN_HOUR, battleBoost, battleResults, battleShapes, loadVotes, remainingPairs, voteEnded, voteOpen } from '@/lib/battle';
 import BattleModal from './BattleModal';
+import PhotoSwipe, { type SwipeEntry } from './PhotoSwipe';
+import { loadPhotoVotes, photoBoost, photoEntries, photosToVote } from '@/lib/photo';
 import ShapeSvg from './ShapeSvg';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +52,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const adminEarly = !!bBoost && !!me?.is_admin && !isOpen && !voteEnded(bBoost, now);
   const votes = bBoost && shapes.length > 1 && (isOpen || adminEarly || (SHOW_BATTLE_PODIUM && voteEnded(bBoost, now))) ? await loadVotes() : [];
   const pairsToVote = bBoost && me && (isOpen || adminEarly) ? remainingPairs(shapes, votes, me.id, { allowOwn: adminEarly }) : [];
+
+  // Photo couleur (#COULEURZ) : vote façon appli de rencontre. Les admins le voient avant l'ouverture,
+  // avec des photos de démo (non enregistrées) tant qu'il n'y a pas au moins 2 vraies photos.
+  const pBoost = photoBoost(boosts);
+  const pOpen = !!pBoost && voteOpen(pBoost, now);
+  const pEarly = !!pBoost && !!me?.is_admin && !pOpen && !voteEnded(pBoost, now);
+  const pEntries = pBoost ? photoEntries(pBoost, data.scored) : [];
+  const pDemo = pEarly && pEntries.length < 2;
+  const photoDeck: SwipeEntry[] = !pBoost || !me || !(pOpen || pEarly) ? []
+    : pDemo ? DEMO_PHOTOS
+    : photosToVote(pEntries, await loadPhotoVotes(), me.id, { allowOwn: pEarly }).map(({ id, url, title, caption, km }) => ({ id, url, title, caption, km }));
+  const pActive = !!pBoost && now.slice(0, 10) >= pBoost.starts_at.slice(0, 10) && now.slice(0, 10) <= pBoost.ends_at.slice(0, 10);
   const podium = SHOW_BATTLE_PODIUM && bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
 
   const card = (t: TeamStats, big = false) => (
@@ -109,6 +123,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           </ol>
         </details>
       )}
+      {pBoost && photoDeck.length > 0 && (
+        <PhotoSwipe entries={photoDeck} demo={pDemo} until={fmtDate(pBoost.vote_to ?? pBoost.vote_from!)}
+          preview={pEarly ? `${fmtDate(pBoost.vote_from!)} à ${VOTE_OPEN_HOUR.replace(':00', 'h')}` : undefined} />
+      )}
       {bBoost && me && (isOpen || adminEarly) && pairsToVote.length > 0 && (
         <BattleModal pairs={pairsToVote} shapes={Object.fromEntries(shapes.map((x) => [x.id, { path: x.path, km: x.km, label: x.label }]))} until={fmtDate(bBoost.vote_to ?? bBoost.vote_from!)}
           preview={adminEarly ? `${fmtDate(bBoost.vote_from!)} à ${VOTE_OPEN_HOUR.replace(':00', 'h')}` : undefined} />
@@ -129,6 +147,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
             ))}
           </div>
         </>
+      )}
+      {pBoost && pActive && (
+        <div className="banner">📸 {pBoost.name} : nomme ta sortie « #COULEURZ (ta trouvaille) », ajoute ta photo sur Strava et une description, à pied ou en courant : +{Number(pBoost.bonus_km)} km pour ton équipe{Number(pBoost.team_bonus_km) > 0 ? `, +${Number(pBoost.team_bonus_km)} km si toute l’équipe joue` : ''}.</div>
       )}
       {boost && (
         <div className="banner">⚡ {boost.name} en cours : {boost.tag
@@ -238,3 +259,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     </>
   );
 }
+
+/** Photos de démo (Lorem Picsum) pour l'aperçu admin, tant qu'il n'y a pas de vraies photos #COULEURZ. */
+const DEMO_PHOTOS: SwipeEntry[] = [
+  ['Porte rouge du marché', 'Repérée au km 3, impossible de ne pas s’arrêter. Fan de portes anciennes et de sorties du dimanche.'],
+  ['Le vélo orange', 'Il attendait sagement contre un lampadaire. Moi, je marchais, promis.'],
+  ['Feuilles d’automne', 'Team Orange jusqu’au bout des feuilles. Cherche coéquipier pour ramasser des marrons.'],
+  ['Banc vert du parc', 'Pause de 30 secondes, pas plus. Aime les bancs, les parcs et les km.'],
+  ['Façade bleue', 'Trouvée en détour sur le chemin du bureau. Le ×2 du matin vaut bien un détour.'],
+  ['Boîte aux lettres', 'Rouge, ronde, rétro. On s’écrit ?'],
+  ['Kayak au bord du canal', 'Bleu, mais je l’ai laissé là. Le RunZ, c’est à pied.'],
+  ['Graffiti du pont', 'Street art + footing = combo parfait.'],
+].map(([title, caption], k) => ({ id: `demo-${k}`, url: `https://picsum.photos/seed/runz-couleur-${k}/600/800`, title, caption, km: 3 + k * 0.85 }));

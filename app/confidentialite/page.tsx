@@ -17,6 +17,9 @@ export default function Privacy() {
           <li><b>Exception, sur ton choix :</b> si tu ajoutes <b>#TRACEZ</b> au titre d’une activité (jeu des formes), son tracé est conservé
             pour dessiner la forme. Elle est affichée sans fond de carte (on ne voit ni rue ni lieu), de façon anonyme pendant le vote,
             puis avec ton prénom si elle est sur le podium. Retire le tag du titre sur Strava pour que le tracé soit effacé.</li>
+          <li><b>Photo couleur, sur ton choix :</b> si tu ajoutes <b>#COULEURZ</b> au titre d’une activité, sa photo principale et sa description
+            Strava sont conservées pour le vote photo : les participants les voient (sans ton nom ni carte). Retire le tag du titre sur Strava
+            pour qu’elles soient effacées.</li>
         </ul>
         <h2>Qui voit quoi</h2>
         <ul>

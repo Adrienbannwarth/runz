@@ -18,6 +18,7 @@
 //    ou à la « moyenne » par personne (réglage).
 
 import { decodePolyline } from './polyline.ts';
+import { photoBoost, photoEntries, photoTeamBonus } from './photo-core.ts';
 
 export type Slot = 'Avant 8h' | '12h-14h' | '19h-22h' | 'Autre';
 export type BoostSlot = Slot | 'Tous';
@@ -53,7 +54,9 @@ export type Activity = {
   polyline?: string | null;           // tracé, conservé seulement pour les activités #TRACEZ
   excluded?: boolean | null;          // exclue par un admin (triche, erreur) : ne compte jamais
   speed_ok?: boolean | null;          // vitesse suspecte vérifiée et validée par un admin
-  vote_excluded?: boolean | null;     // forme retirée du vote TraceZ par un admin (l'activité et son ×4 comptent toujours)
+  vote_excluded?: boolean | null;     // forme ou photo retirée du vote par un admin (l'activité et son bonus comptent toujours)
+  photo_url?: string | null;          // photo principale Strava, conservée seulement pour les activités #COULEURZ
+  photo_caption?: string | null;      // description Strava, conservée seulement pour les activités #COULEURZ
 };
 export type Boost = { id: number; name: string; starts_at: string; ends_at: string; multiplier: number; slot?: BoostSlot | null; manual?: boolean | null;
   from_time?: string | null; to_time?: string | null; // horaire quotidien perso (ex. 18:30 → 22:00), prioritaire sur le créneau
@@ -61,6 +64,7 @@ export type Boost = { id: number; name: string; starts_at: string; ends_at: stri
   tag?: string | null;        // boost à valider réservé aux activités dont le titre contient ce tag (ex. #TRACEZ)
   sport_types?: string[] | null; // boost réservé à ces types d'activité (ex. Walk, Hike) ; vide = tous
   vote_from?: string | null; vote_to?: string | null; // vote « battle » des formes validées
+  bonus_km?: number | null; team_bonus_km?: number | null; // boost photo : km par personne, km si toute l'équipe participe
 };
 
 /** Le titre contient le tag (insensible à la casse, aux espaces et au #). */
@@ -368,12 +372,15 @@ export function computeStandings(input: {
     };
   });
 
+  // Boost photo (#COULEURZ) : km bonus automatiques par équipe
+  const pBoost = photoBoost(boosts);
+  const photoBonus = photoTeamBonus(pBoost, pBoost ? photoEntries(pBoost, scored, { includeExcluded: true }) : [], participants);
   const mode = settings.ranking_mode ?? 'total';
   const teamStats: TeamStats[] = teams.filter((t) => t.active).map((team) => {
     const members = people.filter((p) => p.participant.team_id === team.id);
     const realKm = members.reduce((t, p) => t + p.cappedKm, 0); // km réels retenus (plafond appliqué)
     const countedKm = members.reduce((t, p) => t + p.countedKm, 0);
-    const bonusKm = bonuses.filter((b) => b.team_id === team.id).reduce((t, b) => t + Number(b.km), 0);
+    const bonusKm = bonuses.filter((b) => b.team_id === team.id).reduce((t, b) => t + Number(b.km), 0) + (photoBonus.get(team.id)?.km ?? 0);
     const totalKm = countedKm + bonusKm;
     const avgKm = members.length ? totalKm / members.length : 0;
     const todayBonus = bonuses.filter((b) => b.team_id === team.id && b.awarded_on === today).reduce((t, b) => t + Number(b.km), 0);
