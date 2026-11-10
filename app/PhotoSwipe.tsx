@@ -63,7 +63,9 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
   const x = fling ? fling * (frame.current?.clientWidth ?? 420) * 1.3 : drag.x; // sortie de carte limitée au cadre
   const y = fling ? drag.y : drag.y * 0.25;
   const p = Math.max(-1, Math.min(1, x / THRESHOLD)); // -1 (non) … 1 (oui)
-  const style = { transform: `translate(${x}px, ${y}px) rotate(${x / 18}deg)`, transition: drag.on && !fling ? 'none' : 'transform .28s ease' };
+  // Sortie : la carte part en glissant et s'efface ; la suivante apparaît ensuite (classe swipe-enter)
+  const style = { transform: `translate(${x}px, ${y}px) rotate(${x / 18}deg)`, opacity: fling ? 0 : 1,
+    transition: drag.on && !fling ? 'none' : 'transform .28s ease, opacity .28s ease' };
 
   const modal = (
     <div className="swipe-overlay" role="dialog" aria-modal="true" aria-labelledby="swipe-title" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
@@ -86,10 +88,14 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
           <>
             <h2 id="swipe-title" className="sr-only">Photo {i + 1} sur {entries.length}</h2>
             <div className="swipe-stack">
-              {next && <Card key={next.id} e={next} back />}
-              {/* key : la carte suivante arrive sans animation (elle était déjà visible derrière) */}
-              <div key={cur.id} className="swipe-card-wrap" style={style} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
-                <Card e={cur} tint={p} />
+              {/* une seule carte à la fois : rien derrière pendant le glissé ; key → animation d'entrée de la suivante */}
+              <div key={cur.id} className="swipe-card-wrap swipe-enter" style={style} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+                <Card e={cur} />
+                <span className={`swipe-tag${p > 0 ? ' yes' : ''}`} style={{ opacity: Math.abs(p), transform: `translateX(-50%) scale(${0.85 + 0.15 * Math.abs(p)})` }} aria-hidden="true">
+                  {p > 0
+                    ? <><svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" fill="currentColor" /></svg>Oui</>
+                    : <><svg width="12" height="12" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>Non</>}
+                </span>
               </div>
             </div>
             <div className="swipe-actions">
@@ -121,14 +127,10 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
   );
 }
 
-function Card({ e, back, tint = 0 }: { e: SwipeEntry; back?: boolean; tint?: number }) {
+function Card({ e }: { e: SwipeEntry }) {
   return (
-    <div className={`swipe-card${back ? ' back' : ''}`} aria-hidden={back}>
-      <div className="swipe-photo">
-        <img src={e.url} alt={e.title || 'Photo couleur'} draggable={false} />
-        {/* voile vert (oui) ou rouge (non) pendant le glissé */}
-        {tint !== 0 && <span className="swipe-tint" style={{ background: tint > 0 ? `rgba(46,160,67,${tint * 0.5})` : `rgba(200,49,47,${-tint * 0.5})` }} />}
-      </div>
+    <div className="swipe-card">
+      <div className="swipe-photo"><img src={e.url} alt={e.title || 'Photo couleur'} draggable={false} /></div>
       <div className="swipe-prompt">
         {e.title && <b>{e.title}</b>}
         {e.caption && <p>{e.caption}</p>}
