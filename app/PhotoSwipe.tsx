@@ -21,6 +21,7 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
   const [drag, setDrag] = useState({ x: 0, y: 0, on: false });
   const [fling, setFling] = useState<0 | 1 | -1>(0); // carte qui sort à droite (1) ou à gauche (-1)
   const start = useRef<{ x: number; y: number } | null>(null);
+  const frame = useRef<HTMLDivElement>(null);
   const done = i >= entries.length;
   const cur = entries[i];
   const next = entries[i + 1];
@@ -59,14 +60,14 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
     else setDrag({ x: 0, y: 0, on: false });
   };
 
-  const x = fling ? fling * (typeof window !== 'undefined' ? window.innerWidth : 800) * 1.2 : drag.x;
+  const x = fling ? fling * (frame.current?.clientWidth ?? 420) * 1.3 : drag.x; // sortie de carte limitée au cadre
   const y = fling ? drag.y : drag.y * 0.25;
   const p = Math.max(-1, Math.min(1, x / THRESHOLD)); // -1 (non) … 1 (oui)
   const style = { transform: `translate(${x}px, ${y}px) rotate(${x / 18}deg)`, transition: drag.on && !fling ? 'none' : 'transform .28s ease' };
 
   const modal = (
-    <div className="swipe-overlay" role="dialog" aria-modal="true" aria-labelledby="swipe-title">
-      <div className="swipe">
+    <div className="swipe-overlay" role="dialog" aria-modal="true" aria-labelledby="swipe-title" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
+      <div className="swipe" ref={frame}>
         <div className="swipe-head">
           <p className="swipe-eyebrow">
             {preview ? <><b>Aperçu admins{demo ? ' · photos de démo' : ''}</b> · ouverture à tous le {preview}{demo ? ' · rien n’est enregistré' : ' · les votes comptent'}</> : <>Photo couleur · vote jusqu’au {until}</>}
