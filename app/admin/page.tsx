@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { isAdmin, isPasswordAdmin } from '@/lib/session';
 import { appCapacity, appUrl, stravaApps } from '@/lib/strava';
 import { boostOfDay, daysLeft, fmtDate, fmtKm, loadAll, sportsLabel, windowLabel } from '@/lib/data';
-import { GPS_GAP_MAX_M, leadSentence, speedKmh, tagMatch } from '@/lib/scoring';
+import { GPS_GAP_MAX_M, RUN_MIN_KMH, leadSentence, runOnlyBoost, speedKmh, tagMatch, walkingPace } from '@/lib/scoring';
 import * as A from './actions';
 import TeamSelect from './TeamSelect';
 import CopyLink from './CopyLink';
@@ -380,13 +380,21 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         const speedRows = d.scored.filter((a) => a.speedReview && !a.excluded && !a.speed_ok && d.settings.sport_types.includes(a.sport_type) && a.day >= d.settings.start_date && a.day <= d.settings.end_date)
           .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
         const speedTodo = speedRows.length;
+        // Courses à allure de marche pendant un boost « course uniquement » (à valider ou déjà validées)
+        const runBoosts = d.boosts.filter(runOnlyBoost);
+        const paceRows = d.scored.filter((a) => a.eligible && walkingPace(a)
+          && (a.pendingBoosts.some((x) => x.pace) || runBoosts.some((b) => (a.validated_boosts ?? []).map(Number).includes(Number(b.id)))))
+          .sort((a, b) => b.start_date_local.localeCompare(a.start_date_local));
+        const paceTodo = paceRows.filter((a) => a.pendingBoosts.some((x) => x.pace)).length;
         const showVitesse = sp.v === 'vitesse';
-        const showSaisies = !showVitesse && (!sp.boost || !manual.length); // par défaut : les saisies manuelles
+        const showAllure = sp.v === 'allure';
+        const showSaisies = !showVitesse && !showAllure && (!sp.boost || !manual.length); // par défaut : les saisies manuelles
         const subnav = (
           <nav className="tabs sub">
             <Link href="/admin?tab=validations&v=vitesse" className={showVitesse ? 'on' : ''}>Vitesse suspecte · {speedTodo} à vérifier</Link>
+            <Link href="/admin?tab=validations&v=allure" className={showAllure ? 'on' : ''}>Allure de marche · {paceTodo} à vérifier</Link>
             <Link href="/admin?tab=validations&v=saisies" className={showSaisies ? 'on' : ''}>Saisies manuelles Strava · {manualRows.filter((a) => !a.manual_ok).length} non validée{manualRows.filter((a) => !a.manual_ok).length > 1 ? "s" : ""}</Link>
-            {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={!showSaisies && !showVitesse && String(b.id) === (sp.boost ?? String(manual[0].id)) ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
+            {manual.map((b) => <Link key={b.id} href={`/admin?tab=validations&boost=${b.id}`} className={!showSaisies && !showVitesse && !showAllure && String(b.id) === (sp.boost ?? String(manual[0].id)) ? 'on' : ''}>{b.name} ×{b.multiplier}</Link>)}
           </nav>
         );
         if (showVitesse) {
@@ -418,6 +426,54 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                               </form>{' '}
                               <form action={A.toggleExcluded} style={{ display: 'inline' }}>
                                 <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value="1" /><input type="hidden" name="back" value="validations&v=vitesse" />
+                                <button className="btn small danger">Exclure</button>
+                              </form>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          );
+        }
+        if (showAllure) {
+          return (
+            <>
+              {subnav}
+              <p className="muted small">Pendant un boost « course uniquement » (ex. Morning HourZ), une course sous {RUN_MIN_KMH.Run} km/h de moyenne (plus de {Math.floor(60 / RUN_MIN_KMH.Run)}:{String(Math.round((60 / RUN_MIN_KMH.Run % 1) * 60)).padStart(2, '0')} min/km), ou un trail sous {RUN_MIN_KMH.TrailRun} km/h, est à une allure de marche : ses km comptent normalement, mais <b>sans le boost</b> tant que vous ne la validez pas. Validez si c’est une vraie course lente (fractionné, côtes, reprise…).</p>
+              <div className="card" style={{ overflowX: 'auto' }}>
+                {paceRows.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune course à allure de marche.</p> : (
+                  <table>
+                    <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Distance</th><th className="num">Durée</th><th className="num">Vitesse</th><th></th><th></th></tr></thead>
+                    <tbody>
+                      {paceRows.map((a) => {
+                        const t = allTeams.find((x) => x.id === d.participants.find((p) => p.id === a.participant_id)?.team_id);
+                        const min = Math.round(Number(a.moving_time_s) / 60);
+                        const pending = a.pendingBoosts.find((x) => x.pace);
+                        const done = runBoosts.find((b) => (a.validated_boosts ?? []).map(Number).includes(Number(b.id)));
+                        const boost = pending ?? (done && { id: Number(done.id), name: done.name, multiplier: Number(done.multiplier) });
+                        return (
+                          <tr key={a.id} className={pending ? 'off' : ''}>
+                            <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}><span className="dot" style={{ display: 'inline-block', background: t?.color }} /> {pName(a.participant_id)}</td>
+                            <td>{a.name || '—'} <span className="muted small">{SPORT_FR[a.sport_type] ?? a.sport_type}</span>{boost && <div className="muted small">{boost.name} ×{boost.multiplier}</div>}</td>
+                            <td className="num">{fmtKm(a.rawKm)} km</td>
+                            <td className="num">{min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}` : `${min} min`}</td>
+                            <td className="num" style={{ color: 'var(--red)' }}>{(speedKmh(a) ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km/h</td>
+                            <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank" rel="noopener noreferrer">Voir sur Strava</a>}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {boost && (
+                                <form action={A.toggleBoostValidation} style={{ display: 'inline' }}>
+                                  <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="boost" value={boost.id} /><input type="hidden" name="on" value={pending ? '1' : '0'} />
+                                  <input type="hidden" name="back" value="validations&v=allure" />
+                                  {pending ? <button className="btn small primary">Valider ×{boost.multiplier}</button> : <button className="btn small">✓ Validée · retirer</button>}
+                                </form>
+                              )}{' '}
+                              <form action={A.toggleExcluded} style={{ display: 'inline' }}>
+                                <input type="hidden" name="activity" value={a.id} /><input type="hidden" name="on" value="1" /><input type="hidden" name="back" value="validations&v=allure" />
                                 <button className="btn small danger">Exclure</button>
                               </form>
                             </td>

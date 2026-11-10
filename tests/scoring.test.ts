@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import { battleResults, battleShapes, duelAllowed, remainingPairs, voteEnded, voteOpen, type Shape, type Vote } from '../lib/battle-core.ts';
 import assert from 'node:assert/strict';
 import { decodePolyline, hasTraceTag, polylineToPath } from '../lib/polyline.ts';
-import { boostActiveAt, boostsOn, computeStandings, leadSentence, speedSuspect, longestGapM, strictShapeName, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
+import { boostActiveAt, boostsOn, walkingPace, computeStandings, leadSentence, speedSuspect, longestGapM, strictShapeName, tagMatch, normLocal, scoreActivities, slotOf, weekOf, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 // Réglages du fichier RunZ-Suivi.xlsx (onglet Paramètres)
 const settings: Settings = {
@@ -423,4 +423,22 @@ test('Battle : une forme exclue du vote garde son ×4 mais sort des duels', () =
   assert.deepEqual(s.map((x) => x.multiplier), [4, 4]);
   assert.deepEqual(battleShapes(tb, s).map((x) => x.label), ['A']);
   assert.deepEqual(battleShapes(tb, s, { includeExcluded: true }).filter((x) => x.excluded).map((x) => x.label), ['B']);
+});
+
+test('Boost course uniquement : une « course » à allure de marche n’a pas le boost sans validation', () => {
+  const mh: Boost = { id: 9, name: 'Morning HourZ', starts_at: '2026-11-10T00:00:00', ends_at: '2026-11-13T23:59:59', multiplier: 2, from_time: '06:00', to_time: '09:30', sport_types: ['Run', 'TrailRun'] };
+  const run = (km: number, min: number, sport = 'Run', extra: Partial<Activity> = {}): Activity => ({ ...act('r', '2026-11-10T07:30:00', km, sport), moving_time_s: min * 60, ...extra });
+  const s = scoreActivities([
+    run(5, 30),                                   // 10 km/h : ×2
+    run(5, 50),                                   // 6 km/h : allure de marche → ×1, à valider
+    run(5, 40),                                   // 7,5 km/h : ×2
+    run(5, 55, 'TrailRun'),                       // 5,5 km/h en trail : sous 6 → à valider
+    run(5, 45, 'TrailRun'),                       // 6,7 km/h en trail : ×2
+    run(5, 50, 'Run', { validated_boosts: [9] }), // validée par un admin : ×2
+  ], { ...settings, cap_mode: 'alert' }, [mh]);
+  assert.deepEqual(s.map((x) => x.multiplier), [2, 1, 2, 1, 2, 2]);
+  assert.equal(s[1].pendingBoosts[0]?.pace, true);
+  assert.equal(s[1].countedKm, 5);             // les km comptent quand même
+  assert.ok(walkingPace({ distance_m: 5000, moving_time_s: 2700, sport_type: 'Run' }));   // 6,67 km/h
+  assert.ok(!walkingPace({ distance_m: 5000, moving_time_s: 2700, sport_type: 'Walk' })); // la marche n'est pas concernée
 });

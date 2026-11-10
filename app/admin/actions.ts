@@ -173,7 +173,7 @@ export async function toggleBoostValidation(fd: FormData) {
   const set = new Set((row.validated_boosts ?? []).map(Number));
   if (on) set.add(boost); else set.delete(boost);
   must(await db().from('activities').update({ validated_boosts: [...set] }).eq('id', id));
-  done(`validations&boost=${boost}`, on ? (replaced ? 'Forme validée (remplace la précédente de cette personne)' : 'Boost validé') : 'Validation retirée');
+  done(s(fd, 'back') || `validations&boost=${boost}`, on ? (replaced ? 'Forme validée (remplace la précédente de cette personne)' : 'Boost validé') : 'Validation retirée');
 }
 export async function deleteBoost(fd: FormData) {
   await guard();

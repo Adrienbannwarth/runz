@@ -98,7 +98,7 @@ export type ScoredActivity = Activity & {
   cappedKm: number;
   multiplier: number;
   boostName?: string;
-  pendingBoosts: { id: number; name: string; multiplier: number }[];
+  pendingBoosts: { id: number; name: string; multiplier: number; pace?: boolean }[]; // pace : course à allure de marche
   tagCandidates: number[]; // boosts à tag automatiques pour lesquels l'activité est éligible (une seule retenue par personne)
   tagWinner?: number;      // boost à tag automatique effectivement appliqué à cette activité
   gpsGapM?: number;        // plus longue ligne droite du tracé (m), si tracé conservé
@@ -224,6 +224,19 @@ export const speedSuspect = (a: Pick<Activity, 'distance_m' | 'moving_time_s' | 
   return v != null && max != null && v > max;
 };
 
+/**
+ * Allure minimale d'une course pour les boosts « course uniquement » (ex. Morning HourZ) : en dessous, c'est une allure
+ * de marche (95 % des marches du challenge sont sous 6,9 km/h, 75 % des courses au-dessus de 8,7 km/h).
+ * L'activité compte normalement, sans le boost, tant qu'un admin ne l'a pas validée.
+ */
+export const RUN_MIN_KMH: Record<string, number> = { Run: 7, VirtualRun: 7, TrailRun: 6 };
+export const walkingPace = (a: Pick<Activity, 'distance_m' | 'moving_time_s' | 'sport_type'>) => {
+  const v = speedKmh(a); const min = RUN_MIN_KMH[a.sport_type];
+  return v != null && min != null && v < min;
+};
+/** Boost réservé à la course (tous ses types sont des types « course »). */
+export const runOnlyBoost = (b: Pick<Boost, 'sport_types'>) => !!b.sport_types?.length && b.sport_types.every((t) => t in RUN_MIN_KMH);
+
 export function scoreActivities(acts: Activity[], settings: Settings, boosts: Boost[]): ScoredActivity[] {
   const allowed = new Set(settings.sport_types);
   const scored: ScoredActivity[] = acts.map((a) => {
@@ -252,6 +265,11 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
         if (b.bonus_note || !boostApplies(b, local, slot)) continue;
         if (b.tag && !tagMatch(b.tag, a.name)) continue; // boost réservé aux activités taguées
         if (b.sport_types?.length && !b.sport_types.includes(a.sport_type)) continue; // boost réservé à certains types (ex. marche)
+        if (runOnlyBoost(b) && walkingPace(a) && !validated.has(Number(b.id))) {
+          // « Course » à allure de marche : pas de boost course sans validation (les km comptent quand même)
+          pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier), pace: true });
+          continue;
+        }
         if (b.tag && !b.manual) {
           // Forme automatique : titre avec #TRACEZ (le « (nom) » est conseillé, pas obligatoire), vrai tracé GPS
           // sans grande ligne droite (transport). Sinon, vérification par un admin.

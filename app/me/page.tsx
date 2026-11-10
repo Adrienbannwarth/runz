@@ -109,7 +109,7 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
                     </td>
                     <td>{SPORT_FR[a.sport_type] ?? a.sport_type}</td>
                     <td className="num">{fmtKm(a.rawKm)} km</td>
-                    <td className="num">{a.eligible ? <>{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div><span className="pill">⚡ ×{a.multiplier.toLocaleString('fr-FR')} {a.boostName}</span></div>}{a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="small muted">×{x.multiplier} {x.name} : en attente de validation</div>)}</> : '—'}</td>
+                    <td className="num">{a.eligible ? <>{fmtKm(a.countedKm)} km{a.multiplier > 1 && <div><span className="pill">⚡ ×{a.multiplier.toLocaleString('fr-FR')} {a.boostName}</span></div>}{a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="small muted">×{x.multiplier} {x.name} : {x.pace ? 'allure de marche, en attente de validation' : 'en attente de validation'}</div>)}</> : '—'}</td>
                     <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava</a>}</td>
                   </tr>
                 ))}
@@ -134,7 +134,7 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
                 {(a.multiplier > 1 || !a.eligible || a.overCap || a.pendingBoosts.some((x) => x.multiplier > a.multiplier) || a.strava_activity_id) && (
                   <div className="act-meta">
                     {a.eligible && a.multiplier > 1 && <span className="pill">⚡ ×{a.multiplier.toLocaleString('fr-FR')} {a.boostName}</span>}
-                    {a.eligible && a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <span key={x.id} className="small muted">×{x.multiplier} {x.name} en attente de validation</span>)}
+                    {a.eligible && a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <span key={x.id} className="small muted">×{x.multiplier} {x.name} {x.pace ? 'non appliqué (allure de marche), en attente de validation' : 'en attente de validation'}</span>)}
                     {!a.eligible && <span className="small">{a.reason}</span>}
                     {a.eligible && a.overCap && <span className="small" style={{ color: 'var(--red)' }}>{capNote}</span>}
                     {a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank">Voir sur Strava ↗</a>}
