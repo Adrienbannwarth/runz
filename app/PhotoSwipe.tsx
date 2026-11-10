@@ -8,7 +8,8 @@ import { votePhoto } from './battle-actions';
  * Glisser à droite (ou ♥) = oui, à gauche (ou ✕) = non. Chaque photo n'apparaît qu'une fois par votant.
  * En mode démo (aperçu admin sans vraies photos), rien n'est enregistré.
  */
-export type SwipeEntry = { id: string; url: string; title: string; caption: string; km: number };
+export type SwipeEntry = { id: string; url: string; title: string; caption: string; km: number; sport?: string };
+const SPORT: Record<string, string> = { Walk: 'Marche', Hike: 'Rando', Run: 'Course', TrailRun: 'Trail', VirtualRun: 'Tapis' };
 
 const km = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
 const THRESHOLD = 110; // px de glissé pour valider un choix
@@ -84,8 +85,9 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
           <>
             <h2 id="swipe-title" className="sr-only">Photo {i + 1} sur {entries.length}</h2>
             <div className="swipe-stack">
-              {next && <Card e={next} back />}
-              <div className="swipe-card-wrap" style={style} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+              {next && <Card key={next.id} e={next} back />}
+              {/* key : la carte suivante arrive sans animation (elle était déjà visible derrière) */}
+              <div key={cur.id} className="swipe-card-wrap" style={style} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
                 <Card e={cur} />
                 <span className="swipe-stamp yes" style={{ opacity: Math.max(0, p) }}>OUI</span>
                 <span className="swipe-stamp no" style={{ opacity: Math.max(0, -p) }}>NON</span>
@@ -125,10 +127,9 @@ function Card({ e, back }: { e: SwipeEntry; back?: boolean }) {
     <div className={`swipe-card${back ? ' back' : ''}`} aria-hidden={back}>
       <div className="swipe-photo"><img src={e.url} alt={e.title || 'Photo couleur'} draggable={false} /></div>
       <div className="swipe-prompt">
-        <span className="swipe-label">Ma trouvaille couleur</span>
-        <b>{e.title || 'Sans titre'}</b>
+        {e.title && <b>{e.title}</b>}
         {e.caption && <p>{e.caption}</p>}
-        <span className="swipe-km">{km(e.km)}</span>
+        <span className="swipe-km">{km(e.km)}{e.sport && SPORT[e.sport] ? ` · ${SPORT[e.sport]}` : ''}</span>
       </div>
     </div>
   );

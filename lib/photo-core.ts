@@ -13,7 +13,7 @@ import type { Boost, Participant, ScoredActivity } from './scoring.ts';
 export const PHOTO_TAG = /#\s*couleur\s*[sz]?(?![a-zà-ÿ])/i;
 export const hasPhotoTag = (name?: string | null) => !!name && PHOTO_TAG.test(name);
 
-export type PhotoEntry = { id: string; participant_id: string; url: string; title: string; caption: string; km: number; day: string; excluded: boolean };
+export type PhotoEntry = { id: string; participant_id: string; url: string; title: string; caption: string; km: number; sport: string; day: string; excluded: boolean };
 export type PhotoVote = { voter_id: string; activity_id: string; liked: boolean };
 
 /** Le boost photo : un boost à tag qui rapporte des km bonus (le plus récent). */
@@ -32,7 +32,7 @@ export function photoEntries(boost: Boost, scored: ScoredActivity[], opts: { inc
   for (const a of ok) { const cur = best.get(a.participant_id); if (!cur || a.rawKm > cur.rawKm) best.set(a.participant_id, a); }
   return [...best.values()]
     .filter((a) => opts.includeExcluded || !a.vote_excluded)
-    .map((a) => ({ id: a.id, participant_id: a.participant_id, url: a.photo_url!, title: photoTitle(a.name), caption: (a.photo_caption ?? '').trim().slice(0, 280), km: Math.round(a.rawKm * 100) / 100, day: a.day, excluded: !!a.vote_excluded }));
+    .map((a) => ({ id: a.id, participant_id: a.participant_id, url: a.photo_url!, title: photoTitle(a.name), caption: (a.photo_caption ?? '').trim().slice(0, 280), km: Math.round(a.rawKm * 100) / 100, sport: a.sport_type, day: a.day, excluded: !!a.vote_excluded }));
 }
 
 /** Km bonus par équipe : bonus_km par personne avec une photo, + team_bonus_km si tous les membres en ont une. */

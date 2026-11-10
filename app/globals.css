@@ -259,15 +259,15 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .swipe-stack { position: relative; flex: 1; min-height: 0; }
 .swipe-card-wrap { position: absolute; inset: 0; touch-action: none; cursor: grab; z-index: 2; }
 .swipe-card-wrap:active { cursor: grabbing; }
-.swipe-card { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; }
-.swipe-card.back { transform: scale(.95) translateY(10px); opacity: .6; z-index: 1; }
-.swipe-photo { flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; background: #272727; }
+.swipe-card { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 10px; background: #EEEFE8; }
+.swipe-card.back { z-index: 1; }
+.swipe-card.back .swipe-prompt { visibility: hidden; }
+.swipe-photo { flex: 0 1 auto; min-height: 0; width: 100%; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; background: #272727; } /* format portrait d'une photo de téléphone */
 .swipe-photo img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-.swipe-prompt { background: #272727; color: #EEEFE8; border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
-.swipe-label { font-size: 12px; opacity: .7; }
+.swipe-prompt { color: #272727; padding: 2px 4px 0; display: flex; flex-direction: column; gap: 4px; }
 .swipe-prompt b { font-size: 24px; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; }
 .swipe-prompt p { margin: 2px 0 0; font-size: 14px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.swipe-km { font-size: 12px; opacity: .6; }
+.swipe-km { font-size: 13px; color: #6f6f6f; }
 .swipe-stamp { position: absolute; top: 22px; padding: 4px 12px; border: 3px solid; border-radius: 8px; font-size: 28px; font-weight: 700; letter-spacing: .04em; pointer-events: none; }
 .swipe-stamp.yes { left: 18px; color: #FC4C02; border-color: #FC4C02; transform: rotate(-14deg); background: rgba(238,239,232,.85); }
 .swipe-stamp.no { right: 18px; color: #272727; border-color: #272727; transform: rotate(14deg); background: rgba(238,239,232,.85); }

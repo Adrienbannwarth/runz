@@ -62,7 +62,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const pDemo = pEarly && pEntries.length < 2;
   const photoDeck: SwipeEntry[] = !pBoost || !me || !(pOpen || pEarly) ? []
     : pDemo ? DEMO_PHOTOS
-    : photosToVote(pEntries, await loadPhotoVotes(), me.id, { allowOwn: pEarly }).map(({ id, url, title, caption, km }) => ({ id, url, title, caption, km }));
+    : photosToVote(pEntries, await loadPhotoVotes(), me.id, { allowOwn: pEarly }).map(({ id, url, title, caption, km, sport }) => ({ id, url, title, caption, km, sport }));
   const pActive = !!pBoost && now.slice(0, 10) >= pBoost.starts_at.slice(0, 10) && now.slice(0, 10) <= pBoost.ends_at.slice(0, 10);
   const podium = SHOW_BATTLE_PODIUM && bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
 
@@ -270,4 +270,4 @@ const DEMO_PHOTOS: SwipeEntry[] = [
   ['Boîte aux lettres', 'Rouge, ronde, rétro. On s’écrit ?'],
   ['Kayak au bord du canal', 'Bleu, mais je l’ai laissé là. Le RunZ, c’est à pied.'],
   ['Graffiti du pont', 'Street art + footing = combo parfait.'],
-].map(([title, caption], k) => ({ id: `demo-${k}`, url: `https://picsum.photos/seed/runz-couleur-${k}/600/800`, title, caption, km: 3 + k * 0.85 }));
+].map(([title, caption], k) => ({ id: `demo-${k}`, url: `https://picsum.photos/seed/runz-couleur-${k}/600/800`, title, caption: k === 5 ? '' : caption, km: 3 + k * 0.85, sport: k % 2 ? 'Run' : 'Walk' }));
