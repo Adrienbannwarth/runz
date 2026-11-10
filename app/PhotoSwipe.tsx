@@ -100,7 +100,7 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
               </button>
               <span className="swipe-count">{i + 1} / {entries.length}</span>
               <button className="swipe-btn yes" aria-label="Oui, j’aime" onClick={() => choose(true)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" fill="currentColor" /></svg>
+                <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" fill="currentColor" /></svg>
               </button>
             </div>
             {err && <p className="swipe-err">{err}</p>}
