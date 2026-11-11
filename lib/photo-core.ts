@@ -19,7 +19,7 @@ export type PhotoVote = { voter_id: string; activity_id: string; liked: boolean;
 
 /** Réactions proposées sous chaque photo, toutes positives. */
 export const REACTIONS = [
-  { key: 'love', emoji: '🫶🏼', label: 'J’adore' },
+  { key: 'love', emoji: '❤️', label: 'J’adore' },
   { key: 'couleur', emoji: '🎨', label: 'Trop couleur' },
   { key: 'drole', emoji: '😂', label: 'Trop drôle' },
   { key: 'trouvaille', emoji: '🤯', label: 'Belle trouvaille' },
