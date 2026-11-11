@@ -188,18 +188,19 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
         {shown.map((t, i) => (
           <g key={i} transform={`translate(${t.x - t.size / 2} ${t.y - t.size / 2}) rotate(${t.rot} ${t.size / 2} ${t.size / 2}) scale(${t.size / 100})`}>
             {/* avec les temps : tracé un peu réduit + distance, allure et temps en dessous (façon partage Strava) */}
-            <g transform={withStats ? 'translate(16 -4) scale(.68)' : undefined}>
+            <g className="rw-st-shape" style={{ transform: withStats ? 'translate(16px, -4px) scale(.68)' : 'none' }}>
               <path d={t.path} pathLength={1} stroke={trackColor(t.sport)} vectorEffect="non-scaling-stroke" className={on ? 'draw' : ''} style={{ transitionDelay: `${0.2 + i * 0.05}s` }} />
             </g>
             {withStats && <>
-              <text x="50" y="80" textAnchor="middle" className="rw-st-km">{nf(t.km, 2)} km</text>
-              <text x="50" y="92" textAnchor="middle" className="rw-st-sub">{statLine(t)}</text>
+              <text x="50" y="80" textAnchor="middle" className="rw-st rw-st-km" style={{ animationDelay: `${i * 0.02}s` }}>{nf(t.km, 2)} km</text>
+              <text x="50" y="92" textAnchor="middle" className="rw-st rw-st-sub" style={{ animationDelay: `${0.05 + i * 0.02}s` }}>{statLine(t)}</text>
             </>}
           </g>
         ))}
       </svg>
-      {!runsOnly && r.tracksTotal > r.tracks.length && <div className="r rw-small" style={{ marginTop: 8 }}>Les {r.tracks.length} plus longues</div>}
-      {withStats && <div className="r rw-small" style={{ textAlign: 'center' }}>Données Powered by Strava</div>}
+      {r.tracksTotal > r.tracks.length && <div className="r rw-small" style={{ marginTop: 8, visibility: runsOnly ? 'hidden' : 'visible' }}>Les {r.tracks.length} plus longues</div>}
+      {/* toujours présent (masqué si besoin) : la story ne bouge pas quand on active les options */}
+      <div className="r rw-small rw-st-credit" style={{ textAlign: 'center', visibility: withStats ? 'visible' : 'hidden' }}>Données Powered by Strava</div>
       <div className="r rw-tracks-actions">
         <button className="rw-btn" onClick={() => shareImage(drawTracks(r, shown, shownTotal, withStats, runsOnly), `runz-${runsOnly ? 'courses' : 'traces'}${withStats ? '-temps' : ''}-${slug(r.name)}.png`)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Télécharger</button>
         <div className="rw-switches">

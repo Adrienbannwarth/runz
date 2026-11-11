@@ -137,3 +137,8 @@ body:has(.rw-overlay) { overflow: hidden; }
 .rw-switch[aria-checked="true"] .rw-switch-track { background: var(--orange); }
 .rw-switch[aria-checked="true"] .rw-switch-knob { transform: translateX(16px); }
 .rw-switches { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+/* Options de la story tracés : rien ne bouge, apparition discrète des temps */
+.rw-st-shape { transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+.rw-st { animation: rw-st-in .35s ease-out both; }
+@keyframes rw-st-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rw-st { animation: none; } .rw-st-shape { transition: none; } }
