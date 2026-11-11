@@ -13,6 +13,7 @@ export type SwipeEntry = { id: string; url: string; title: string; caption: stri
 const SPORT: Record<string, string> = { Walk: 'Marche', Hike: 'Rando', Run: 'Course', TrailRun: 'Trail', VirtualRun: 'Tapis' };
 
 const km = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
+const HEART = "M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z";
 const OUT_MS = 520; // durée de l'effet de réaction + sortie de la carte
 
 export default function PhotoSwipe({ entries, until, preview, demo }: { entries: SwipeEntry[]; until: string; preview?: string; demo?: boolean }) {
@@ -70,14 +71,17 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
               {/* key : chaque nouvelle photo rejoue l'animation d'entrée ; « out » fait sortir la carte après la réaction */}
               <div key={cur.id} className={`swipe-card-wrap swipe-enter${picked ? ' out' : ''}`}>
                 <Card e={cur} />
-                {emoji && <span className="swipe-burst" aria-hidden="true">{emoji}</span>}
+                {picked === 'love'
+                  ? <span className="swipe-burst love" aria-hidden="true"><svg width="84" height="84" viewBox="0 0 24 24"><path d={HEART} fill="currentColor" /></svg></span>
+                  : emoji && <span className="swipe-burst" aria-hidden="true">{emoji}</span>}
               </div>
             </div>
             <div className="swipe-reactions" role="group" aria-label="Ta réaction">
               {REACTIONS.map((x) => (
-                <button key={x.key} className={`swipe-react${picked === x.key ? ' on' : ''}`} disabled={!!picked} onClick={() => react(x.key)}>
-                  <span className="swipe-react-emoji" aria-hidden="true">{x.emoji}</span>
-                  <span className="swipe-react-label">{x.label}</span>
+                <button key={x.key} className={`swipe-react ${x.key}${picked === x.key ? ' on' : ''}`} disabled={!!picked} onClick={() => react(x.key)} aria-label={x.label} title={x.label}>
+                  {x.key === 'love'
+                    ? <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d={HEART} fill="currentColor" /></svg>
+                    : <span aria-hidden="true">{x.emoji}</span>}
                 </button>
               ))}
             </div>
