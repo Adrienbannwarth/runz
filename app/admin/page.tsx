@@ -11,7 +11,7 @@ import ShapeSvg from '../ShapeSvg';
 import { polylineToPath } from '@/lib/polyline';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
 import ConfirmButton from './ConfirmButton';
-import { loadPhotoVotes, photoBoost, photoEntries, photoResults, photoTeamBonus } from '@/lib/photo';
+import { REACTIONS, loadPhotoVotes, photoBoost, photoEntries, photoResults, photoTeamBonus } from '@/lib/photo';
 import { testActivityPhotos } from '@/lib/strava';
 import { getParticipantId } from '@/lib/session';
 
@@ -679,10 +679,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             )}
             {photo && (
               <>
-                <h2>Photo couleur · {photo.results.length} photo{photo.results.length > 1 ? 's' : ''} · {photo.votes.length} vote{photo.votes.length > 1 ? 's' : ''}</h2>
+                <h2>Photo couleur · {photo.results.length} photo{photo.results.length > 1 ? 's' : ''} · {photo.votes.filter((v) => v.reaction).length} réaction{photo.votes.filter((v) => v.reaction).length > 1 ? 's' : ''}</h2>
                 <p className="muted small">
                   {fmtDate(photo.boost.starts_at)} → {fmtDate(photo.boost.ends_at)} : une sortie nommée « #COULEURZ (nom) » avec une photo Strava = +{Number(photo.boost.bonus_km)} km pour l’équipe (une par personne, la plus longue), +{Number(photo.boost.team_bonus_km ?? 0)} km si toute l’équipe joue. Automatique, avec les contrôles habituels (vrai tracé, pas de saisie manuelle, vitesse).
-                  {photo.boost.vote_from && <> Vote du {fmtDate(photo.boost.vote_from)} à 14h au {fmtDate(photo.boost.vote_to ?? photo.boost.vote_from)} ; MVP = le plus de « oui ». Les admins voient le vote dès maintenant (photos de démo tant qu’il y a moins de 2 vraies photos).</>}
+                  {photo.boost.vote_from && <> Réactions du {fmtDate(photo.boost.vote_from)} à 14h au {fmtDate(photo.boost.vote_to ?? photo.boost.vote_from)} ({REACTIONS.map((x) => `${x.emoji} ${x.label}`).join(' · ')}, ou « Passer »). Le MVP est choisi par l’organisation, rien d’automatique. Les admins voient les réactions dès maintenant (photos de démo tant qu’il y a moins de 2 vraies photos).</>}
                 </p>
                 <div className="card" style={{ marginBottom: 12 }}>
                   <table>
@@ -697,20 +697,19 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                 </div>
                 {photo.votes.length > 0 && (
                   <form action={A.clearPhotoVotes} style={{ marginBottom: 12 }}>
-                    <ConfirmButton className="btn small danger" message={`Supprimer les ${photo.votes.length} votes photo ? Le vote repartira de zéro (irréversible).`}>Supprimer les votes photo</ConfirmButton>
+                    <ConfirmButton className="btn small danger" message={`Supprimer les ${photo.votes.length} réactions photo ? Tout repartira de zéro (irréversible).`}>Supprimer les réactions</ConfirmButton>
                   </form>
                 )}
                 <div className="card" style={{ overflowX: 'auto', marginBottom: 12 }}>
                   {photo.results.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune photo #COULEURZ pour l’instant.</p> : (
                     <table>
-                      <thead><tr><th>#</th><th>Photo</th><th>Participant</th><th className="num">Oui</th><th className="num">Votes</th><th className="num">% oui</th><th></th></tr></thead>
+                      <thead><tr><th>Photo</th><th>Participant</th>{REACTIONS.map((x) => <th key={x.key} className="num" title={x.label}>{x.emoji}</th>)}<th className="num">Total</th><th className="num">Vue par</th><th></th></tr></thead>
                       <tbody>
-                        {photo.results.map((r, k) => (
+                        {photo.results.map((r) => (
                           <tr key={r.entry.id}>
-                            <td>{k + 1}</td>
                             <td><img src={r.entry.url} alt="" width={56} height={70} style={{ objectFit: 'cover', borderRadius: 6, display: 'block' }} /></td>
                             <td>{pName(r.entry.participant_id)}<div className="muted small">{r.entry.title || 'Sans titre'} · {fmtKm(r.entry.km)} km</div>{r.entry.caption && <div className="muted small" style={{ maxWidth: 360 }}>« {r.entry.caption} »</div>}</td>
-                            <td className="num">{r.likes}</td><td className="num">{r.votes}</td><td className="num">{r.votes ? `${Math.round(r.pct * 100)} %` : '—'}</td>
+                            {REACTIONS.map((x) => <td key={x.key} className="num">{r.by[x.key] || '—'}</td>)}<td className="num"><b>{r.total}</b></td><td className="num">{r.seen}</td>
                             <td>
                               <form action={A.toggleVoteExcluded}>
                                 <input type="hidden" name="activity" value={r.entry.id} /><input type="hidden" name="on" value="1" />

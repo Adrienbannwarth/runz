@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasPhotoTag, photoEntries, photoResults, photoTeamBonus, photosToVote, photoTitle, type PhotoVote } from '../lib/photo-core.ts';
+import { hasPhotoTag, isReaction, photoEntries, photoResults, photoTeamBonus, photosToVote, photoTitle, type PhotoVote } from '../lib/photo-core.ts';
 import { computeStandings, scoreActivities, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 const settings: Settings = { start_date: '2026-10-27', end_date: '2026-11-27', daily_cap_km: 10, sprint_multiplier: 1, sport_types: ['Walk', 'Run', 'TrailRun', 'Hike'], cap_mode: 'cap' };
@@ -40,7 +40,7 @@ test('Photo couleur : +25 km par personne, +50 km si toute l’équipe', () => {
   assert.equal(st.teams.find((x) => x.team.id === 2)?.bonusKm, 25);
 });
 
-test('Photo couleur : vote oui / non, pas sa photo, une fois, MVP au nombre de oui', () => {
+test('Photo couleur : réactions, pas sa photo, une fois', () => {
   const acts = ['a', 'b', 'c', 'd'].map((p) => act(p, 3, `#COULEURZ (${p})`));
   const e = photoEntries(pb, scoreActivities(acts, settings, [pb]));
   assert.equal(photosToVote(e, [], 'a').length, 3);                                 // pas la sienne
@@ -48,10 +48,12 @@ test('Photo couleur : vote oui / non, pas sa photo, une fois, MVP au nombre de o
   assert.deepEqual(photosToVote(e, [], 'a').map((x) => x.id), photosToVote(e, [], 'a').map((x) => x.id)); // ordre stable
   const id = (p: string) => e.find((x) => x.participant_id === p)!.id;
   const votes: PhotoVote[] = [
-    { voter_id: 'a', activity_id: id('b'), liked: true }, { voter_id: 'c', activity_id: id('b'), liked: true },
-    { voter_id: 'a', activity_id: id('c'), liked: true }, { voter_id: 'b', activity_id: id('c'), liked: false },
+    { voter_id: 'a', activity_id: id('b'), liked: true, reaction: 'love' }, { voter_id: 'c', activity_id: id('b'), liked: true, reaction: 'drole' },
+    { voter_id: 'a', activity_id: id('c'), liked: true, reaction: 'couleur' }, { voter_id: 'b', activity_id: id('c'), liked: false, reaction: null },
   ];
-  assert.equal(photosToVote(e, votes, 'a').length, 1);                              // déjà voté b et c
+  assert.equal(photosToVote(e, votes, 'a').length, 1);                              // déjà vu b et c (réaction ou « Passer »)
   const r = photoResults(e, votes);
-  assert.deepEqual(r.slice(0, 2).map((x) => [x.entry.participant_id, x.likes, x.votes]), [['b', 2, 2], ['c', 1, 2]]);
+  assert.deepEqual(r.slice(0, 2).map((x) => [x.entry.participant_id, x.total, x.seen]), [['b', 2, 2], ['c', 1, 2]]);
+  assert.deepEqual(r[0].by, { love: 1, couleur: 0, drole: 1, trouvaille: 0 });
+  assert.ok(isReaction('trouvaille') && !isReaction('non'));
 });

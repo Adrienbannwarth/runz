@@ -5,7 +5,8 @@
 //   rapporte bonus_km (25) à l'équipe. Une seule par personne (la plus longue). Mêmes contrôles que le reste :
 //   activité éligible (vitesse, exclusion), vrai tracé GPS, pas de saisie manuelle Strava.
 // - Si TOUS les membres d'une équipe en ont une : team_bonus_km (50) en plus pour l'équipe.
-// - Vote : chaque participant voit chaque photo une fois (pas la sienne) et dit oui ou non. MVP = le plus de « oui ».
+// - Réactions : chaque participant voit chaque photo une fois (pas la sienne) et met une réaction positive (ou passe).
+//   Pas de MVP automatique : il est choisi par l'organisation à partir des réactions.
 
 import type { Boost, Participant, ScoredActivity } from './scoring.ts';
 
@@ -14,7 +15,17 @@ export const PHOTO_TAG = /#\s*couleur\s*[sz]?(?![a-zà-ÿ])/i;
 export const hasPhotoTag = (name?: string | null) => !!name && PHOTO_TAG.test(name);
 
 export type PhotoEntry = { id: string; participant_id: string; url: string; title: string; caption: string; km: number; sport: string; day: string; excluded: boolean };
-export type PhotoVote = { voter_id: string; activity_id: string; liked: boolean };
+export type PhotoVote = { voter_id: string; activity_id: string; liked: boolean; reaction?: string | null };
+
+/** Réactions proposées sous chaque photo, toutes positives. */
+export const REACTIONS = [
+  { key: 'love', emoji: '🫶', label: 'J’adore' },
+  { key: 'couleur', emoji: '🎨', label: 'Trop couleur' },
+  { key: 'drole', emoji: '😂', label: 'Trop drôle' },
+  { key: 'trouvaille', emoji: '🤯', label: 'Belle trouvaille' },
+] as const;
+export type ReactionKey = (typeof REACTIONS)[number]['key'];
+export const isReaction = (x: unknown): x is ReactionKey => REACTIONS.some((r) => r.key === x);
 
 /** Le boost photo : un boost à tag qui rapporte des km bonus (le plus récent). */
 export const photoBoost = (boosts: Boost[]) =>
@@ -61,11 +72,12 @@ export function photosToVote(entries: PhotoEntry[], votes: PhotoVote[], voterId:
   return pool.sort((a, b) => key(a.id) - key(b.id));
 }
 
-/** Classement : nombre de « oui », puis % de « oui ». */
+/** Réactions reçues par photo (pour aider l'organisation à choisir le MVP), triées par nombre total de réactions. */
 export function photoResults(entries: PhotoEntry[], votes: PhotoVote[]) {
   return entries.map((e) => {
     const vs = votes.filter((v) => v.activity_id === e.id);
-    const likes = vs.filter((v) => v.liked).length;
-    return { entry: e, likes, votes: vs.length, pct: vs.length ? likes / vs.length : 0 };
-  }).sort((x, y) => y.likes - x.likes || y.pct - x.pct);
+    const by = Object.fromEntries(REACTIONS.map((r) => [r.key, vs.filter((v) => v.reaction === r.key).length])) as Record<ReactionKey, number>;
+    const total = REACTIONS.reduce((t, r) => t + by[r.key], 0);
+    return { entry: e, by, total, seen: vs.length };
+  }).sort((x, y) => y.total - x.total || y.seen - x.seen);
 }
