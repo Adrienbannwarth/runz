@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRewind, climbLabel, scatter } from '../lib/rewind.ts';
+import { buildRewind, climbLabel, fmtDuration, fmtPace, scatter } from '../lib/rewind.ts';
 import { computeStandings, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 const settings: Settings = {
@@ -54,7 +54,8 @@ test('Rewind : km, répartition, série, créneaux, boosts, équipe', () => {
   assert.ok(Math.abs(r.slots.lunch - 4 / 25) < 1e-9);
   assert.ok(Math.abs(r.slots.evening - 15 / 25) < 1e-9);
   assert.equal(r.slots.day, 0);
-  assert.deepEqual(r.tracks.map((x) => x.km), [12, 6]); // plus longue d'abord, activité inconnue ignorée
+  assert.deepEqual(r.tracks.map((x) => x.km), [12, 6]);
+  assert.deepEqual(r.tracks.map((x) => x.timeS), [72 * 60, 36 * 60]); // plus longue d'abord, activité inconnue ignorée
   assert.equal(r.tracksTotal, 2);
   assert.deepEqual(r.gallery.map((g) => [g.label, g.mine]), [['Étoile', true], ['Cœur', false]]);
   assert.equal(r.teamRankInside, 1);
@@ -81,4 +82,11 @@ test('Rewind : équivalences du dénivelé', () => {
   assert.equal(climbLabel(2000), 'soit 1 mont Ventoux');
   assert.equal(climbLabel(5300), 'soit 1,1 Mont Blanc');
   assert.equal(climbLabel(10000), 'soit 2,1 Monts Blancs');
+});
+
+test('Rewind : temps et allure façon Strava', () => {
+  assert.equal(fmtDuration(1935), '32:15');
+  assert.equal(fmtDuration(3750), '1:02:30');
+  assert.equal(fmtPace(1800, 5), '6:00 /km');
+  assert.equal(fmtPace(0, 5), '');
 });

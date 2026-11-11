@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { SCATTER_H, SCATTER_W, type Rewind } from '@/lib/rewind';
+import { SCATTER_H, SCATTER_W, fmtDuration, fmtPace as fmtPaceKm, type Rewind, type Track } from '@/lib/rewind';
 import './rewind.css';
 
 const DUR = 6500;
@@ -62,6 +62,7 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
   ] as const;
   const slotTop = SLOTS.slice().sort((a, b) => r.slots[b.k] - r.slots[a.k])[0];
 
+  const [withStats, setWithStats] = useState(false); // story tracés : tracés seuls ou avec distance / allure / temps
   const slides: { cls: string; lt?: boolean; style?: React.CSSProperties; body: (on: boolean) => React.ReactNode }[] = [
     { cls: 's-intro', lt: true, body: () => (<>
       <img className="r rw-logo" src="/logo.svg" alt="RunZ by Colorz" />
@@ -182,12 +183,25 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
       <svg className="r rw-scatter" viewBox={`0 0 ${SCATTER_W} ${SCATTER_H}`}>
         {r.tracks.map((t, i) => (
           <g key={i} transform={`translate(${t.x - t.size / 2} ${t.y - t.size / 2}) rotate(${t.rot} ${t.size / 2} ${t.size / 2}) scale(${t.size / 100})`}>
-            <path d={t.path} pathLength={1} stroke={trackColor(t.sport)} vectorEffect="non-scaling-stroke" className={on ? 'draw' : ''} style={{ transitionDelay: `${0.2 + i * 0.05}s` }} />
+            {/* avec les temps : tracé un peu réduit + distance, allure et temps en dessous (façon partage Strava) */}
+            <g transform={withStats ? 'translate(16 -4) scale(.68)' : undefined}>
+              <path d={t.path} pathLength={1} stroke={trackColor(t.sport)} vectorEffect="non-scaling-stroke" className={on ? 'draw' : ''} style={{ transitionDelay: `${0.2 + i * 0.05}s` }} />
+            </g>
+            {withStats && <>
+              <text x="50" y="80" textAnchor="middle" className="rw-st-km">{nf(t.km, 2)} km</text>
+              <text x="50" y="92" textAnchor="middle" className="rw-st-sub">{statLine(t)}</text>
+            </>}
           </g>
         ))}
       </svg>
       {r.tracksTotal > r.tracks.length && <div className="r rw-small" style={{ marginTop: 8 }}>Les {r.tracks.length} plus longues</div>}
-      <div className="r" style={{ textAlign: 'center' }}><button className="rw-btn" onClick={() => shareImage(drawTracks(r), `runz-traces-${slug(r.name)}.png`)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Télécharger mes tracés</button></div>
+      {withStats && <div className="r rw-small" style={{ textAlign: 'center' }}>Données Powered by Strava</div>}
+      <div className="r rw-tracks-actions">
+        <button className="rw-btn" onClick={() => shareImage(drawTracks(r, withStats), `runz-traces${withStats ? '-temps' : ''}-${slug(r.name)}.png`)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Télécharger</button>
+        <button className="rw-switch" role="switch" aria-checked={withStats} onClick={() => setWithStats((v) => !v)}>
+          <span className="rw-switch-track"><span className="rw-switch-knob" /></span>Avec les temps
+        </button>
+      </div>
     </>) }] : []),
   ];
 
@@ -304,7 +318,10 @@ function drawLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, W:
 
 const trackColor = (_sport: string) => PAL.orange; // course et marche, tout en orange
 /** Ses tracés 1080×1920, fond blanc. */
-async function drawTracks(r: Rewind) {
+/** « 5:48 /km · 30:12 » (temps seul si pas d'allure). */
+const statLine = (t: Track) => [fmtPaceKm(t.timeS, t.km), t.timeS ? fmtDuration(t.timeS) : ''].filter(Boolean).join(' · ');
+
+async function drawTracks(r: Rewind, withStats = false) {
   const { c, g, F, W, logo } = await canvasBase();
   g.fillStyle = PAL.creme; g.fillRect(0, 0, W, 1920);
   g.fillStyle = PAL.noir; g.textAlign = 'left';
@@ -314,11 +331,19 @@ async function drawTracks(r: Rewind) {
   r.tracks.forEach((t) => {
     g.save(); g.translate(ox + t.x * k, oy + t.y * k); g.rotate((t.rot * Math.PI) / 180);
     const sc = (t.size * k) / 100; g.translate((-t.size * k) / 2, (-t.size * k) / 2); g.scale(sc, sc);
-    g.strokeStyle = trackColor(t.sport); g.lineWidth = 4 / sc; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.save();
+    if (withStats) { g.translate(16, -4); g.scale(0.68, 0.68); }
+    g.strokeStyle = trackColor(t.sport); g.lineWidth = (withStats ? 4 / 0.68 : 4) / sc; g.lineCap = 'round'; g.lineJoin = 'round';
     g.stroke(new Path2D(t.path)); g.restore();
+    if (withStats) {
+      g.fillStyle = PAL.noir; g.textAlign = 'center';
+      g.font = `600 11px ${F}`; g.fillText(`${nf(t.km, 2)} km`, 50, 80);
+      g.font = `400 7.5px ${F}`; g.fillText(statLine(t), 50, 92);
+    }
+    g.restore();
   });
   g.textAlign = 'center'; g.fillStyle = '#6f6f6f'; g.font = `600 34px ${F}`;
-  g.fillText(`${r.name} · RunZ Challenge`, W / 2, 1660);
+  g.fillText(`${r.name} · RunZ Challenge${withStats ? ' · Powered by Strava' : ''}`, W / 2, 1660);
   drawLogo(g, logo, W, 1720, 120);
   return c;
 }

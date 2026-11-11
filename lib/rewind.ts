@@ -33,7 +33,7 @@ export type RewindDay = { day: string; km: number; level: 0 | 1 | 2 | 3; streak:
 export type RewindTeam = { id: number; name: string; emoji: string; color: string; rank: number; km: number; mine: boolean };
 
 export type GalleryShape = { path: string; label: string; km: number; mine: boolean };
-export type Track = { path: string; km: number; sport: string; day: string; x: number; y: number; size: number; rot: number };
+export type Track = { path: string; km: number; timeS: number; sport: string; day: string; x: number; y: number; size: number; rot: number };
 /** Zone de la mosaïque « Ton mois en tracés » (unités SVG). */
 export const SCATTER_W = 100, SCATTER_H = 124;
 const MAX_TRACKS = 36;
@@ -155,7 +155,7 @@ export function buildRewind(input: {
   const poly = new Map((input.tracks ?? []).map((t) => [Number(t.stravaId), t.polyline]));
   const allTracks = mine
     .filter((s) => s.strava_activity_id != null && poly.has(Number(s.strava_activity_id)))
-    .map((s) => ({ path: polylineToPath(poly.get(Number(s.strava_activity_id))) ?? '', km: Math.round(s.rawKm * 10) / 10, sport: s.sport_type, day: s.day }))
+    .map((s) => ({ path: polylineToPath(poly.get(Number(s.strava_activity_id))) ?? '', km: Math.round(s.rawKm * 100) / 100, timeS: Number(s.moving_time_s ?? 0), sport: s.sport_type, day: s.day }))
     .filter((t) => t.path)
     .sort((a, b) => b.km - a.km);
 
@@ -233,3 +233,15 @@ export function scatter<T extends { km: number }>(items: T[], w: number, h: numb
   }
   return [];
 }
+
+/** Temps façon Strava : « 32:15 » ou « 1:02:30 ». */
+export const fmtDuration = (sec: number) => {
+  const s = Math.round(sec), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}` : `${m}:${String(r).padStart(2, '0')}`;
+};
+/** Allure façon Strava : « 5:48 /km » (vide si pas de temps). */
+export const fmtPace = (sec: number, km: number) => {
+  if (!sec || !km) return '';
+  const p = Math.round(sec / km);
+  return `${Math.floor(p / 60)}:${String(p % 60).padStart(2, '0')} /km`;
+};
