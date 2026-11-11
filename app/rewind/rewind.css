@@ -136,3 +136,4 @@ body:has(.rw-overlay) { overflow: hidden; }
 .rw-switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
 .rw-switch[aria-checked="true"] .rw-switch-track { background: var(--orange); }
 .rw-switch[aria-checked="true"] .rw-switch-knob { transform: translateX(16px); }
+.rw-switches { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }

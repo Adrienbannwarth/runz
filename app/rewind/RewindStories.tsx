@@ -1,7 +1,7 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { SCATTER_H, SCATTER_W, fmtDuration, fmtPace as fmtPaceKm, type Rewind, type Track } from '@/lib/rewind';
+import { SCATTER_H, SCATTER_W, fmtDuration, fmtPace as fmtPaceKm, scatter, type Rewind, type Track } from '@/lib/rewind';
 import './rewind.css';
 
 const DUR = 6500;
@@ -63,6 +63,10 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
   const slotTop = SLOTS.slice().sort((a, b) => r.slots[b.k] - r.slots[a.k])[0];
 
   const [withStats, setWithStats] = useState(false); // story tracés : tracés seuls ou avec distance / allure / temps
+  const [runsOnly, setRunsOnly] = useState(false);   // story tracés : toutes les sorties ou la course à pied seulement
+  // Course seulement : on replace les tracés restants (même tirage stable, sans trous)
+  const shown = useMemo(() => (runsOnly ? scatter(r.tracks.filter((t) => RUN_TYPES.includes(t.sport)), SCATTER_W, SCATTER_H, r.name) : r.tracks), [runsOnly, r.tracks, r.name]);
+  const shownTotal = runsOnly ? shown.length : r.tracksTotal;
   const slides: { cls: string; lt?: boolean; style?: React.CSSProperties; body: (on: boolean) => React.ReactNode }[] = [
     { cls: 's-intro', lt: true, body: () => (<>
       <img className="r rw-logo" src="/logo.svg" alt="RunZ by Colorz" />
@@ -179,9 +183,9 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
     } },
     ...(r.tracks.length ? [{ cls: 's-tracks', lt: true, body: (on: boolean) => (<>
       <div className="r rw-kicker">Ton mois en tracés</div>
-      <div className="r rw-mid">{r.tracksTotal} sortie{r.tracksTotal > 1 ? 's' : ''}, {r.tracksTotal > 1 ? 'autant de dessins' : 'un dessin'}</div>
+      <div className="r rw-mid">{shownTotal} {runsOnly ? 'course' : 'sortie'}{shownTotal > 1 ? 's' : ''}, {shownTotal > 1 ? 'autant de dessins' : shownTotal ? 'un dessin' : 'pas encore de dessin'}</div>
       <svg className="r rw-scatter" viewBox={`0 0 ${SCATTER_W} ${SCATTER_H}`}>
-        {r.tracks.map((t, i) => (
+        {shown.map((t, i) => (
           <g key={i} transform={`translate(${t.x - t.size / 2} ${t.y - t.size / 2}) rotate(${t.rot} ${t.size / 2} ${t.size / 2}) scale(${t.size / 100})`}>
             {/* avec les temps : tracé un peu réduit + distance, allure et temps en dessous (façon partage Strava) */}
             <g transform={withStats ? 'translate(16 -4) scale(.68)' : undefined}>
@@ -194,13 +198,18 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
           </g>
         ))}
       </svg>
-      {r.tracksTotal > r.tracks.length && <div className="r rw-small" style={{ marginTop: 8 }}>Les {r.tracks.length} plus longues</div>}
+      {!runsOnly && r.tracksTotal > r.tracks.length && <div className="r rw-small" style={{ marginTop: 8 }}>Les {r.tracks.length} plus longues</div>}
       {withStats && <div className="r rw-small" style={{ textAlign: 'center' }}>Données Powered by Strava</div>}
       <div className="r rw-tracks-actions">
-        <button className="rw-btn" onClick={() => shareImage(drawTracks(r, withStats), `runz-traces${withStats ? '-temps' : ''}-${slug(r.name)}.png`)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Télécharger</button>
-        <button className="rw-switch" role="switch" aria-checked={withStats} onClick={() => setWithStats((v) => !v)}>
+        <button className="rw-btn" onClick={() => shareImage(drawTracks(r, shown, shownTotal, withStats, runsOnly), `runz-${runsOnly ? 'courses' : 'traces'}${withStats ? '-temps' : ''}-${slug(r.name)}.png`)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Télécharger</button>
+        <div className="rw-switches">
+          <button className="rw-switch" role="switch" aria-checked={withStats} onClick={() => setWithStats((v) => !v)}>
           <span className="rw-switch-track"><span className="rw-switch-knob" /></span>Avec les temps
         </button>
+          <button className="rw-switch" role="switch" aria-checked={runsOnly} onClick={() => setRunsOnly((v) => !v)}>
+            <span className="rw-switch-track"><span className="rw-switch-knob" /></span>Course seulement
+          </button>
+        </div>
       </div>
     </>) }] : []),
   ];
@@ -321,14 +330,17 @@ const trackColor = (_sport: string) => PAL.orange; // course et marche, tout en 
 /** « 5:48 /km · 30:12 » (temps seul si pas d'allure). */
 const statLine = (t: Track) => [fmtPaceKm(t.timeS, t.km), t.timeS ? fmtDuration(t.timeS) : ''].filter(Boolean).join(' · ');
 
-async function drawTracks(r: Rewind, withStats = false) {
+const RUN_TYPES = ['Run', 'TrailRun', 'VirtualRun'];
+
+async function drawTracks(r: Rewind, tracks: Track[], total: number, withStats = false, runsOnly = false) {
   const { c, g, F, W, logo } = await canvasBase();
   g.fillStyle = PAL.creme; g.fillRect(0, 0, W, 1920);
   g.fillStyle = PAL.noir; g.textAlign = 'left';
   g.font = `500 40px ${F}`; g.fillText('Mon mois en tracés', 80, 150);
-  g.font = `600 66px ${F}`; g.fillText(`${r.tracksTotal} sorties · ${nf(r.totalKm, 0)} km`, 80, 230);
+  const km = runsOnly ? tracks.reduce((t, x) => t + x.km, 0) : r.totalKm;
+  g.font = `600 66px ${F}`; g.fillText(`${total} ${runsOnly ? 'course' : 'sortie'}${total > 1 ? 's' : ''} · ${nf(km, 0)} km`, 80, 230);
   const k = 960 / SCATTER_W, ox = 60, oy = 300 + (1340 - SCATTER_H * k) / 2;
-  r.tracks.forEach((t) => {
+  tracks.forEach((t) => {
     g.save(); g.translate(ox + t.x * k, oy + t.y * k); g.rotate((t.rot * Math.PI) / 180);
     const sc = (t.size * k) / 100; g.translate((-t.size * k) / 2, (-t.size * k) / 2); g.scale(sc, sc);
     g.save();
