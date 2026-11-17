@@ -157,6 +157,33 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
               </>
             );
           })()}
+          {(() => {
+            const late = d.scored.filter((a) => a.eligible && a.overrun).sort((x, y) => y.start_date_local.localeCompare(x.start_date_local));
+            if (!late.length) return null;
+            return (
+              <>
+                <h2>Alerte créneau dépassé · activités boostées finies après la fin du créneau ({late.length})</h2>
+                <div className="card" style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead><tr><th>Date</th><th>Participant</th><th>Activité</th><th className="num">Km</th><th>Boost</th><th>Fin estimée</th><th></th></tr></thead>
+                    <tbody>
+                      {late.map((a) => (
+                        <tr key={a.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(a.day)} {a.start_date_local.slice(11, 16)}</td><td>{pName(a.participant_id)}</td>
+                          <td>{a.name || '—'} <span className="muted small">{SPORT_FR[a.sport_type] ?? a.sport_type}</span></td>
+                          <td className="num">{fmtKm(a.rawKm)}</td>
+                          <td className="small">×{a.multiplier.toLocaleString('fr-FR')} {a.overrun!.boost} · jusqu’à {a.overrun!.until}</td>
+                          <td><span className="pill" style={{ color: 'var(--red)' }}>{a.overrun!.endsAt} · +{a.overrun!.minutes} min</span></td>
+                          <td>{a.strava_activity_id && <a className="strava-link" href={`https://www.strava.com/activities/${a.strava_activity_id}`} target="_blank" rel="noopener noreferrer">Voir sur Strava</a>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted small">Le boost compte dès que l’activité démarre dans le créneau ; ces sorties ont continué après sa fin (montre pas arrêtée ?). Fin estimée = départ + temps en mouvement, donc la fin réelle est au moins aussi tardive. Pour corriger, ajoute un bonus négatif à l’équipe ou exclue l’activité.</p>
+              </>
+            );
+          })()}
           {d.people.some((x) => x.overCapDays.length) && (
             <>
               <h2>Alertes plafond ({d.settings.daily_cap_km} km / jour)</h2>
@@ -228,6 +255,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                             {a.multiplier > 1 && <div>⚡ ×{a.multiplier.toLocaleString('fr-FR')} {a.boostName}</div>}
                             {a.pendingBoosts.filter((x) => x.multiplier > a.multiplier).map((x) => <div key={x.id} className="muted">×{x.multiplier} {x.name} à valider</div>)}
                             {a.eligible && a.overCap && <div style={{ color: 'var(--red)' }}>Plafond {d.settings.daily_cap_km} km dépassé ce jour</div>}
+                            {a.eligible && a.overrun && <div style={{ color: 'var(--red)' }}>Fin estimée {a.overrun.endsAt}, après la fin du créneau {a.overrun.boost} ({a.overrun.until}) · +{a.overrun.minutes} min</div>}
                             {a.flag && <div style={{ color: 'var(--red)' }}>⚠ {a.flag}</div>}
                             {a.speedReview && a.speed_ok && (
                               <form action={A.toggleSpeedOk} className="muted">

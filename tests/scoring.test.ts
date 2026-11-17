@@ -442,3 +442,18 @@ test('Boost course uniquement : une « course » à allure de marche n’a pas l
   assert.ok(walkingPace({ distance_m: 5000, moving_time_s: 2700, sport_type: 'Run' }));   // 6,67 km/h
   assert.ok(!walkingPace({ distance_m: 5000, moving_time_s: 2700, sport_type: 'Walk' })); // la marche n'est pas concernée
 });
+
+test('boost à horaire : alerte quand l’activité finit après la fin du créneau', () => {
+  const pd: Boost = { id: 11, name: 'Pause Dej', starts_at: '2026-11-17T00:00:00', ends_at: '2026-11-19T23:59:59', multiplier: 1.5, from_time: '12:30', to_time: '14:00' };
+  const mk = (when: string, km: number, min: number): Activity => ({ ...act('a', when, km), moving_time_s: min * 60 });
+  const [inside, over, outside] = scoreActivities([
+    mk('2026-11-17T13:00:00', 8, 50),   // fin 13h50 : rien
+    mk('2026-11-18T13:30:00', 10, 55),  // fin 14h25 : alerte
+    mk('2026-11-19T15:00:00', 10, 60),  // hors créneau : pas de boost, pas d'alerte
+  ], settings, [pd]);
+  assert.equal(inside.multiplier, 1.5);
+  assert.equal(inside.overrun, undefined);
+  assert.equal(over.multiplier, 1.5); // le boost s'applique quand même (heure de départ)
+  assert.deepEqual(over.overrun, { boost: 'Pause Dej', until: '14h00', endsAt: '14h25', minutes: 25 });
+  assert.equal(outside.overrun, undefined);
+});

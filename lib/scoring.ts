@@ -110,6 +110,7 @@ export type ScoredActivity = Activity & {
   manualReview: boolean; // saisie manuelle Strava soumise à validation (comptée seulement si validée) // boosts « à valider » possibles, pas encore validés
   countedKm: number;
   overCap: boolean;   // la journée de cette personne dépasse le plafond
+  overrun?: { boost: string; until: string; endsAt: string; minutes: number }; // boost à horaire : l'activité finit après la fin du créneau (montre pas arrêtée ?)
   flag?: string;      // à vérifier par les admins (compte quand même)
 };
 
@@ -202,6 +203,24 @@ function boostApplies(b: Boost, local: string, slot: Slot) {
   return bs === slot;
 }
 
+/**
+ * Boost à horaire (from_time → to_time) : l'activité, partie dans le créneau, finit-elle après sa fin ?
+ * Fin estimée = départ + temps en mouvement (la fin réelle est au moins aussi tardive : pauses non comptées).
+ * Sert d'alerte aux admins (montre pas arrêtée à 14h, par exemple) ; le boost s'applique quand même.
+ */
+export function windowOverrun(b: Pick<Boost, 'name' | 'from_time' | 'to_time'>, local: string, movingS: number | null | undefined) {
+  if (!b.from_time || !b.to_time || !movingS || Number(movingS) <= 0) return undefined;
+  const [h, m] = local.slice(11, 16).split(':').map(Number);
+  const [eh, em] = b.to_time.slice(0, 5).split(':').map(Number);
+  const startMin = h * 60 + m;
+  const endMin = startMin + Number(movingS) / 60;
+  const limit = eh * 60 + em;
+  if (limit <= startMin || endMin <= limit) return undefined;
+  const e = Math.round(endMin);
+  const endsAt = `${String(Math.floor(e / 60) % 24).padStart(2, '0')}h${String(e % 60).padStart(2, '0')}`;
+  return { boost: b.name, until: b.to_time.slice(0, 5).replace(':', 'h'), endsAt, minutes: Math.round(endMin - limit) };
+}
+
 /** Nom de forme strict : « #TRACEZ (nom) » (avec #TRACE / #TRACÉ acceptés). */
 export const strictShapeName = (name?: string | null) => !!name && /#\s*trac[eé]\s*z?\s*\(\s*[^)\s][^)]*\)/i.test(name);
 /** Ligne droite au-delà de laquelle une forme part en vérification (trajet en transports probable). */
@@ -260,6 +279,7 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
 
     let multiplier = 1;
     let boostName: string | undefined;
+    let applied: Boost | undefined;
     const pendingBoosts: ScoredActivity['pendingBoosts'] = [];
     const tagCandidates: number[] = [];
     const gpsGapM = a.polyline ? longestGapM(a.polyline) : undefined;
@@ -287,15 +307,16 @@ export function scoreActivities(acts: Activity[], settings: Settings, boosts: Bo
           pendingBoosts.push({ id: Number(b.id), name: b.name, multiplier: Number(b.multiplier) });
           continue;
         }
-        if (Number(b.multiplier) > multiplier) { multiplier = Number(b.multiplier); boostName = b.name; }
+        if (Number(b.multiplier) > multiplier) { multiplier = Number(b.multiplier); boostName = b.name; applied = b; }
       }
       if (day === settings.end_date && Number(settings.sprint_multiplier) > multiplier) {
-        multiplier = Number(settings.sprint_multiplier); boostName = 'Sprint final';
+        multiplier = Number(settings.sprint_multiplier); boostName = 'Sprint final'; applied = undefined;
       }
     }
+    const overrun = applied ? windowOverrun(applied, local, a.moving_time_s) : undefined;
     return {
       ...a, start_date_local: local, eligible, reason, day, week: weekOf(day, settings.start_date), slot,
-      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, tagCandidates, gpsGapM, manualReview, speedReview, countedKm: 0, overCap: false, flag: flagOf(a),
+      rawKm, cappedKm: eligible ? rawKm : 0, multiplier, boostName, pendingBoosts, tagCandidates, gpsGapM, manualReview, speedReview, countedKm: 0, overCap: false, overrun, flag: flagOf(a),
     };
   });
 
