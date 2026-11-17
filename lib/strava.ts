@@ -209,16 +209,6 @@ export async function fetchTracks(participantId: string, startDate: string, endD
   return out;
 }
 
-/** Test admin : photos d'une activité Strava de l'admin connecté (détail + toutes les photos). */
-export async function testActivityPhotos(participantId: string, activityId: number) {
-  const p = must(await db().from('participants').select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;
-  const token = await validToken(p);
-  const a = await api<StravaActivity>(token, `/activities/${activityId}`);
-  const all = await api<{ urls?: Record<string, string>; caption?: string }[]>(token, `/activities/${activityId}/photos?size=600&photo_sources=true`).catch(() => []);
-  return { name: a.name, count: a.total_photo_count ?? a.photos?.count ?? 0, primary: primaryPhoto(a), description: a.description ?? null,
-    photos: all.map((x) => x.urls?.['600'] || Object.values(x.urls ?? {})[0]).filter(Boolean) as string[] };
-}
-
 /** Mode test Battle (admins) : récupère les tracés des dernières activités déjà en base et les range dans test_polyline. */
 export async function fetchTestPolylines(participantId: string, max = 8) {
   const p = must(await db().from('participants').select(TOKEN_COLS).eq('id', participantId).single()) as TokenRow;

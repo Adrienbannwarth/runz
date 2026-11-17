@@ -12,8 +12,6 @@ import { polylineToPath } from '@/lib/polyline';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
 import ConfirmButton from './ConfirmButton';
 import { REACTIONS, loadPhotoVotes, photoBoost, photoEntries, photoResults, photoTeamBonus } from '@/lib/photo';
-import { testActivityPhotos } from '@/lib/strava';
-import { getParticipantId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,12 +39,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
     const all = photoEntries(pb, d.scored, { includeExcluded: true }); const votes = await loadPhotoVotes();
     return { boost: pb, results: photoResults(all.filter((e) => !e.excluded), votes), excluded: all.filter((e) => e.excluded), votes, teams: photoTeamBonus(pb, all, d.participants) };
   })() : null;
-  // Test : photos d'une activité Strava de l'admin connecté (?photoTest=<id ou lien Strava>)
-  const testId = Number(String(sp.photoTest ?? '').match(/(\d{6,})/)?.[1] ?? 0);
-  const myPid = await getParticipantId();
-  const photoTest = tab === 'mvp' && testId && myPid
-    ? await testActivityPhotos(myPid, testId).catch((e) => ({ error: (e as Error).message }))
-    : null;
   const teamsAll = d.teamList;                       // toutes les équipes (y compris inactives)
   const allTeams = teamsAll.filter((t) => t.active); // équipes en jeu
   const pName = (id: string | null) => d.participants.find((p) => p.id === id)?.display_name ?? '';
@@ -735,27 +727,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                   </div>
                 )}
               </>
-            )}
-            <h2>Test : photos d’une activité Strava</h2>
-            <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              <input type="hidden" name="tab" value="mvp" />
-              <input name="photoTest" defaultValue={sp.photoTest ?? ''} placeholder="Lien ou numéro d’une de TES activités Strava" style={{ flex: 1, minWidth: 260, font: 'inherit', padding: '8px 12px', border: '1px solid var(--line)', borderRadius: 99 }} />
-              <button className="btn small primary">Récupérer les photos</button>
-            </form>
-            {photoTest && (
-              <div className="card" style={{ marginBottom: 24 }}>
-                {'error' in photoTest ? <p style={{ margin: 0, color: 'var(--red)' }}>Erreur : {photoTest.error}</p> : (
-                  <>
-                    <p style={{ marginTop: 0 }}><b>{photoTest.name}</b> · {photoTest.count} photo{photoTest.count > 1 ? 's' : ''} selon Strava · photo principale {photoTest.primary ? 'trouvée' : 'absente'}{photoTest.description ? <> · description : « {photoTest.description} »</> : ' · pas de description'}</p>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {[photoTest.primary, ...photoTest.photos.filter((u) => u !== photoTest.primary)].filter(Boolean).slice(0, 12).map((u, k) => (
-                        <img key={k} src={u!} alt="" width={140} height={140} style={{ objectFit: 'cover', borderRadius: 8, outline: k === 0 && photoTest.primary ? '3px solid var(--strava)' : undefined }} />
-                      ))}
-                    </div>
-                    <p className="muted small" style={{ marginBottom: 0 }}>Contour orange : la photo principale, celle qui serait utilisée pour le vote.</p>
-                  </>
-                )}
-              </div>
             )}
             <h2>Prix calculés</h2>
             <div className="card" style={{ overflowX: 'auto' }}>
