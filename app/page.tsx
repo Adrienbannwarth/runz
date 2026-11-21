@@ -77,6 +77,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
       </div>
       <div className="name">{t.team.name}</div>
       <div className="rank">{view === 'admin' ? `${t.members} membre${t.members > 1 ? 's' : ''}` : `${mates.filter(isOn).length} connecté·e${mates.filter(isOn).length > 1 ? 's' : ''}`} · +{fmtKm(t.todayKm)} km aujourd’hui</div>
+      {t.photo && (t.photo.km > 0 || pActive) && (
+        <div className="rank">📸 Photo couleur : +{fmtKm(t.photo.km)} km · {t.photo.people}/{t.photo.members} avec photo{t.photo.all ? ' · toute l’équipe 🎉' : ''}</div>
+      )}
       {view === 'admin' && <div className="progress"><div style={{ width: `${(t.score / leader) * 100}%` }} /></div>}
       {isTotal ? <div className="kv"><span>Moyenne / pers.</span><span>{fmtKm(t.avgKm)} km</span></div>
                : <div className="kv"><span>Total équipe</span><span>{fmtKm(t.totalKm)} km</span></div>}

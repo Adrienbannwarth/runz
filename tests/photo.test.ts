@@ -38,6 +38,12 @@ test('Photo couleur : +25 km par personne, +50 km si toute l’équipe', () => {
   const st = computeStandings({ settings, teams, participants, activities: acts, boosts: [pb], bonuses: [], today: '2026-11-16' });
   assert.equal(st.teams.find((x) => x.team.id === 1)?.bonusKm, 100);
   assert.equal(st.teams.find((x) => x.team.id === 2)?.bonusKm, 25);
+  assert.deepEqual(st.teams.find((x) => x.team.id === 1)?.photo, { km: 100, people: 2, members: 2, all: true });
+  // Le jour de la photo, le bonus s'ajoute aux « km aujourd'hui » (les photos sont toutes du 14/11)
+  const day = computeStandings({ settings, teams, participants, activities: acts, boosts: [pb], bonuses: [], today: '2026-11-14' });
+  const t1 = day.teams.find((x) => x.team.id === 1)!;
+  assert.ok(t1.todayKm >= 100, `todayKm ${t1.todayKm}`);
+  assert.equal(st.teams.find((x) => x.team.id === 1)?.todayKm, 0);
 });
 
 test('Photo couleur : réactions, pas sa photo, une fois', () => {

@@ -149,6 +149,7 @@ export type TeamStats = {
   multiplierKm: number; // km gagnés via multiplicateurs
   countedKm: number;    // réels + multiplicateurs
   bonusKm: number;
+  photo?: { km: number; people: number; members: number; all: boolean }; // bonus Photo couleur (#COULEURZ), inclus dans bonusKm
   totalKm: number;
   avgKm: number;
   score: number;        // valeur de tri selon ranking_mode
@@ -375,6 +376,8 @@ export function computeStandings(input: {
   // Boost photo (#COULEURZ) : km bonus automatiques par équipe
   const pBoost = photoBoost(boosts);
   const photoBonus = photoTeamBonus(pBoost, pBoost ? photoEntries(pBoost, scored, { includeExcluded: true }) : [], participants);
+  // Même calcul sans les photos du jour : la différence s'ajoute aux « km aujourd'hui »
+  const photoBefore = photoTeamBonus(pBoost, pBoost ? photoEntries(pBoost, scored, { includeExcluded: true }).filter((e) => e.day < today) : [], participants);
   const mode = settings.ranking_mode ?? 'total';
   const teamStats: TeamStats[] = teams.filter((t) => t.active).map((team) => {
     const members = people.filter((p) => p.participant.team_id === team.id);
@@ -383,11 +386,14 @@ export function computeStandings(input: {
     const bonusKm = bonuses.filter((b) => b.team_id === team.id).reduce((t, b) => t + Number(b.km), 0) + (photoBonus.get(team.id)?.km ?? 0);
     const totalKm = countedKm + bonusKm;
     const avgKm = members.length ? totalKm / members.length : 0;
-    const todayBonus = bonuses.filter((b) => b.team_id === team.id && b.awarded_on === today).reduce((t, b) => t + Number(b.km), 0);
+    const todayBonus = bonuses.filter((b) => b.team_id === team.id && b.awarded_on === today).reduce((t, b) => t + Number(b.km), 0)
+      + (photoBonus.get(team.id)?.km ?? 0) - (photoBefore.get(team.id)?.km ?? 0);
+    const ph = photoBonus.get(team.id);
     return {
       team, members: members.length,
       realKm: r2(realKm), multiplierKm: r2(countedKm - realKm), countedKm: r2(countedKm),
       bonusKm: r2(bonusKm), totalKm: r2(totalKm), avgKm: r2(avgKm),
+      photo: pBoost && ph ? { km: r2(ph.km), people: ph.people, members: ph.members, all: ph.all } : undefined,
       score: r2(mode === 'average' ? avgKm : totalKm),
       todayKm: r2(members.reduce((t, p) => t + p.todayKm, 0) + todayBonus),
       notYetThisWeek: members.filter((p) => !p.activeThisWeek).length,
