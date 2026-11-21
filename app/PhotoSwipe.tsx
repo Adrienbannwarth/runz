@@ -7,7 +7,8 @@ import { REACTIONS, type ReactionKey } from '@/lib/photo-core';
 /**
  * Vote « Photo couleur » par réactions : une photo à la fois, on touche une réaction et la suivante arrive.
  * Que des réactions positives (aucune photo n'est « mal notée ») ; « Passer » pour ne pas réagir.
- * Chaque photo n'apparaît qu'une fois par votant. En mode démo (aperçu admin sans vraies photos), rien n'est enregistré.
+ * Chaque photo n'apparaît qu'une fois par votant. En aperçu admin (avant l'ouverture), rien n'est enregistré
+ * et toutes les photos reviennent à chaque visite.
  */
 export type SwipeEntry = { id: string; url: string; title: string; caption: string; km: number; sport?: string };
 const SPORT: Record<string, string> = { Walk: 'Marche', Hike: 'Rando', Run: 'Course', TrailRun: 'Trail', VirtualRun: 'Tapis' };
@@ -15,7 +16,7 @@ const SPORT: Record<string, string> = { Walk: 'Marche', Hike: 'Rando', Run: 'Cou
 const km = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
 const OUT_MS = 520; // durée de l'effet de réaction + sortie de la carte
 
-export default function PhotoSwipe({ entries, until, preview, demo }: { entries: SwipeEntry[]; until: string; preview?: string; demo?: boolean }) {
+export default function PhotoSwipe({ entries, until, preview, demo, dry }: { entries: SwipeEntry[]; until: string; preview?: string; demo?: boolean; dry?: boolean }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const [err, setErr] = useState('');
@@ -40,7 +41,7 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
   function react(r: ReactionKey | 'skip') {
     if (!cur || picked) return;
     setPicked(r);
-    if (!demo) votePhoto(cur.id, r === 'skip' ? null : r).then((x) => setErr(!x.ok && x.error ? x.error : '')).catch(() => setErr('Réaction non enregistrée, réessaie.'));
+    if (!demo && !dry) votePhoto(cur.id, r === 'skip' ? null : r).then((x) => setErr(!x.ok && x.error ? x.error : '')).catch(() => setErr('Réaction non enregistrée, réessaie.'));
     setTimeout(() => { setI((n) => n + 1); setPicked(null); }, OUT_MS);
   }
 
@@ -51,7 +52,7 @@ export default function PhotoSwipe({ entries, until, preview, demo }: { entries:
       <div className="swipe">
         <div className="swipe-head">
           <p className="swipe-eyebrow">
-            {preview ? <><b>Aperçu admins{demo ? ' · photos de démo' : ''}</b> · ouverture à tous le {preview}{demo ? ' · rien n’est enregistré' : ' · les réactions comptent'}</> : <>Photo couleur · réactions jusqu’au {until}</>}
+            {preview ? <><b>Aperçu admins{demo ? ' · photos de démo' : ''}</b> · ouverture à tous le {preview}{' · rien n’est enregistré, les photos reviennent à chaque visite'}</> : <>Photo couleur · réactions jusqu’au {until}</>}
           </p>
           <button className="swipe-close" aria-label="Fermer" onClick={() => setOpen(false)}>
             <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>

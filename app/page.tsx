@@ -62,7 +62,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const pDemo = pEarly && pEntries.length < 2;
   const photoDeck: SwipeEntry[] = !pBoost || !me || !(pOpen || pEarly) ? []
     : pDemo ? DEMO_PHOTOS
-    : photosToVote(pEntries, await loadPhotoVotes(), me.id, { allowOwn: pEarly }).map(({ id, url, title, caption, km, sport }) => ({ id, url, title, caption, km, sport }));
+    // Aperçu admin : toutes les vraies photos à chaque visite, rien n'est enregistré avant l'ouverture
+    : (pEarly ? photosToVote(pEntries, [], me.id, { allowOwn: true }) : photosToVote(pEntries, await loadPhotoVotes(pBoost), me.id)).map(({ id, url, title, caption, km, sport }) => ({ id, url, title, caption, km, sport }));
   const pActive = !!pBoost && now.slice(0, 10) >= pBoost.starts_at.slice(0, 10) && now.slice(0, 10) <= pBoost.ends_at.slice(0, 10);
   const podium = SHOW_BATTLE_PODIUM && bBoost && voteEnded(bBoost, now) && votes.length ? battleResults(shapes, votes).slice(0, 3) : [];
 
@@ -124,7 +125,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </details>
       )}
       {pBoost && photoDeck.length > 0 && (
-        <PhotoSwipe entries={photoDeck} demo={pDemo} until={fmtDate(pBoost.vote_to ?? pBoost.vote_from!)}
+        <PhotoSwipe entries={photoDeck} demo={pDemo} dry={pEarly} until={fmtDate(pBoost.vote_to ?? pBoost.vote_from!)}
           preview={pEarly ? `${fmtDate(pBoost.vote_from!)} à ${VOTE_OPEN_HOUR.replace(':00', 'h')}` : undefined} />
       )}
       {bBoost && me && (isOpen || adminEarly) && pairsToVote.length > 0 && (

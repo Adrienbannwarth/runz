@@ -9,13 +9,24 @@
 //   Pas de MVP automatique : il est choisi par l'organisation à partir des réactions.
 
 import type { Boost, Participant, ScoredActivity } from './scoring.ts';
+import { VOTE_OPEN_HOUR } from './battle-core.ts';
 
 /** Tag des photos : #COULEURZ (accepte aussi #COULEUR, #COULEURS, majuscules et espaces). */
 export const PHOTO_TAG = /#\s*couleur\s*[sz]?(?![a-zà-ÿ])/i;
 export const hasPhotoTag = (name?: string | null) => !!name && PHOTO_TAG.test(name);
 
 export type PhotoEntry = { id: string; participant_id: string; url: string; title: string; caption: string; km: number; sport: string; day: string; excluded: boolean };
-export type PhotoVote = { voter_id: string; activity_id: string; liked: boolean; reaction?: string | null };
+export type PhotoVote = { voter_id: string; activity_id: string; liked: boolean; reaction?: string | null; created_at?: string };
+
+/**
+ * Ne garde que les réactions données après l'ouverture du vote (vote_from à 14h, heure de Paris) :
+ * les essais des admins pendant l'aperçu ne comptent jamais. `toLocal` convertit created_at en heure de Paris.
+ */
+export function votesSinceOpening(boost: Boost, votes: PhotoVote[], toLocal: (iso: string) => string) {
+  if (!boost.vote_from) return votes;
+  const opening = `${boost.vote_from}T${VOTE_OPEN_HOUR}`;
+  return votes.filter((v) => !v.created_at || toLocal(v.created_at) >= opening);
+}
 
 /** Réactions proposées sous chaque photo, toutes positives. */
 export const REACTIONS = [

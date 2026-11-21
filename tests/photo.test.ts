@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasPhotoTag, isReaction, photoEntries, photoResults, photoTeamBonus, photosToVote, photoTitle, type PhotoVote } from '../lib/photo-core.ts';
+import { hasPhotoTag, isReaction, photoEntries, photoResults, photoTeamBonus, photosToVote, photoTitle, type PhotoVote, votesSinceOpening } from '../lib/photo-core.ts';
 import { computeStandings, scoreActivities, type Activity, type Boost, type Settings } from '../lib/scoring.ts';
 
 const settings: Settings = { start_date: '2026-10-27', end_date: '2026-11-27', daily_cap_km: 10, sprint_multiplier: 1, sport_types: ['Walk', 'Run', 'TrailRun', 'Hike'], cap_mode: 'cap' };
@@ -56,4 +56,15 @@ test('Photo couleur : réactions, pas sa photo, une fois', () => {
   assert.deepEqual(r.slice(0, 2).map((x) => [x.entry.participant_id, x.total, x.seen]), [['b', 2, 2], ['c', 1, 2]]);
   assert.deepEqual(r[0].by, { love: 1, couleur: 0, drole: 1, trouvaille: 0 });
   assert.ok(isReaction('trouvaille') && !isReaction('non'));
+});
+
+test('réactions : seules celles données après l’ouverture du vote comptent', () => {
+  const b = { id: 1, name: 'Photo couleur', starts_at: '2026-11-21T00:00:00', ends_at: '2026-11-22T23:59:59', multiplier: 1, vote_from: '2026-11-24', vote_to: '2026-11-27' } as Boost;
+  const id = (s: string) => s; // created_at déjà en heure de Paris dans ce test
+  const votes = [
+    { voter_id: 'adm', activity_id: 'a', liked: true, reaction: 'love', created_at: '2026-11-21T18:00:00' }, // essai admin
+    { voter_id: 'adm', activity_id: 'b', liked: true, reaction: 'love', created_at: '2026-11-24T13:59:59' }, // juste avant 14h
+    { voter_id: 'x', activity_id: 'a', liked: true, reaction: 'drole', created_at: '2026-11-24T14:00:00' },
+  ];
+  assert.deepEqual(votesSinceOpening(b, votes, id).map((v) => v.voter_id), ['x']);
 });

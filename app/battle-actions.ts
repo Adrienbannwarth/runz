@@ -32,9 +32,9 @@ export async function votePhoto(activityId: string, reaction: string | null): Pr
   const boost = photoBoost(d.boosts);
   if (!boost) return { ok: false, error: 'Le vote est fermé.' };
   const now = nowParis();
-  const early = !voteOpen(boost, now) && !voteEnded(boost, now) && !!d.participants.find((p) => p.id === pid)?.is_admin;
-  if (!voteOpen(boost, now) && !early) return { ok: false, error: 'Le vote est fermé.' };
-  const left = photosToVote(photoEntries(boost, d.scored), await loadPhotoVotes(), pid, { allowOwn: early });
+  // Avant l'ouverture (aperçu admin), rien n'est enregistré : les réactions ne comptent qu'à partir de l'ouverture.
+  if (!voteOpen(boost, now)) return { ok: false, error: 'Le vote n’est pas encore ouvert.' };
+  const left = photosToVote(photoEntries(boost, d.scored), await loadPhotoVotes(boost), pid);
   if (!left.some((e) => e.id === activityId)) return { ok: false, error: 'Photo déjà votée ou non disponible.' };
   await castPhotoVote(pid, activityId, reaction);
   return { ok: true };

@@ -36,7 +36,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
   })() : null;
   const pb = photoBoost(d.boosts);
   const photo = pb && tab === 'mvp' ? await (async () => {
-    const all = photoEntries(pb, d.scored, { includeExcluded: true }); const votes = await loadPhotoVotes();
+    const all = photoEntries(pb, d.scored, { includeExcluded: true }); const votes = await loadPhotoVotes(pb);
     return { boost: pb, results: photoResults(all.filter((e) => !e.excluded), votes), excluded: all.filter((e) => e.excluded), votes, teams: photoTeamBonus(pb, all, d.participants) };
   })() : null;
   const teamsAll = d.teamList;                       // toutes les équipes (y compris inactives)
@@ -674,7 +674,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                 <h2>Photo couleur · {photo.results.length} photo{photo.results.length > 1 ? 's' : ''} · {photo.votes.filter((v) => v.reaction).length} réaction{photo.votes.filter((v) => v.reaction).length > 1 ? 's' : ''}</h2>
                 <p className="muted small">
                   {fmtDate(photo.boost.starts_at)} → {fmtDate(photo.boost.ends_at)} : une sortie nommée « #COULEURZ (nom) » avec une photo Strava = +{Number(photo.boost.bonus_km)} km pour l’équipe (une par personne, la plus longue), +{Number(photo.boost.team_bonus_km ?? 0)} km si toute l’équipe joue. Automatique, avec les contrôles habituels (vrai tracé, pas de saisie manuelle, vitesse).
-                  {photo.boost.vote_from && <> Réactions du {fmtDate(photo.boost.vote_from)} à 14h au {fmtDate(photo.boost.vote_to ?? photo.boost.vote_from)} ({REACTIONS.map((x) => `${x.emoji} ${x.label}`).join(' · ')}, ou « Passer »). Le MVP est choisi par l’organisation, rien d’automatique. Les admins voient les réactions dès maintenant (photos de démo tant qu’il y a moins de 2 vraies photos).</>}
+                  {photo.boost.vote_from && <> Réactions du {fmtDate(photo.boost.vote_from)} à 14h au {fmtDate(photo.boost.vote_to ?? photo.boost.vote_from)} ({REACTIONS.map((x) => `${x.emoji} ${x.label}`).join(' · ')}, ou « Passer »). Le MVP est choisi par l’organisation, rien d’automatique. Avant l’ouverture, les admins ont un aperçu : toutes les photos reviennent à chaque visite et rien n’est enregistré (photos de démo tant qu’il y a moins de 2 vraies photos). Seules les réactions données après l’ouverture comptent.</>}
                 </p>
                 <div className="card" style={{ marginBottom: 12 }}>
                   <table>
