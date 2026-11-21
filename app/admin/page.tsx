@@ -610,65 +610,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         const teamOf = (id: number | null) => d.teamList.find((t) => t.id === id);
         return (
           <>
-            {battle && (
-              <>
-                <h2>Battle TraceZ · {battle.shapes.length} forme{battle.shapes.length > 1 ? 's' : ''} validée{battle.shapes.length > 1 ? 's' : ''} · {battle.votes.length} vote{battle.votes.length > 1 ? 's' : ''}</h2>
-                <p className="muted small">Vote du {fmtDate(battle.boost.vote_from!)} au {fmtDate(battle.boost.vote_to ?? battle.boost.vote_from!)} · classement au % de duels gagnés (visible par les participants seulement après la fin du vote).</p>
-                <p className="muted small">Avant l’ouverture à tous ({fmtDate(battle.boost.vote_from!)} à 14h), les admins voient déjà la fenêtre de vote sur l’accueil, avec leurs propres formes. Ces votes comptent : supprime-les après vos tests.</p>
-                {battle.votes.length > 0 && (
-                  <form action={A.clearVotes} style={{ marginBottom: 12 }}>
-                    <ConfirmButton className="btn small danger" message={`Supprimer les ${battle.votes.length} votes ? Le vote repartira de zéro (irréversible).`}>Supprimer les votes</ConfirmButton>
-                  </form>
-                )}
-                <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
-                  {battle.results.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune forme validée pour l’instant (onglet Validations › {battle.boost.name}).</p> : (
-                    <table>
-                      <thead><tr><th>#</th><th>Forme</th><th>Participant</th><th className="num">Victoires</th><th className="num">Duels</th><th className="num">% gagnés</th><th></th></tr></thead>
-                      <tbody>
-                        {battle.results.map((r, k) => (
-                          <tr key={r.shape.id}>
-                            <td>{k + 1}</td>
-                            <td><ShapeSvg path={r.shape.path} size={56} /></td>
-                            <td>{pName(r.shape.participant_id)}<div className="muted small">{r.shape.label ? `${r.shape.label} · ` : ''}{fmtKm(r.shape.km)} km</div></td>
-                            <td className="num">{r.wins}</td><td className="num">{r.duels}</td>
-                            <td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
-                            <td>
-                              <form action={A.toggleVoteExcluded}>
-                                <input type="hidden" name="activity" value={r.shape.id} /><input type="hidden" name="on" value="1" />
-                                <ConfirmButton className="btn small" message={`Retirer la forme de ${pName(r.shape.participant_id)} du vote ? Elle n’apparaîtra plus dans les duels (son ×4 reste acquis).`}>Exclure du vote</ConfirmButton>
-                              </form>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-                {battle.excluded.length > 0 && (
-                  <>
-                    <h3 style={{ margin: '0 0 8px' }}>Exclues du vote · {battle.excluded.length}</h3>
-                    <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
-                      <table>
-                        <tbody>
-                          {battle.excluded.map((x) => (
-                            <tr key={x.id} className="off">
-                              <td><ShapeSvg path={x.path} size={48} /></td>
-                              <td>{pName(x.participant_id)}<div className="muted small">{x.label ? `${x.label} · ` : ''}{fmtKm(x.km)} km · le ×4 compte toujours</div></td>
-                              <td>
-                                <form action={A.toggleVoteExcluded}>
-                                  <input type="hidden" name="activity" value={x.id} /><input type="hidden" name="on" value="0" />
-                                  <button className="btn small">Remettre dans le vote</button>
-                                </form>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
             {photo && (
               <>
                 <h2>Photo couleur · {photo.results.length} photo{photo.results.length > 1 ? 's' : ''} · {photo.votes.filter((v) => v.reaction).length} réaction{photo.votes.filter((v) => v.reaction).length > 1 ? 's' : ''}</h2>
@@ -727,6 +668,65 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                   </div>
                 )}
               </>
+            )}
+            {battle && (
+              <details className="mvp-battle" style={{ marginTop: 48 }}>
+                <summary style={{ cursor: 'pointer' }}><h2 style={{ display: 'inline' }}>Battle TraceZ · {battle.shapes.length} forme{battle.shapes.length > 1 ? 's' : ''} validée{battle.shapes.length > 1 ? 's' : ''} · {battle.votes.length} vote{battle.votes.length > 1 ? 's' : ''} · terminé</h2></summary>
+                <p className="muted small">Vote du {fmtDate(battle.boost.vote_from!)} au {fmtDate(battle.boost.vote_to ?? battle.boost.vote_from!)} · classement au % de duels gagnés (visible par les participants seulement après la fin du vote).</p>
+                <p className="muted small">Avant l’ouverture à tous ({fmtDate(battle.boost.vote_from!)} à 14h), les admins voient déjà la fenêtre de vote sur l’accueil, avec leurs propres formes. Ces votes comptent : supprime-les après vos tests.</p>
+                {battle.votes.length > 0 && (
+                  <form action={A.clearVotes} style={{ marginBottom: 12 }}>
+                    <ConfirmButton className="btn small danger" message={`Supprimer les ${battle.votes.length} votes ? Le vote repartira de zéro (irréversible).`}>Supprimer les votes</ConfirmButton>
+                  </form>
+                )}
+                <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
+                  {battle.results.length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucune forme validée pour l’instant (onglet Validations › {battle.boost.name}).</p> : (
+                    <table>
+                      <thead><tr><th>#</th><th>Forme</th><th>Participant</th><th className="num">Victoires</th><th className="num">Duels</th><th className="num">% gagnés</th><th></th></tr></thead>
+                      <tbody>
+                        {battle.results.map((r, k) => (
+                          <tr key={r.shape.id}>
+                            <td>{k + 1}</td>
+                            <td><ShapeSvg path={r.shape.path} size={56} /></td>
+                            <td>{pName(r.shape.participant_id)}<div className="muted small">{r.shape.label ? `${r.shape.label} · ` : ''}{fmtKm(r.shape.km)} km</div></td>
+                            <td className="num">{r.wins}</td><td className="num">{r.duels}</td>
+                            <td className="num">{r.duels ? `${Math.round(r.pct * 100)} %` : '—'}</td>
+                            <td>
+                              <form action={A.toggleVoteExcluded}>
+                                <input type="hidden" name="activity" value={r.shape.id} /><input type="hidden" name="on" value="1" />
+                                <ConfirmButton className="btn small" message={`Retirer la forme de ${pName(r.shape.participant_id)} du vote ? Elle n’apparaîtra plus dans les duels (son ×4 reste acquis).`}>Exclure du vote</ConfirmButton>
+                              </form>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+                {battle.excluded.length > 0 && (
+                  <>
+                    <h3 style={{ margin: '0 0 8px' }}>Exclues du vote · {battle.excluded.length}</h3>
+                    <div className="card" style={{ overflowX: 'auto', marginBottom: 24 }}>
+                      <table>
+                        <tbody>
+                          {battle.excluded.map((x) => (
+                            <tr key={x.id} className="off">
+                              <td><ShapeSvg path={x.path} size={48} /></td>
+                              <td>{pName(x.participant_id)}<div className="muted small">{x.label ? `${x.label} · ` : ''}{fmtKm(x.km)} km · le ×4 compte toujours</div></td>
+                              <td>
+                                <form action={A.toggleVoteExcluded}>
+                                  <input type="hidden" name="activity" value={x.id} /><input type="hidden" name="on" value="0" />
+                                  <button className="btn small">Remettre dans le vote</button>
+                                </form>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </details>
             )}
             <h2>Prix calculés</h2>
             <div className="card" style={{ overflowX: 'auto' }}>
