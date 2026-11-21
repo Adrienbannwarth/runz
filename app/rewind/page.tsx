@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { loadAll } from '@/lib/data';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
+import { REACTIONS, loadPhotoVotes, photoBoost, photoEntries, photoResults } from '@/lib/photo';
 import { db } from '@/lib/db';
 import { REWIND_PUBLIC, buildRewind } from '@/lib/rewind';
 import { getParticipantId, isAdmin } from '@/lib/session';
@@ -44,13 +45,23 @@ export default async function RewindPage({ searchParams }: { searchParams: Promi
     ? await fetchTracks(person.id, data.settings.start_date, data.settings.end_date).catch((e) => { console.error('Rewind : tracés', e); return []; })
     : [];
 
+  // Sa photo #COULEURZ et les réactions reçues (comptées seulement après l'ouverture du vote)
+  const pBoost = photoBoost(data.boosts);
+  const myPhoto = pBoost ? photoEntries(pBoost, data.scored, { includeExcluded: true }).find((e) => e.participant_id === person.id) : undefined;
+  const photoRes = myPhoto ? photoResults([myPhoto], await loadPhotoVotes(pBoost).catch(() => []))[0] : undefined;
+  const photo = myPhoto ? {
+    url: myPhoto.url, title: myPhoto.title, caption: myPhoto.caption, km: myPhoto.km, day: myPhoto.day,
+    reactions: REACTIONS.map((x) => ({ emoji: x.emoji, label: x.label, count: photoRes?.by[x.key] ?? 0 })).filter((x) => x.count > 0),
+    total: photoRes?.total ?? 0,
+  } : null;
+
   const rewind = buildRewind({
     participantId: person.id, name: person.display_name, teamId: person.team_id,
     scored: data.scored, teams: data.teams, boosts: data.boosts,
     counted: data.people.map((p) => ({ participantId: p.participant.id, teamId: p.participant.team_id, km: p.countedKm })),
     start: data.settings.start_date, end: data.settings.end_date, today: data.today,
     cap: Number(data.settings.daily_cap_km) || 10, battle, avatar,
-    tracks,
+    tracks, photo,
   });
 
   const asOf = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });

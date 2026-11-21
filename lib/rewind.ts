@@ -38,6 +38,8 @@ export type Track = { path: string; km: number; timeS: number; sport: string; da
 export const SCATTER_W = 100, SCATTER_H = 124;
 const MAX_TRACKS = 36;
 
+export type RewindPhoto = { url: string; title: string; caption: string; km: number; day: string; reactions: { emoji: string; label: string; count: number }[]; total: number };
+
 export type Rewind = {
   name: string;
   avatar: string | null;
@@ -60,6 +62,7 @@ export type Rewind = {
   favDay: { name: string; count: number } | null;
   boosts: { name: string; count: number }[]; boostsCaught: number; boostsTotal: number;
   shape: { path: string; label: string; km: number; day: string; wins: number; duels: number; rank: number | null } | null;
+  photo: RewindPhoto | null; // sa photo #COULEURZ (week-end Photo couleur), avec les réactions reçues
   teamShare: number; teamRankInside: number | null; teamMembers: number; teamKm: number;
   podium: RewindTeam[];
   gallery: GalleryShape[]; // toutes les formes #TRACEZ retenues (sans lieu ni nom), la sienne en premier
@@ -89,6 +92,7 @@ export function buildRewind(input: {
   avatar?: string | null;
   gallery?: { participantId: string; path: string; label: string; km: number }[];
   tracks?: { stravaId: number; polyline: string }[]; // tracés lus chez Strava (non stockés)
+  photo?: RewindPhoto | null;
 }): Rewind {
   const { participantId, scored, teams, boosts, start, end, today, cap } = input;
   const mine = scored.filter((s) => s.participant_id === participantId && s.eligible)
@@ -190,6 +194,7 @@ export function buildRewind(input: {
       path, label: shapeLabel(shapeAct.name), km: Math.round(shapeAct.rawKm * 100) / 100, day: shapeAct.day,
       wins: res?.wins ?? 0, duels: res?.duels ?? 0, rank: res?.rank ?? null,
     } : null,
+    photo: input.photo ?? null,
     teamShare: teamKm ? countedKm / teamKm : 0,
     teamRankInside: myIdx >= 0 ? myIdx + 1 : null, teamMembers: mates.length, teamKm: r1(teamKm),
     podium: teams.map((t) => ({ id: t.team.id, name: t.team.name, emoji: t.team.emoji, color: t.team.color, rank: t.rank, km: r1(t.totalKm), mine: t.team.id === input.teamId })),

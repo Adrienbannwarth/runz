@@ -157,6 +157,17 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
       <div className="r rw-sub">« {r.shape!.label || 'Ma forme'} » · <b>{nf(r.shape!.km, 2)} km</b> · {dFr(r.shape!.day)}</div>
       {r.shape!.duels > 0 && <div className="r rw-small">🗳️ {r.shape!.wins} duel{r.shape!.wins > 1 ? 's' : ''} gagné{r.shape!.wins > 1 ? 's' : ''} sur {r.shape!.duels} à la Battle{r.shape!.rank ? ` · ${r.shape!.rank === 1 ? '1re' : `${r.shape!.rank}e`} forme` : ''}</div>}
     </>) }] : []),
+    ...(r.photo ? [{ cls: 's-photo', body: () => (<>
+      <div className="r rw-kicker" style={{ color: PAL.orange, opacity: 1 }}>#COULEURZ</div>
+      <div className="r rw-mid">Ta photo couleur</div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="r rw-photo" src={r.photo!.url} alt={r.photo!.title || 'Ma photo couleur'} />
+      <div className="r rw-sub">{r.photo!.title ? <>« {r.photo!.title} » · </> : null}<b>{nf(r.photo!.km, 2)} km</b> · {dFr(r.photo!.day)}</div>
+      {r.photo!.caption && <div className="r rw-small rw-photo-cap">{r.photo!.caption}</div>}
+      {r.photo!.total > 0
+        ? <div className="r rw-small">{r.photo!.reactions.map((x) => `${x.emoji} ${x.count}`).join(' · ')} · {r.photo!.total} réaction{r.photo!.total > 1 ? 's' : ''}</div>
+        : <div className="r rw-small">+25 km pour ton équipe</div>}
+    </>) }] : []),
     { cls: 's-team', lt: true, body: (on) => {
       const max = Math.max(1, ...r.podium.map((t) => t.km));
       const order = [...r.podium].sort((a, b) => a.rank - b.rank);

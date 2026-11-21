@@ -69,7 +69,7 @@ body:has(.rw-overlay) { overflow: hidden; }
 .s-days { background: var(--beige); color: var(--noir); }
 .rw-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 9px; margin-top: 16px; padding: 3px; }
 .rw-cal em { font-style: normal; font-size: 10px; text-align: center; opacity: .7; }
-.rw-cal i { aspect-ratio: 1; border-radius: 5px; background: rgba(39,39,39,.08); }
+.rw-cal i { aspect-ratio: 1; border-radius: 5px; background: rgba(238,239,232,.08); }
 .rw-cal i.pad { visibility: hidden; }
 .rw-slide.on .rw-cal i { animation: rw-pop .35s ease-out both; }
 .rw-cal i.l1 { background: rgba(39,39,39,.28); } .rw-cal i.l2 { background: rgba(39,39,39,.58); } .rw-cal i.l3 { background: var(--noir); }
@@ -102,6 +102,9 @@ body:has(.rw-overlay) { overflow: hidden; }
 .rw-orange { color: var(--orange) !important; opacity: 1 !important; font-weight: 500 !important; }
 
 .s-shape { background: var(--creme); color: var(--noir); }
+.s-photo { background: var(--noir); color: var(--creme); }
+.rw-photo { display: block; width: 72%; max-width: 300px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; margin: 14px 0 4px; background: rgba(238,239,232,.08); }
+.rw-photo-cap { max-width: 320px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .rw-shape { width: 100%; height: 230px; margin-top: 10px; }
 .rw-shape path { fill: none; stroke: var(--orange); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
 .rw-shape path.draw { stroke-dashoffset: 0; transition: stroke-dashoffset 2.8s .3s ease-in-out; }
