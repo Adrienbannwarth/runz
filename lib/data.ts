@@ -19,6 +19,21 @@ export async function getSettings(): Promise<Settings & { challenge_name: string
   return must(await db().from('settings').select('*').eq('id', 1).single());
 }
 
+/**
+ * Toutes les activités, page par page : Supabase plafonne chaque requête à 1 000 lignes (réglage max-rows),
+ * quel que soit le .limit() demandé. Au-delà de 1 000 activités, les plus anciennes disparaissaient du calcul.
+ */
+async function allActivities(): Promise<Activity[]> {
+  const PAGE = 1000;
+  const out: Activity[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const page = must(await db().from('activities').select('*')
+      .order('start_date_local', { ascending: false }).order('id').range(from, from + PAGE - 1)) as Activity[];
+    out.push(...page);
+    if (page.length < PAGE) return out;
+  }
+}
+
 export async function loadAll() {
   const [settings, teams, participants, activities, boosts, bonuses] = await Promise.all([
     getSettings(),
@@ -26,7 +41,7 @@ export async function loadAll() {
     db().from('participants')
       .select('id, display_name, team_id, invite_token, strava_athlete_id, strava_app, is_admin, is_captain, pole, last_sync_at, created_at')
       .order('display_name').then(must) as Promise<ParticipantRow[]>,
-    db().from('activities').select('*').order('start_date_local', { ascending: false }).limit(10000).then(must) as Promise<Activity[]>,
+    allActivities(),
     db().from('boosts').select('*').order('starts_at').then(must) as Promise<Boost[]>,
     db().from('bonuses').select('*').order('awarded_on', { ascending: false }).then(must) as Promise<Bonus[]>,
   ]);
