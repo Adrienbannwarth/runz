@@ -338,7 +338,9 @@ a.se-rewind:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; 
 }
 
 /* BingoZ (saison 2) · DA sobre orange / noir / beige */
-.bz { --bz-beige: #EEEFE8; --bz-noir: #272727; --bz-orange: #FC4C02; }
+.bz { --bz-beige: #EEEFE8; --bz-noir: #272727; --bz-orange: #FC4C02;
+  /* page plus large que le reste du site (1400 px au lieu de 1180) pour agrandir les cases */
+  width: min(1400px, calc(100vw - 48px)); margin-left: calc(50% - min(700px, 50vw - 24px)); }
 .bz-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
 .bz-head h1 { margin: 0; font-weight: 800; letter-spacing: -0.04em; }
 .bz-z { color: var(--bz-orange); }
@@ -355,7 +357,8 @@ a.se-rewind:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; 
 .bz-cell.center { background: var(--bz-orange); color: #111; border-color: var(--bz-orange); }
 .bz-cell.todo { border-style: dashed; }
 .bz-cell.todo .bz-q { align-self: center; }
-.bz-num { font-size: 12px; font-weight: 700; opacity: .75; }
+.bz-num { font-size: 11px; font-weight: 300; color: #5c5c5c; } /* numéro discret : petit, gris foncé, light */
+.bz-cell.center .bz-num { color: #111; }
 .bz-label { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .bz-q { font-size: 26px; font-weight: 700; opacity: .35; }
 .bz-side { flex: 1 1 300px; }
@@ -365,7 +368,7 @@ a.se-rewind:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; 
 .bz-detail-text { margin: 0; font-size: 14px; line-height: 1.45; opacity: .85; }
 @media (max-width: 640px) {
   .bz-grid { gap: 5px; } .bz-cell { padding: 0; align-items: center; justify-content: center; border-radius: 5px; }
-  .bz-label { display: none; } .bz-num { font-size: 13px; opacity: 1; } .bz-q { font-size: 18px; }
+  .bz-label { display: none; } .bz-num { font-size: 13px; font-weight: 400; color: var(--bz-noir); } .bz-q { font-size: 18px; }
 }
 
 /* Historique des saisons */
