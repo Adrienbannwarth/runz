@@ -62,8 +62,9 @@ export default function RewindStories({ r, children }: { r: Rewind; children?: R
   ] as const;
   const slotTop = SLOTS.slice().sort((a, b) => r.slots[b.k] - r.slots[a.k])[0];
 
-  const [withStats, setWithStats] = useState(false); // story tracés : tracés seuls ou avec distance / allure / temps
-  const [runsOnly, setRunsOnly] = useState(false);   // story tracés : toutes les sorties ou la course à pied seulement
+  const [withStats, setWithStats] = useState(true); // story tracés : avec distance / allure / temps par défaut
+  // « Course seulement » cochée par défaut pour les profils plutôt course (plus de km en course/trail qu'en marche/rando)
+  const [runsOnly, setRunsOnly] = useState(() => r.split.run + r.split.trail > r.split.walk + r.split.hike);
   // Course seulement : on replace les tracés restants (même tirage stable, sans trous)
   const shown = useMemo(() => (runsOnly ? scatter(r.tracks.filter((t) => RUN_TYPES.includes(t.sport)), SCATTER_W, SCATTER_H, r.name) : r.tracks), [runsOnly, r.tracks, r.name]);
   const shownTotal = runsOnly ? shown.length : r.tracksTotal;
