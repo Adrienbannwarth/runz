@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { fmtDate, fmtKm, loadAll } from '@/lib/data';
+import { rewindPublic } from '@/lib/rewind'; // le rang final n'est montré qu'à l'heure des résultats (lundi 30/11 18h)
+import { fmtDate, fmtKm, loadAll, nowParis } from '@/lib/data';
 import { getParticipantId } from '@/lib/session';
 import { disconnectMe, logout, syncMe } from '../actions';
 
@@ -44,7 +45,7 @@ export default async function Me({ searchParams }: { searchParams: Promise<Recor
 
       <h1>{me.display_name}</h1>
       <p className="muted">
-        {team ? <>Équipe <b>{team.team.emoji} {team.team.name}</b>{data.today > data.settings.end_date && <> · {team.rank === 1 ? '🏆 équipe gagnante' : `${team.rank}e au classement`}</>}</> : 'Équipe pas encore attribuée'}
+        {team ? <>Équipe <b>{team.team.emoji} {team.team.name}</b>{rewindPublic(nowParis()) && <> · {team.rank === 1 ? '🏆 équipe gagnante' : `${team.rank}e au classement`}</>}</> : 'Équipe pas encore attribuée'}
         {me.last_sync_at && <> · dernière synchro {new Date(me.last_sync_at).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</>}
       </p>
 

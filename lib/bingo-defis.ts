@@ -1,4 +1,4 @@
-// BingoZ (saison 2) : catalogue des défis validés (onglet « Défis validés » du doc de cadrage, 30 sur 48).
+// BingoZ (saison 2) : catalogue des défis validés (onglets « Défis validés » et « Défis restants (cadrés) » du doc de cadrage).
 // V1 : affichage seulement ; les règles de validation automatique (sport, distance, horaire…) viendront avec le moteur.
 
 export type BingoLevel = 'Facile' | 'Moyen' | 'Costaud' | 'Exploit';
@@ -39,6 +39,8 @@ export const DEFIS: BingoDefi[] = [
   { id: 98, family: 'Équipe', label: 'Everest d’équipe : 8 849 m de dénivelé cumulés par l’équipe en une semaine', short: 'Everest d’équipe', level: 'Exploit', check: 'strava' },
   { id: 58, family: 'Tracés', label: 'Un tracé en forme d’animal (5 km minimum)', short: 'Tracé animal', level: 'Costaud', check: 'admin' },
   { id: 66, family: 'Photo et fun', label: 'Une sortie sous la pluie', short: 'Sous la pluie', level: 'Facile', check: 'photo' },
+  { id: 149, family: 'Équipe', label: 'Les 24 h du week-end : l’équipe cumule 24 h d’activité entre samedi 0 h et dimanche 23 h 59 (tous les membres y contribuent, 3 h maximum par activité)', short: '24 h du week-end', level: 'Costaud', check: 'strava' },
+  { id: 150, family: 'Ensemble', label: 'Trois à 10 : trois coéquipiers font chacun au moins 10 km de course le même jour (une sortie chacun, tapis exclu)', short: 'Trois à 10', level: 'Moyen', check: 'strava' },
 ];
 
 /** Position des défis dans une grille (propre à chaque équipe, reproductible) : null = case « ? » pas encore définie. */
