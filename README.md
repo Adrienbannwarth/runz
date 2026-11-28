@@ -1,99 +1,58 @@
-# RunZ · plateforme du challenge
+# RunZ · plateforme des challenges sportifs du CSE Colorz
 
-Plateforme web du RunZ Challenge (CSE Colorz) : chaque participant connecte son compte Strava, ses marches et courses remontent automatiquement, et le classement par équipe se calcule tout seul.
+Chaque participant connecte son compte Strava : ses sorties remontent toutes seules et les classements se calculent automatiquement. Le site accueille une **saison** par challenge : RunZ (saison 1), puis BingoZ (saison 2), etc.
 
-**Stack** : Next.js 16 (App Router, server actions), Supabase (Postgres), déploiement Vercel.
+- **En ligne** : https://runz-colorz.vercel.app
+- **Stack** : Next.js 16, Supabase (Postgres), Vercel, API Strava. Animations : Framer Motion.
 
-## Ce que fait la V1
+## Les pages
 
-| Page | Pour qui | Contenu |
+| URL | Qui la voit | Ce qu'on y trouve |
 |---|---|---|
-| `/` | Tout le monde | Classement des équipes (moyenne km/pers., bonus inclus), boost en cours, boosts à venir, bouton « Se connecter avec Strava » |
-| `/join/<jeton>` | Participant invité | Lien personnel qui rattache le compte Strava à la bonne fiche et à la bonne équipe |
-| `/me` | Participant connecté | Ses activités avec les km comptés (plafond, boost), resynchro, déconnexion, effacement de ses données |
-| `/admin` | Organisateurs (mot de passe) | Participants et équipes, saisie manuelle (captures d'écran), bonus, boosts horaires, stats MVP, récap du soir à coller dans `~runz`, réglages |
+| `/` | Tout le monde | La saison en cours. Aujourd'hui : l'écran de fin RunZ (chiffres, compte à rebours), puis classement final + Rewind à partir du lundi 30/11 à 18h |
+| `/?suite=1` | Admins | L'ancien accueil RunZ (équipes, boosts, votes), derrière l'écran de fin |
+| `/rewind` | Admins, puis tout le monde le 30/11 à 18h | Le récap de sa saison en stories, avec export de ses tracés |
+| `/saisons` | Tout le monde | L'historique : une carte par saison (les saisons en préparation n'apparaissent que pour toi) |
+| `/saisons/1` | Tout le monde | Le récap RunZ, une fois que la saison 2 a remplacé RunZ sur l'accueil |
+| `/bingoz` | **Adrien seul** (404 pour les autres) | L'aperçu du BingoZ en préparation (`/bingos` y renvoie aussi) |
+| `/me` | Participant connecté | Ses activités, ses km comptés, resynchro, déconnexion |
+| `/join/<jeton>` | Participant invité | Son lien personnel pour relier Strava à sa fiche et son équipe |
+| `/admin` | Organisateurs | Participants, activités, saisie manuelle, bonus, boosts, validations, MVP, récap zlack, réglages |
 | `/confidentialite` | Tout le monde | Données utilisées, qui voit quoi, suppression |
 
-**Synchronisation Strava**
-- Import complet à la connexion (activités de la période du challenge).
-- Webhook Strava : création, modification et suppression d'activité, révocation de l'accès (les données sont alors effacées).
-- Filet de sécurité : cron quotidien (`vercel.json`, 23 h / minuit heure de Paris) et boutons de resynchro.
-- Stocké : type, date/heure locale, distance, durée, dénivelé, nom. **Jamais** de tracé GPS.
+## Saison 1 · RunZ (27/10 → 27/11/2026, terminée)
 
-**Règles de calcul** (`lib/scoring.ts`, testées dans `tests/scoring.test.ts`), alignées sur `RunZ-Suivi.xlsx` (SharePoint BOF › Général) :
-1. Activités comptées (réglables) : marche, course, trail, randonnée, tapis. Vélo exclu.
-2. Période : du 27/10 au 27/11/2026, dates incluses.
-3. Créneau déduit de l'heure de départ : Avant 8h, 12h-14h, 19h-22h ou Autre.
-4. Boosts multiplicateurs, par période et par créneau, comme l'onglet Boost : Flash HourZ ×2 (02 au 06/11, 19h-22h), On vient à pied Days ×3 (09 au 11/11), Tracé GPS ×5 (16 au 20/11), Sprint final ×2 (27/11). S'il y a plusieurs boosts, le plus fort s'applique.
-5. Plafond de 10 km/jour/personne en mode **alerte**, comme l'Excel : les km comptent, la journée est signalée dans l'admin et dans Mon espace. Un mode « coupe automatique » existe dans les réglages.
-6. Équipe : total = km réels + km gagnés via multiplicateurs + km bonus. Classement au **total** (réglable : moyenne par personne).
-7. Prix MVP : Machine à KilomètreZ (km réels), Métronome (jours actifs), Lève-tôt d'or (km avant 8 h), Pause Déj' (km 12h-14h), Mollets d'acier (D+). Les prix votés se règlent sur zlack : Paparazzi RunZ, Capitaine Courage, Picasso du GPS.
+- **Sports comptés** : marche, course, trail, rando, tapis. Plafond de 10 km réels par jour et par personne.
+- **Boosts** : Flash HourZ ×2, On vient à pied ×3, Tracé GPS ×4 (#TRACEZ), Morning HourZ ×2, Pause Dej ×1,5, Photo couleur (#COULEURZ, +25 km par personne, +50 si toute l'équipe), Sprint final ×2.
+- **Votes** : Battle TraceZ (duels de formes) et réactions Photo couleur ; les MVP sont choisis par l'organisation.
+- **Anti-triche** : saisies manuelles Strava, vitesses suspectes et courses à allure de marche passent en validation admin.
+- **Fin de saison** : écran de clôture pour les membres, résultats et Rewind ouverts le lundi 30/11 à 18h (`RESULTS_AT` dans `lib/rewind.ts`).
 
-## Déploiement en place (16/10/2026)
+## Saison 2 · BingoZ (en préparation)
 
-| Élément | Valeur |
+Grille 7 × 7 par équipe : 48 défis sportifs + un défi imposé au centre. Les cases se cochent toutes seules à partir des sorties Strava, les défis photo (#BINGOZ), tracés et Hyrox sont validés par un admin. Cadrage complet : doc « BingoZ-saison2-cadrage-tech » du projet. Les défis sont dans `lib/bingo-defis.ts` (« ? » = défi pas encore choisi).
+
+**Lancer une nouvelle saison** : passer `settings.current_season` à 2 ; l'accueil affiche alors le BingoZ et RunZ part dans `/saisons/1`.
+
+## Comment ça marche
+
+- **Strava** : import complet à la connexion, webhook pour les créations, modifications et suppressions, cron quotidien en filet de sécurité. On garde le type, la date, la distance, la durée, le dénivelé et le nom ; les tracés seulement pour #TRACEZ, les photos seulement pour #COULEURZ.
+- **Calcul** : `lib/scoring.ts` (points, boosts, plafond), `lib/photo-core.ts`, `lib/battle-core.ts`, `lib/rewind.ts`. Tout est testé dans `tests/`.
+- **Saisons** : `lib/seasons.ts`, tables `seasons` et `season_members`.
+
+## Travailler sur le projet
+
+On travaille directement en prod (pas de base locale) :
+
+1. Modifier le code, puis `npm test` (calculs) et `npx tsc --noEmit` (types).
+2. `git push` sur `main` : Vercel déploie tout seul.
+3. Un changement de base = un fichier dans `supabase/migrations/` (numéroté), à exécuter dans le SQL Editor de Supabase. Dernière migration appliquée : `025_seasons.sql`.
+
+| Service | Où |
 |---|---|
-| Repo | github.com/Adrienbannwarth/runz (branche `main`, déploiement auto à chaque push) |
-| Vercel | projet `runz-colorz` → https://runz-colorz.vercel.app |
-| Supabase | org « Runz », projet `dpzanzllzbcjzrbcckpq` (eu-west-1), schéma appliqué |
-| Strava | app « Colorz », Client ID 256066, callback domain `runz-colorz.vercel.app` (localhost reste autorisé par Strava pour le dev) |
-| Capacité Strava | 10 athlètes (1 connecté) → review à demander, voir REVIEW-STRAVA.md |
+| Code | github.com/Adrienbannwarth/runz, branche `main` |
+| Hébergement | Vercel, projet `runz-colorz` |
+| Base | Supabase, projet `dpzanzllzbcjzrbcckpq` |
+| Strava | app « Colorz » (+ 2e app de Christelle pour la capacité) |
 
-Les variables d'environnement sont préparées dans `.env.vercel.local`, ignoré par git. Les secrets de session, de cron et du webhook, ainsi que le mot de passe admin, y sont déjà générés.
-
-**Étapes restantes**
-1. Compléter `SUPABASE_SERVICE_ROLE_KEY` et `STRAVA_CLIENT_SECRET` dans `.env.vercel.local`.
-2. Vercel → runz-colorz → Settings → Environment Variables : coller le contenu du fichier (Production + Preview).
-3. Deployments → dernier déploiement → « Redeploy ».
-4. Créer le webhook : `./scripts/strava-webhook.sh`, puis `./scripts/strava-webhook.sh status` pour vérifier.
-5. Ouvrir https://runz-colorz.vercel.app/admin avec `ADMIN_PASSWORD` et ajouter les participants.
-
-## Mise en route (≈ 30 min)
-
-### 1. Supabase
-1. Créer un projet sur supabase.com (région Europe).
-2. SQL Editor → coller et exécuter `supabase/schema.sql`. Le script crée les tables, les 4 équipes et les réglages : du 27/10 au 27/11/2026, plafond 10 km. Sur une base existante, exécuter plutôt les scripts de `supabase/migrations/` dans l'ordre.
-3. Project Settings → API : noter l'URL et la clé `service_role`.
-
-### 2. Vercel
-1. Pousser ce dossier sur un repo GitHub, puis l'importer dans Vercel.
-2. Renseigner les variables d'environnement listées dans `.env.example`. Pour `SESSION_SECRET`, `CRON_SECRET` et `ADMIN_PASSWORD`, générer des valeurs avec `openssl rand -hex 32`. `APP_URL` est l'URL finale, par exemple `https://runz-colorz.vercel.app`.
-3. Déployer.
-
-### 3. Application Strava (strava.com/settings/api)
-- **Authorization Callback Domain** : le domaine seul, sans https, par exemple `runz-colorz.vercel.app`. En local : `localhost`.
-- Website : l'URL de l'app.
-- Récupérer le Client ID et le Client Secret, les mettre dans Vercel, puis redéployer.
-
-### 4. Webhook Strava (une seule fois, après le déploiement)
-Le plus simple : `./scripts/strava-webhook.sh`. Il lit les valeurs dans `.env.vercel.local`. Équivalent manuel :
-```bash
-curl -X POST https://www.strava.com/api/v3/push_subscriptions \
-  -F client_id=$STRAVA_CLIENT_ID -F client_secret=$STRAVA_CLIENT_SECRET \
-  -F callback_url=https://runz-colorz.vercel.app/api/strava/webhook \
-  -F verify_token=runz-webhook
-# → {"id": 123456}  : mettre cette valeur dans STRAVA_SUBSCRIPTION_ID (facultatif)
-```
-Pour vérifier : `curl -G https://www.strava.com/api/v3/push_subscriptions -d client_id=... -d client_secret=...`
-
-### 5. Préparer le challenge
-1. `/admin` → Participants : coller la liste des noms par équipe (un par ligne).
-2. Envoyer à chacun son lien `/join/…` par DM zlack.
-3. Les participants sans Strava, ou au-delà de la limite d'athlètes Strava, envoient leurs captures d'écran. Les km sont saisis dans l'onglet Saisie manuelle.
-
-## En local
-```bash
-npm install
-cp .env.example .env.local   # remplir
-npm run dev                  # http://localhost:3000
-npm test                     # tests du calcul des points
-```
-
-## À faire avant de soumettre à Strava
-- Remplacer le bouton orange par le bouton officiel « Connect with Strava ». Remplacer aussi le texte « POWERED BY STRAVA » (`app/layout.tsx`) par le logo officiel. Les deux se trouvent sur developers.strava.com/guidelines.
-- Voir `REVIEW-STRAVA.md`.
-
-## Pistes V2
-- Génération automatique de l'image du récap (reprendre `runz-recap-generateur.html`) et post direct dans `~runz`.
-- Boosts calculables automatiquement : « Tous au compteur » (chaque membre ≥ 1 km dans la semaine), Régularité.
-- Validation par l'admin des activités Strava saisies à la main sur Strava (sans GPS).
+Les variables d'environnement sont listées dans `.env.example` ; les valeurs sont dans Vercel et dans `.env.vercel.local` (jamais commité). Webhook Strava : `./scripts/strava-webhook.sh`.
