@@ -32,8 +32,9 @@ export type Settings = {
   ranking_mode?: 'total' | 'average';  // défaut : total
   manual_strava_from?: string | null;   // à partir de ce jour, les saisies manuelles Strava ne comptent que si un admin les valide
   cap_mode?: 'alert' | 'cap';          // défaut : alert
+  current_season?: number;             // saison affichée sur l'accueil (migration 025), défaut 1
 };
-export type Team = { id: number; name: string; color: string; emoji: string; active: boolean };
+export type Team = { id: number; name: string; color: string; emoji: string; active: boolean; season?: number | null }; // season : migration 025, défaut 1 (RunZ)
 export type Participant = { id: string; display_name: string; team_id: number | null };
 export type Activity = {
   id: string;

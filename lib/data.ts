@@ -46,8 +46,10 @@ export async function loadAll() {
     db().from('bonuses').select('*').order('awarded_on', { ascending: false }).then(must) as Promise<Bonus[]>,
   ]);
   const today = todayParis();
-  const standings = computeStandings({ settings, teams, participants, activities, boosts, bonuses, today });
-  return { settings, teamList: teams, participants, activities, boosts, bonuses, today, ...standings };
+  // RunZ (saison 1) : seulement ses équipes (les équipes des saisons suivantes ont season > 1)
+  const runzTeams = teams.filter((t) => (t.season ?? 1) === 1);
+  const standings = computeStandings({ settings, teams: runzTeams, participants, activities, boosts, bonuses, today });
+  return { settings, teamList: runzTeams, participants, activities, boosts, bonuses, today, ...standings };
 }
 
 /** Boost en cours à l'instant (pour la bannière). */
