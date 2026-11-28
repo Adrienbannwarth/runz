@@ -303,14 +303,13 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 /* Écran de fin de saison */
 .season-end { display: grid; gap: 16px; }
 .se-hero { background: var(--ink); color: #fff; border-radius: var(--radius); padding: 28px 48px; animation: page-enter .3s ease-out both; }
-.se-season { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--strava); }
+.se-hero .eyebrow { color: #d6d6d6; margin-bottom: 4px; }
 .se-hero h1 { font-size: 36px; margin: 0 0 6px; }
 .se-lead { margin: 0; font-size: 14px; color: #d6d6d6; line-height: 1.45; max-width: 560px; }
 .se-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.18); }
 .se-stats div { display: flex; flex-direction: column; gap: 2px; }
 .se-stats b { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .se-stats span { font-size: 12px; color: #d6d6d6; }
-.se-stats div:nth-child(odd) b { color: var(--strava); } /* km et participants en orange, sorties et dénivelé en blanc */
 .se-rewind { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 32px 48px;
   background: #EEEFE8; color: var(--ink); border-radius: var(--radius); text-decoration: none; overflow: hidden; animation: page-enter .35s .05s ease-out both; }
 .se-rw-text { display: flex; flex-direction: column; gap: 6px; }
@@ -333,7 +332,7 @@ a.se-rewind:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; 
 .se-km { font-variant-numeric: tabular-nums; }
 .se-admin { text-align: center; }
 @media (max-width: 760px) {
-  .se-hero { padding: 22px 20px; } .se-hero h1 { font-size: 28px; } .se-season { font-size: 17px; }
+  .se-hero { padding: 22px 20px; } .se-hero h1 { font-size: 28px; }
   .se-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .se-stats b { font-size: 22px; }
   .se-rewind { padding: 20px 24px; } .se-rw-title { font-size: 26px; } .se-rw-arrow { width: 42px; height: 42px; } .se-final { padding: 20px; }
 }

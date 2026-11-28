@@ -32,7 +32,7 @@ export default function SeasonEnd({ teams, km, activities, people, elevation, re
   return (
     <div className="season-end">
       <section className="se-hero">
-        <p className="se-season">RunZ · Saison 1</p>
+        <p className="eyebrow">RunZ · Saison 1 · du 27 octobre au 27 novembre</p>
         <h1>C’est terminé&nbsp;!</h1>
         <p className="se-lead">Un mois à marcher, courir, dessiner des formes et chasser les couleurs. Merci à toutes et à tous&nbsp;!</p>
         <div className="se-stats">
