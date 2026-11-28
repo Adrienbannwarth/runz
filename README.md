@@ -15,6 +15,7 @@ Chaque participant connecte son compte Strava : ses sorties remontent toutes seu
 | `/saisons` | Tout le monde | L'historique : une carte par saison (les saisons en préparation n'apparaissent que pour toi) |
 | `/saisons/1` | Tout le monde | Le récap RunZ, une fois que la saison 2 a remplacé RunZ sur l'accueil |
 | `/bingoz` | **Adrien seul** (404 pour les autres) | L'aperçu du BingoZ en préparation (`/bingos` y renvoie aussi) |
+| `/avis` | Tout le monde | Le formulaire « Donnez votre avis » de fin de saison (réponses dans Admin › Avis) |
 | `/me` | Participant connecté | Ses activités, ses km comptés, resynchro, déconnexion |
 | `/join/<jeton>` | Participant invité | Son lien personnel pour relier Strava à sa fiche et son équipe |
 | `/admin` | Organisateurs | Participants, activités, saisie manuelle, bonus, boosts, validations, MVP, récap zlack, réglages |
@@ -46,7 +47,7 @@ On travaille directement en prod (pas de base locale) :
 
 1. Modifier le code, puis `npm test` (calculs) et `npx tsc --noEmit` (types).
 2. `git push` sur `main` : Vercel déploie tout seul.
-3. Un changement de base = un fichier dans `supabase/migrations/` (numéroté), à exécuter dans le SQL Editor de Supabase. Dernière migration appliquée : `025_seasons.sql`.
+3. Un changement de base = un fichier dans `supabase/migrations/` (numéroté), à exécuter dans le SQL Editor de Supabase. Dernière migration appliquée : `026_feedback.sql`.
 
 | Service | Où |
 |---|---|
