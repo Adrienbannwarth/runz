@@ -4,8 +4,13 @@
 import type { Boost, ScoredActivity, TeamStats } from './scoring.ts';
 import { polylineToPath, shapeLabel } from './polyline.ts';
 
-/** Ouverture du Rewind : false = réservé aux admins (aperçu), true = visible par tous les participants connectés. */
-export const REWIND_PUBLIC = false;
+/**
+ * Résultats et Rewind visibles par tous à partir de lundi 30/11 à 18h (heure de Paris) ; avant, réservés aux admins.
+ * Fin de saison : entre la fin du challenge et cette heure, les membres voient l'écran « Saison 1 terminée ».
+ */
+export const RESULTS_AT = '2026-11-30T18:00';
+export const RESULTS_AT_ISO = '2026-11-30T18:00:00+01:00'; // même instant, pour le compte à rebours côté navigateur
+export const rewindPublic = (nowParis: string) => nowParis >= RESULTS_AT;
 
 const RUN = ['Run', 'VirtualRun'];
 const WALK = ['Walk'];

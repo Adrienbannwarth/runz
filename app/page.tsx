@@ -8,6 +8,8 @@ import BattleModal from './BattleModal';
 import PhotoSwipe, { type SwipeEntry } from './PhotoSwipe';
 import { loadPhotoVotes, photoBoost, photoEntries, photosToVote } from '@/lib/photo';
 import ShapeSvg from './ShapeSvg';
+import SeasonEnd from './SeasonEnd';
+import { rewindPublic } from '@/lib/rewind';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +44,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const isOn = (p: (typeof data.participants)[number]) => !!p.strava_athlete_id || withKm.has(p.id);
   const connected = data.participants.filter(isOn);
   const mates = me ? data.participants.filter((p) => p.team_id === me.team_id) : [];
+
+  // Fin de saison : écran de clôture pour tous (les admins peuvent continuer vers le site avec ?suite=1)
+  if (ended && !(admin && sp.suite === '1')) {
+    const ok = data.scored.filter((x) => x.eligible);
+    return (
+      <SeasonEnd teams={teams} km={totalKm} activities={ok.length} people={withKm.size}
+        elevation={ok.reduce((t, x) => t + Number(x.elevation_gain_m ?? 0), 0)}
+        results={rewindPublic(nowParis())} loggedIn={!!me} myTeamId={me?.team_id} admin={admin} />
+    );
+  }
 
   // Battle TraceZ : fenêtre de vote pour les participants connectés, résultats après la fin
   const now = nowParis();

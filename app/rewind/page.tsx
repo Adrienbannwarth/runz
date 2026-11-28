@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
-import { loadAll } from '@/lib/data';
+import { loadAll, nowParis } from '@/lib/data';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
 import { REACTIONS, loadPhotoVotes, photoBoost, photoEntries, photoResults } from '@/lib/photo';
 import { db } from '@/lib/db';
-import { REWIND_PUBLIC, buildRewind } from '@/lib/rewind';
+import { buildRewind, rewindPublic } from '@/lib/rewind';
 import { getParticipantId, isAdmin } from '@/lib/session';
 import { fetchTracks } from '@/lib/strava';
 import RewindStories from './RewindStories';
@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic';
 export default async function RewindPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sp = await searchParams;
   const admin = await isAdmin();
-  if (!REWIND_PUBLIC && !admin) notFound();
+  const isPublic = rewindPublic(nowParis());
+  if (!isPublic && !admin) notFound();
   const myId = await getParticipantId();
   if (!myId && !admin) {
     return (
@@ -77,7 +78,7 @@ export default async function RewindPage({ searchParams }: { searchParams: Promi
             <button>Afficher</button>
           </form>
           <p>
-            {!REWIND_PUBLIC && 'Aperçu admin (REWIND_PUBLIC = false dans lib/rewind.ts). '}
+            {!isPublic && 'Aperçu admin : ouvert à tous le lundi 30 novembre à 18h (RESULTS_AT dans lib/rewind.ts). '}
             {rewind.final ? 'Chiffres définitifs.' : `Chiffres provisoires au ${asOf(data.today)}, mis à jour jusqu’au ${asOf(data.settings.end_date)}.`}
           </p>
         </>

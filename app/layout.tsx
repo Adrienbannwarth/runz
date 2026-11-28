@@ -4,8 +4,8 @@ import { Suspense } from 'react';
 import NavProgress from './NavProgress';
 import '@fontsource-variable/figtree';
 import './globals.css';
-import { getSettings } from '@/lib/data';
-import { REWIND_PUBLIC } from '@/lib/rewind';
+import { getSettings, nowParis } from '@/lib/data';
+import { rewindPublic } from '@/lib/rewind';
 import { isAdmin } from '@/lib/session';
 
 const longDate = (d: string) =>
@@ -20,8 +20,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dates = await getSettings()
     .then((s) => `du ${longDate(s.start_date)} au ${longDate(s.end_date)}`)
     .catch(() => '');
-  // Rewind : réservé aux admins tant que REWIND_PUBLIC est à false
-  const showRewind = REWIND_PUBLIC || (await isAdmin().catch(() => false));
+  // Rewind : réservé aux admins jusqu'à l'heure des résultats (RESULTS_AT)
+  const showRewind = rewindPublic(nowParis()) || (await isAdmin().catch(() => false));
   return (
     <html lang="fr">
       <body>
