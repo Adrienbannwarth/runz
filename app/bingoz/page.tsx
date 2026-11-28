@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import BingoGrid from './BingoGrid';
-import { DEFIS, gridFor } from '@/lib/bingo-defis';
+import { BINGO_CELLS, DEFIS, gridFor } from '@/lib/bingo-defis';
 import { getParticipantId } from '@/lib/session';
 import { canPreview } from '@/lib/seasons';
 
@@ -25,8 +25,13 @@ export default async function BingoPreview() {
           <p className="eyebrow">Saison 2 · aperçu privé, visible par toi seul</p>
           <h1>Bingo<span className="bz-z">Z</span></h1>
         </div>
-        <p className="muted small">{DEFIS.length} défis validés sur 48 · les cases « ? » restent à définir</p>
+        <div className="bz-score" aria-label="Score de l’équipe">
+          <span><b>0</b>/{BINGO_CELLS}<small>cases</small></span>
+          <span><b>0</b><small>ligne</small></span>
+          <span className="pts"><b>0</b><small>point</small></span>
+        </div>
       </div>
+      <p className="muted small" style={{ margin: '-12px 0 20px' }}>{DEFIS.length} défis validés sur 48 · les cases « ? » restent à définir</p>
       <BingoGrid cells={grid} />
     </div>
   );

@@ -342,6 +342,11 @@ a.se-rewind:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; 
 .bz-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
 .bz-head h1 { margin: 0; font-weight: 800; letter-spacing: -0.04em; }
 .bz-z { color: var(--bz-orange); }
+.bz-score { display: flex; gap: clamp(14px, 3vw, 36px); }
+.bz-score > span { display: flex; align-items: baseline; gap: 4px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.bz-score b { font-size: clamp(24px, 3.4vw, 40px); font-weight: 700; letter-spacing: -0.03em; }
+.bz-score small { font-size: 13px; margin-left: 4px; opacity: .7; }
+.bz-score .pts b { color: var(--bz-orange); }
 .bz-layout { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
 .bz-grid { flex: 999 1 620px; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .bz-cell { aspect-ratio: 1 / 1; border: 1px solid rgba(39,39,39,.18); background: var(--bz-beige); color: var(--bz-noir); border-radius: 6px; padding: 9px;
