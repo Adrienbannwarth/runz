@@ -314,7 +314,7 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
   background: #EEEFE8; color: var(--ink); border-radius: var(--radius); text-decoration: none; overflow: hidden; animation: page-enter .35s .05s ease-out both; }
 .se-rw-text { display: flex; flex-direction: column; gap: 6px; }
 .se-rw-eyebrow { font-size: 13px; font-weight: 600; }
-.se-rw-title { font-size: 36px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; } /* même taille que les autres bandeaux (Photo couleur…) */
+.se-rw-title { color: var(--strava); font-size: 36px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; } /* même taille que les autres bandeaux (Photo couleur…) */
 .se-rw-arrow { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--ink); color: #fff;
   display: grid; place-items: center; transition: transform .25s ease; }
 .se-rw-arrow svg { width: 48%; height: 48%; }
