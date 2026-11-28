@@ -1,12 +1,11 @@
 'use client';
 import { AnimatePresence, motion } from 'framer-motion';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { BingoDefi } from '@/lib/bingo-defis';
 
 type State = { done: boolean; by?: string; on?: string };
-export type GridCell = ({ kind: 'center' } & State) | ({ kind: 'todo' } & State) | ({ kind: 'defi' } & BingoDefi & State);
-type Stats = { team: string; done: number; total: number; lines: number; points: number; defis: number; empty: boolean };
+export type GridCell = ({ kind: 'center' } & State) | ({ kind: 'todo'; num: number } & State) | ({ kind: 'defi'; num: number } & BingoDefi & State);
+type Stats = { team: string; done: number; total: number; lines: number; points: number; defis: number };
 
 const CHECK = { strava: 'Validé automatiquement avec Strava dès que ta sortie remplit le défi.', photo: 'Photo sur ton activité Strava avec #BINGOZ dans le titre, puis validation par un admin.', admin: 'Validé par un admin.' };
 
@@ -51,10 +50,10 @@ export default function BingoGrid({ cells, inLine, size, stats }: { cells: GridC
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
             whileHover={{ y: -3 }} whileTap={{ scale: 0.95 }}
             onClick={() => setSel(i)}
-            aria-label={c.kind === 'defi' ? `Défi ${c.id} : ${c.label}${c.done ? ', validé' : ''}` : c.kind === 'center' ? 'Défi imposé par une autre équipe' : 'Défi à définir'}>
-            {c.kind === 'todo' ? <span className="bz-q">?</span> : (
+            aria-label={c.kind === 'defi' ? `Case ${c.num} : ${c.label}${c.done ? ', validée' : ''}` : c.kind === 'center' ? 'Défi imposé par une autre équipe' : `Case ${c.num} : défi à définir`}>
+            {c.kind === 'todo' ? <><span className="bz-num">{c.num}</span><span className="bz-q">?</span><span /></> : (
               <>
-                <span className="bz-num">{c.kind === 'center' ? '★' : c.id}</span>
+                <span className="bz-num">{c.kind === 'center' ? '★' : c.num}</span>
                 <span className="bz-label">{c.kind === 'center' ? 'Défi imposé' : c.short}</span>
               </>
             )}
@@ -68,10 +67,7 @@ export default function BingoGrid({ cells, inLine, size, stats }: { cells: GridC
         ))}
       </motion.div>
 
-      <p className="bz-foot">
-        Aperçu privé · {stats.defis} défis validés sur 48, « ? » = à définir ·{' '}
-        {stats.empty ? <Link href="/bingoz">voir avec une partie de démo</Link> : <Link href="/bingoz?vide=1">voir la grille vierge</Link>}
-      </p>
+      <p className="bz-foot">Aperçu privé · {stats.defis} défis validés sur 48, « ? » = à définir</p>
 
       <AnimatePresence>
         {cur && (
@@ -84,8 +80,8 @@ export default function BingoGrid({ cells, inLine, size, stats }: { cells: GridC
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
               </button>
               {cur.kind === 'center' && <><span className="bz-p-eyebrow">Case du milieu</span><h2>Défi imposé par une autre équipe</h2><p>Chaque équipe écrit un défi pour une autre. +1 point s’il est réussi.</p></>}
-              {cur.kind === 'todo' && <><span className="bz-p-eyebrow">Case à définir</span><h2>?</h2><p>Ce défi reste à choisir dans le doc de cadrage.</p></>}
-              {cur.kind === 'defi' && <><span className="bz-p-eyebrow">Défi {cur.id} · {cur.family} · {cur.level}</span><h2>{cur.label}</h2><p>{CHECK[cur.check]}</p></>}
+              {cur.kind === 'todo' && <><span className="bz-p-eyebrow">Case {cur.num} · à définir</span><h2>?</h2><p>Ce défi reste à choisir dans le doc de cadrage.</p></>}
+              {cur.kind === 'defi' && <><span className="bz-p-eyebrow">Case {cur.num} · {cur.family} · {cur.level}</span><h2>{cur.label}</h2><p>{CHECK[cur.check]}</p></>}
               {cur.kind !== 'todo' && (
                 <div className={`bz-p-status${cur.done ? ' done' : ''}`}>
                   {cur.done ? <>Validée par {cur.by}, le {cur.on}</> : <>Pas encore validée</>}
