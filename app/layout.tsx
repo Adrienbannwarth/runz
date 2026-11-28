@@ -22,8 +22,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     .catch(() => '');
   // Rewind : réservé aux admins jusqu'à l'heure des résultats (RESULTS_AT)
   const showRewind = rewindPublic(nowParis()) || (await isAdmin().catch(() => false));
+  // suppressHydrationWarning : des extensions (LanguageTool…) ajoutent des attributs à <html> avant React
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <body>
         <Suspense fallback={null}><NavProgress /></Suspense>
         <div className="announce">

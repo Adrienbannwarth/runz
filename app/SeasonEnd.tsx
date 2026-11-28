@@ -15,8 +15,8 @@ export default function SeasonEnd({ teams, km, activities, people, elevation, re
   const podium = [...teams].sort((a, b) => a.rank - b.rank);
   const winner = podium[0];
   const stats: [string, string][] = [
-    [fmtKm(Math.round(km)), 'km au compteur, tous ensemble'],
-    [String(activities), 'sorties enregistrées'],
+    [Math.round(km).toLocaleString('fr-FR'), 'km au compteur, tous ensemble'],
+    [activities.toLocaleString('fr-FR'), 'sorties enregistrées'],
     [String(people), 'participant·es'],
     [Math.round(elevation).toLocaleString('fr-FR'), 'mètres de dénivelé'],
   ];
