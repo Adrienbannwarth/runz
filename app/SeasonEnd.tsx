@@ -46,6 +46,16 @@ export default function SeasonEnd({ teams, km, activities, people, elevation, re
           ? <a href="/api/strava/connect" className="se-rewind">{banner}</a>
           : <div className="se-rewind off" aria-disabled="true">{banner}</div>}
 
+      <Link href="/avis" className="se-rewind se-avis">
+        <span className="se-rw-text">
+          <span className="se-rw-eyebrow">2 minutes, presque que des clics</span>
+          <span className="se-rw-title">Donnez votre avis</span>
+        </span>
+        <span className="se-rw-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </span>
+      </Link>
+
       {results && (
         <section className="se-final">
           <h2>Le classement final</h2>

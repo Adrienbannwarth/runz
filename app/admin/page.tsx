@@ -14,11 +14,12 @@ import ConfirmButton from './ConfirmButton';
 import { REACTIONS, loadPhotoVotes, photoBoost, photoEntries, photoResults, photoTeamBonus } from '@/lib/photo';
 import { currentSeasonId, loadSeasons } from '@/lib/seasons';
 import { BINGO_CELLS, DEFIS } from '@/lib/bingo-defis';
+import { DISLIKED, LIKED, NEXT, RATINGS, RHYTHMS, SPORTS as AVIS_SPORTS, loadFeedback, tally, tallyOne } from '@/lib/feedback';
 
 export const dynamic = 'force-dynamic';
 
 // Arborescence : Général (liens, saisons, participants) · Saison 1 RunZ (ses onglets) · Saison 2 BingoZ
-const SECTIONS = [['general', 'Général'], ['1', 'Saison 1 · RunZ'], ['2', 'Saison 2 · BingoZ']] as const;
+const SECTIONS = [['general', 'Général'], ['1', 'Saison 1 · RunZ'], ['2', 'Saison 2 · BingoZ'], ['avis', 'Avis']] as const;
 const S1_TABS = [
   ['activites', 'Activités'], ['saisie', 'Saisie manuelle'], ['bonus', 'Bonus'], ['boosts', 'Boosts'],
   ['validations', 'Validations'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
@@ -31,6 +32,7 @@ const LINKS: [string, string, string][] = [
   ['/saisons', 'Saisons', 'L’historique des saisons'],
   ['/bingoz', 'BingoZ · aperçu', 'La saison 2 en préparation, visible par toi seul'],
   ['/me', 'Mon espace', 'Tes activités et ta connexion Strava'],
+  ['/avis', 'Donnez votre avis', 'Le formulaire de fin de saison (réponses dans l’onglet Avis)'],
   ['/confidentialite', 'Confidentialité', 'La page données personnelles'],
 ];
 const SPORTS = ['Walk', 'Run', 'TrailRun', 'Hike', 'VirtualRun'];
@@ -41,7 +43,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
   if (!(await isAdmin())) redirect('/admin/login');
   const sp = await searchParams;
   // Anciennes adresses /admin?tab=… (et redirections des actions) : un onglet RunZ ouvre la saison 1
-  const section: 'general' | '1' | '2' = sp.s === '2' ? '2' : sp.s === '1' || S1_KEYS.includes(sp.tab ?? '') ? '1' : 'general';
+  const section: 'general' | '1' | '2' | 'avis' = sp.s === 'avis' ? 'avis' : sp.s === '2' ? '2' : sp.s === '1' || S1_KEYS.includes(sp.tab ?? '') ? '1' : 'general';
+  const avis = section === 'avis' ? await loadFeedback() : [];
   const tab = section === '1' ? (S1_KEYS.includes(sp.tab ?? '') ? sp.tab : 'activites') : section === 'general' ? 'participants' : 'bingoz';
   const [seasons, current] = section === 'general' ? await Promise.all([loadSeasons(), currentSeasonId()]) : [[], 1];
   const d = await loadAll();
@@ -117,6 +120,67 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
           </div>
         </>
       )}
+
+      {section === 'avis' && (() => {
+        const rated = avis.filter((x) => x.rating);
+        const avg = rated.length ? rated.reduce((t, x) => t + (x.rating ?? 0), 0) / rated.length : 0;
+        const yes = avis.filter((x) => x.next_season === NEXT[0]).length;
+        const name = (id: string | null) => (id ? pName(id) || 'Participant' : 'Anonyme');
+        const bars = (title: string, rows: { label: string; n: number }[]) => (
+          <div className="card">
+            <h3 style={{ margin: '0 0 12px' }}>{title}</h3>
+            <div className="avis-bars">
+              {rows.map((r) => (
+                <div key={r.label} className="avis-bar"><span>{r.label}</span><i style={{ width: `${avis.length ? (r.n / avis.length) * 100 : 0}%` }} /><b>{r.n}</b></div>
+              ))}
+            </div>
+          </div>
+        );
+        return (
+          <>
+            <h2>Avis · {avis.length} réponse{avis.length > 1 ? 's' : ''}</h2>
+            <p className="muted small">Formulaire : <Link href="/avis">/avis</Link>, lié depuis l’accueil. Une réponse par participant connecté (il peut la modifier), les autres sont anonymes.</p>
+            {avis.length === 0 ? <p className="muted">Pas encore de réponse.</p> : (
+              <>
+                <div className="grid" style={{ marginBottom: 20 }}>
+                  <div className="card"><span className="muted small">Note moyenne</span><div style={{ fontSize: 36, fontWeight: 600 }}>{avg.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} / 5</div>
+                    <span className="small">{RATINGS.map((r) => `${r.emoji} ${avis.filter((x) => x.rating === r.v).length}`).join(' · ')}</span></div>
+                  <div className="card"><span className="muted small">Partants pour une saison 2</span><div style={{ fontSize: 36, fontWeight: 600 }}>{yes} / {avis.length}</div>
+                    <span className="small">{tallyOne(avis, 'next_season', NEXT).map((r) => `${r.label} : ${r.n}`).join(' · ')}</span></div>
+                </div>
+                <div className="grid">
+                  {bars('Ce qui a plu', tally(avis, 'liked', LIKED))}
+                  {bars('Ce qui a moins plu', tally(avis, 'disliked', DISLIKED))}
+                  {bars('Rythme préféré', tallyOne(avis, 'rhythm', RHYTHMS))}
+                  {bars('Sports à ajouter', tally(avis, 'sports', AVIS_SPORTS))}
+                </div>
+                <h3>Défis qu’ils aimeraient relever</h3>
+                <div className="card">
+                  {avis.filter((x) => x.challenge).length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucun pour l’instant.</p>
+                    : avis.filter((x) => x.challenge).map((x) => <div className="kv" key={x.id}><span>« {x.challenge} »</span><span className="muted">{name(x.participant_id)}</span></div>)}
+                </div>
+                <h3>Derniers mots</h3>
+                <div className="card">
+                  {avis.filter((x) => x.comment).length === 0 ? <p className="muted" style={{ margin: 0 }}>Aucun pour l’instant.</p>
+                    : avis.filter((x) => x.comment).map((x) => <div key={x.id} style={{ padding: '8px 0', borderTop: '1px solid var(--line)' }}><b>{name(x.participant_id)}</b> · <span className="muted small">{fmtDate(x.updated_at.slice(0, 10))}</span><p style={{ margin: '4px 0 0', whiteSpace: 'pre-line' }}>{x.comment}</p></div>)}
+                </div>
+                <h3>Toutes les réponses</h3>
+                <div className="card" style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead><tr><th>Qui</th><th>Note</th><th>A aimé</th><th>Moins aimé</th><th>Rythme</th><th>Saison 2</th><th>Sports</th></tr></thead>
+                    <tbody>
+                      {avis.map((x) => (
+                        <tr key={x.id}><td>{name(x.participant_id)}</td><td>{x.rating ? RATINGS[x.rating - 1].emoji : '—'}</td><td className="small">{x.liked.join(', ') || '—'}</td><td className="small">{x.disliked.join(', ') || '—'}</td>
+                          <td className="small">{x.rhythm ?? '—'}</td><td className="small">{x.next_season ?? '—'}</td><td className="small">{x.sports.join(', ') || '—'}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
+        );
+      })()}
 
       {section === '2' && (
         <>
