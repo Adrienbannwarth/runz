@@ -7,7 +7,7 @@
   -webkit-font-smoothing: antialiased;
 }
 * { box-sizing: border-box; }
-body { margin: 0; overflow-x: clip; } /* les sections pleine largeur (BingoZ) ne créent pas de scroll horizontal */
+body { margin: 0; }
 a { color: inherit; }
 main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
 
@@ -337,61 +337,30 @@ a.se-rewind:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; 
   .se-rewind { padding: 20px 24px; } .se-rw-title { font-size: 26px; } .se-rw-arrow { width: 42px; height: 42px; } .se-final { padding: 20px; }
 }
 
-/* BingoZ (saison 2) · plein écran, DA sobre orange / noir / beige */
-.bz-stage { --bz-beige: #EEEFE8; --bz-noir: #272727; --bz-orange: #FC4C02;
-  width: 100vw; margin: -32px 0 -80px calc(50% - 50vw); min-height: calc(100vh - 140px); background: var(--bz-beige); color: var(--bz-noir);
-  padding: 0 clamp(12px, 3vw, 40px) 32px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; }
-.bz-bar { position: sticky; top: 0; z-index: 5; width: 100%; max-width: 1400px; display: flex; justify-content: space-between; align-items: center; gap: 16px;
-  padding: 18px 0; background: var(--bz-beige); border-bottom: 1px solid rgba(39,39,39,.12); margin-bottom: clamp(16px, 3vh, 32px); }
-.bz-brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.bz-word { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-.bz-word span { color: var(--bz-orange); }
-.bz-team { font-size: 14px; font-weight: 600; padding: 4px 12px; border-radius: 99px; border: 1px solid rgba(39,39,39,.25); }
-.bz-score { display: flex; gap: clamp(14px, 3vw, 36px); }
-.bz-score > span { display: flex; align-items: baseline; gap: 4px; font-size: 15px; font-variant-numeric: tabular-nums; }
-.bz-score b { font-size: clamp(24px, 3.4vw, 40px); font-weight: 700; letter-spacing: -0.03em; }
-.bz-score small { font-size: 13px; margin-left: 4px; opacity: .7; }
-.bz-score .pts b { color: var(--bz-orange); }
-.bz-board { width: min(100%, calc(100vh - 270px), 1100px); min-width: min(100%, 320px); aspect-ratio: 1 / 1;
-  display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); grid-template-rows: repeat(var(--n), minmax(0, 1fr)); gap: clamp(4px, .7vw, 8px); }
-.bz-cell { position: relative; min-height: 0; border: 1px solid rgba(39,39,39,.2); background: transparent; color: var(--bz-noir); border-radius: clamp(5px, .8vw, 10px);
-  padding: clamp(5px, .9vw, 12px); display: flex; flex-direction: column; justify-content: space-between; text-align: left; font: inherit; cursor: pointer; overflow: hidden; }
-.bz-cell:hover { border-color: var(--bz-noir); }
+/* BingoZ (saison 2) · DA sobre orange / noir / beige */
+.bz { --bz-beige: #EEEFE8; --bz-noir: #272727; --bz-orange: #FC4C02; }
+.bz-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.bz-head h1 { margin: 0; font-weight: 800; letter-spacing: -0.04em; }
+.bz-z { color: var(--bz-orange); }
+.bz-layout { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.bz-grid { flex: 999 1 620px; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.bz-cell { aspect-ratio: 1 / 1; border: 1px solid rgba(39,39,39,.18); background: var(--bz-beige); color: var(--bz-noir); border-radius: 6px; padding: 9px;
+  display: flex; flex-direction: column; justify-content: space-between; text-align: left; font: inherit; cursor: pointer; }
 .bz-cell.on { outline: 2px solid var(--bz-orange); outline-offset: 2px; }
-.bz-cell.done { background: var(--bz-noir); color: var(--bz-beige); border-color: var(--bz-noir); }
-.bz-cell.line { box-shadow: inset 0 -4px 0 var(--bz-orange); }
 .bz-cell.center { background: var(--bz-orange); color: #111; border-color: var(--bz-orange); }
-.bz-cell.center.done { background: var(--bz-orange); color: #111; }
 .bz-cell.todo { border-style: dashed; }
 .bz-cell.todo .bz-q { align-self: center; }
-.bz-num { font-size: clamp(11px, 1vw, 14px); font-weight: 700; opacity: .7; }
-.bz-label { font-size: clamp(11px, 1.05vw, 15px); font-weight: 600; line-height: 1.15; }
-.bz-q { font-size: clamp(18px, 2.4vw, 32px); font-weight: 700; opacity: .3; }
-.bz-stamp { position: absolute; top: clamp(4px, .7vw, 10px); right: clamp(4px, .7vw, 10px); width: clamp(16px, 1.8vw, 26px); height: clamp(16px, 1.8vw, 26px);
-  border-radius: 50%; background: var(--bz-orange); color: #111; display: grid; place-items: center; }
-.bz-stamp svg { width: 70%; height: 70%; }
-.bz-cell.center .bz-stamp { background: var(--bz-noir); color: var(--bz-beige); }
-.bz-foot { margin: 20px 0 0; font-size: 13px; opacity: .75; text-align: center; }
-.bz-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(17,17,17,.35); }
-.bz-panel { position: fixed; z-index: 41; top: 0; right: 0; bottom: 0; width: min(420px, 92vw); background: var(--bz-noir); color: var(--bz-beige);
-  padding: 64px 32px 32px; display: flex; flex-direction: column; gap: 14px; box-shadow: -20px 0 60px rgba(0,0,0,.25); }
-.bz-panel h2 { margin: 0; font-size: 28px; line-height: 1.15; }
-.bz-panel p { margin: 0; font-size: 15px; line-height: 1.5; opacity: .85; }
-.bz-p-eyebrow { font-size: 13px; opacity: .75; }
-.bz-p-status { margin-top: 8px; padding: 14px 16px; border-radius: 8px; border: 1px solid rgba(238,239,232,.25); font-size: 14px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.bz-p-status.done { background: var(--bz-orange); color: #111; border-color: var(--bz-orange); font-weight: 600; }
-.bz-p-line { font-weight: 700; }
-.bz-close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(238,239,232,.12); color: inherit; cursor: pointer; display: grid; place-items: center; }
-.bz-close svg { width: 18px; height: 18px; }
-@media (max-width: 700px) {
-  .bz-stage { margin-top: -20px; padding-bottom: 20px; }
-  .bz-bar { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 0; }
-  .bz-score { width: 100%; justify-content: space-between; }
-  .bz-board { width: 100%; }
-  .bz-cell { padding: 0; align-items: center; justify-content: center; }
-  .bz-label { display: none; } .bz-num { font-size: 13px; opacity: 1; }
-  .bz-stamp { width: 12px; height: 12px; top: 3px; right: 3px; } .bz-stamp svg { display: none; }
-  .bz-panel { top: auto; left: 0; width: 100%; max-height: 70vh; border-radius: 16px 16px 0 0; padding: 56px 20px 28px; }
+.bz-num { font-size: 12px; font-weight: 700; opacity: .75; }
+.bz-label { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.bz-q { font-size: 26px; font-weight: 700; opacity: .35; }
+.bz-side { flex: 1 1 300px; }
+.bz-detail { background: var(--bz-noir); color: var(--bz-beige); border-radius: 4px; padding: 22px; display: grid; gap: 8px; }
+.bz-detail-eyebrow { font-size: 13px; opacity: .8; }
+.bz-detail-title { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.25; }
+.bz-detail-text { margin: 0; font-size: 14px; line-height: 1.45; opacity: .85; }
+@media (max-width: 640px) {
+  .bz-grid { gap: 5px; } .bz-cell { padding: 0; align-items: center; justify-content: center; border-radius: 5px; }
+  .bz-label { display: none; } .bz-num { font-size: 13px; opacity: 1; } .bz-q { font-size: 18px; }
 }
 
 /* Historique des saisons */
