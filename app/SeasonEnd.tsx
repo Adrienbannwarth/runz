@@ -1,40 +1,53 @@
 import Link from 'next/link';
-import Countdown from './Countdown';
 import { fmtKm } from '@/lib/data';
-import { RESULTS_AT_ISO } from '@/lib/rewind';
 import type { TeamStats } from '@/lib/scoring';
 
 /**
- * Écran de fin de saison (page d'accueil des membres une fois le challenge terminé).
- * Avant l'heure des résultats : chiffres collectifs + compte à rebours. Après : podium + accès au Rewind.
+ * Écran de fin de saison (accueil des membres une fois le challenge terminé) :
+ * bandeau « C'est terminé » + grande bannière Mon Rewind (cliquable dès l'heure des résultats) + classement final.
  */
 export default function SeasonEnd({ teams, km, activities, people, elevation, results, loggedIn, myTeamId, admin }: {
   teams: TeamStats[]; km: number; activities: number; people: number; elevation: number;
   results: boolean; loggedIn: boolean; myTeamId?: number | null; admin: boolean;
 }) {
   const podium = [...teams].sort((a, b) => a.rank - b.rank);
-  const winner = podium[0];
   const stats: [string, string][] = [
-    [Math.round(km).toLocaleString('fr-FR'), 'km au compteur, tous ensemble'],
-    [activities.toLocaleString('fr-FR'), 'sorties enregistrées'],
+    [Math.round(km).toLocaleString('fr-FR'), 'km au compteur'],
+    [activities.toLocaleString('fr-FR'), 'sorties'],
     [String(people), 'participant·es'],
-    [Math.round(elevation).toLocaleString('fr-FR'), 'mètres de dénivelé'],
+    [Math.round(elevation).toLocaleString('fr-FR'), 'm de dénivelé'],
   ];
+  const open = results || admin; // les admins peuvent ouvrir leur Rewind avant tout le monde
+  const banner = (
+    <>
+      <span className="se-rw-text">
+        <span className="se-rw-eyebrow">{open ? 'Ta saison en stories' : 'Disponible lundi 30 novembre à 18h'}</span>
+        <span className="se-rw-title">Mon Rewind</span>
+      </span>
+      <span className="se-rw-arrow" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      </span>
+    </>
+  );
   return (
     <div className="season-end">
       <section className="se-hero">
-        <p className="se-eyebrow">RunZ · Saison 1 · du 27 octobre au 27 novembre</p>
-        <h1>{results ? <>Et la gagnante est…</> : <>C’est terminé&nbsp;!</>}</h1>
-        {results && winner
-          ? <p className="se-winner"><span className="dot" style={{ background: winner.team.color }} /> {winner.team.name} <small>{fmtKm(winner.totalKm)} km</small></p>
-          : <p className="se-lead">Un mois à marcher, courir, dessiner des formes et chasser les couleurs. Merci à toutes et à tous&nbsp;!</p>}
+        <p className="eyebrow">RunZ · Saison 1 · du 27 octobre au 27 novembre</p>
+        <h1>C’est terminé&nbsp;!</h1>
+        <p className="se-lead">Un mois à marcher, courir, dessiner des formes et chasser les couleurs. Merci à toutes et à tous&nbsp;!</p>
         <div className="se-stats">
           {stats.map(([v, l]) => <div key={l}><b>{v}</b><span>{l}</span></div>)}
         </div>
       </section>
 
-      {results ? (
-        <section className="se-next">
+      {open && loggedIn
+        ? <Link href="/rewind" className="se-rewind">{banner}</Link>
+        : open
+          ? <a href="/api/strava/connect" className="se-rewind">{banner}</a>
+          : <div className="se-rewind off" aria-disabled="true">{banner}</div>}
+
+      {results && (
+        <section className="se-final">
           <h2>Le classement final</h2>
           <ol className="se-podium">
             {podium.map((t) => (
@@ -46,17 +59,6 @@ export default function SeasonEnd({ teams, km, activities, people, elevation, re
               </li>
             ))}
           </ol>
-          <div className="se-cta">
-            {loggedIn
-              ? <Link className="btn primary" href="/rewind">Voir mon Rewind</Link>
-              : <a className="btn strava" href="/api/strava/connect">Se connecter pour voir mon Rewind</a>}
-          </div>
-        </section>
-      ) : (
-        <section className="se-next">
-          <h2>Rendez-vous lundi 30 novembre à 18h</h2>
-          <p>Les derniers km sont vérifiés ce week-end. Lundi soir : le classement final, et ton Rewind, le récap de ta saison en stories.</p>
-          <Countdown to={RESULTS_AT_ISO} />
         </section>
       )}
 

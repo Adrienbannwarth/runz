@@ -4,8 +4,7 @@ import { Suspense } from 'react';
 import NavProgress from './NavProgress';
 import '@fontsource-variable/figtree';
 import './globals.css';
-import { getSettings, nowParis } from '@/lib/data';
-import { rewindPublic } from '@/lib/rewind';
+import { getSettings } from '@/lib/data';
 import { isAdmin } from '@/lib/session';
 
 const longDate = (d: string) =>
@@ -20,9 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dates = await getSettings()
     .then((s) => `du ${longDate(s.start_date)} au ${longDate(s.end_date)}`)
     .catch(() => '');
-  // Rewind : réservé aux admins jusqu'à l'heure des résultats (RESULTS_AT)
   const isAdminUser = await isAdmin().catch(() => false);
-  const showRewind = rewindPublic(nowParis()) || isAdminUser;
   // suppressHydrationWarning : des extensions (LanguageTool…) ajoutent des attributs à <html> avant React
   return (
     <html lang="fr" suppressHydrationWarning>
@@ -41,14 +38,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
                 </svg>
                 Admin
-              </Link>
-            )}
-            {showRewind && (
-              <Link href="/rewind" className="top-right rewind-btn" aria-label="Mon Rewind">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" />
-                </svg>
-                Mon Rewind
               </Link>
             )}
             <Link href="/me" className="top-right" aria-label="Mon espace">
