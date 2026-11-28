@@ -388,6 +388,9 @@ a.se-rewind:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; 
 .admin-link span { font-size: 13px; color: var(--muted); }
 .admin-link code { font-size: 12px; color: var(--muted); }
 
+/* Bannières Mon Rewind + Donnez votre avis : côte à côte sur desktop, l'une sous l'autre sur mobile */
+.se-banners { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .se-banners { grid-template-columns: 1fr; } }
 /* Bannière « Donnez votre avis » (vert des réactions) */
 .se-rewind.se-avis { background: #25AD71; color: #111; }
 .se-rewind.se-avis .se-rw-title { color: #111; }
