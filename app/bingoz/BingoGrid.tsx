@@ -2,11 +2,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
 import type { BingoDefi } from '@/lib/bingo-defis';
+import BingoRules from './BingoRules';
 
 export type GridCell = { kind: 'center' } | { kind: 'todo'; num: number } | ({ kind: 'defi'; num: number } & BingoDefi);
 
 /** Grille 7 × 7 du BingoZ (V1 : affichage). Desktop : numéro + défi ; mobile : numéro seul, détail au clic. */
-export default function BingoGrid({ cells }: { cells: GridCell[] }) {
+export default function BingoGrid({ cells, dates }: { cells: GridCell[]; dates: string }) {
   const [sel, setSel] = useState<number | null>(null);
   const cur = sel === null ? null : cells[sel];
   return (
@@ -40,6 +41,7 @@ export default function BingoGrid({ cells }: { cells: GridCell[] }) {
               <p className="bz-detail-text">{cur.check === 'strava' ? 'Validé automatiquement avec Strava.' : cur.check === 'photo' ? 'Photo sur l’activité Strava avec #BINGOZ dans le titre, puis validation par un admin.' : 'Validé par un admin.'}</p></>}
           </motion.div>
         </AnimatePresence>
+        <BingoRules dates={dates} />
       </aside>
     </div>
   );

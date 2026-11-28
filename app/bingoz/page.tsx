@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import BingoGrid from './BingoGrid';
 import { BINGO_CELLS, DEFIS, gridFor } from '@/lib/bingo-defis';
 import { getParticipantId } from '@/lib/session';
-import { canPreview } from '@/lib/seasons';
+import { canPreview, loadSeasons } from '@/lib/seasons';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'BingoZ · aperçu', robots: { index: false, follow: false } };
@@ -11,6 +11,9 @@ export const metadata = { title: 'BingoZ · aperçu', robots: { index: false, fo
 export default async function BingoPreview() {
   const pid = await getParticipantId();
   if (!(await canPreview(pid))) notFound();
+  const s2 = (await loadSeasons()).find((x) => x.id === 2);
+  const day = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dates = s2?.starts_on && s2?.ends_on ? `du ${day(s2.starts_on)} au ${day(s2.ends_on)}` : 'dates à venir';
   // Numéro de case = sa place dans la grille (1 à 48, ligne par ligne, sans la case du milieu)
   let k = 0;
   const grid = gridFor('apercu').map((c) => {
@@ -32,7 +35,7 @@ export default async function BingoPreview() {
         </div>
       </div>
       <p className="muted small" style={{ margin: '-12px 0 20px' }}>{DEFIS.length} défis validés sur 48 · les cases « ? » restent à définir</p>
-      <BingoGrid cells={grid} />
+      <BingoGrid cells={grid} dates={dates} />
     </div>
   );
 }
