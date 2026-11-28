@@ -12,13 +12,27 @@ import { polylineToPath } from '@/lib/polyline';
 import { battleBoost, battleResults, battleShapes, loadVotes } from '@/lib/battle';
 import ConfirmButton from './ConfirmButton';
 import { REACTIONS, loadPhotoVotes, photoBoost, photoEntries, photoResults, photoTeamBonus } from '@/lib/photo';
+import { currentSeasonId, loadSeasons } from '@/lib/seasons';
+import { BINGO_CELLS, DEFIS } from '@/lib/bingo-defis';
 
 export const dynamic = 'force-dynamic';
 
-const TABS = [
-  ['participants', 'Participants'], ['activites', 'Activités'], ['saisie', 'Saisie manuelle'], ['bonus', 'Bonus'],
-  ['boosts', 'Boosts'], ['validations', 'Validations'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
+// Arborescence : Général (liens, saisons, participants) · Saison 1 RunZ (ses onglets) · Saison 2 BingoZ
+const SECTIONS = [['general', 'Général'], ['1', 'Saison 1 · RunZ'], ['2', 'Saison 2 · BingoZ']] as const;
+const S1_TABS = [
+  ['activites', 'Activités'], ['saisie', 'Saisie manuelle'], ['bonus', 'Bonus'], ['boosts', 'Boosts'],
+  ['validations', 'Validations'], ['mvp', 'MVP'], ['recap', 'Récap zlack'], ['reglages', 'Réglages'],
 ] as const;
+const S1_KEYS: readonly string[] = S1_TABS.map(([k]) => k);
+const LINKS: [string, string, string][] = [
+  ['/', 'Accueil', 'La saison en cours, comme la voient les membres'],
+  ['/?suite=1', 'Accueil RunZ complet', 'Équipes, boosts et votes, derrière l’écran de fin'],
+  ['/rewind', 'Rewind', 'Le récap en stories (ouvert à tous le 30/11 à 18h)'],
+  ['/saisons', 'Saisons', 'L’historique des saisons'],
+  ['/bingoz', 'BingoZ · aperçu', 'La saison 2 en préparation, visible par toi seul'],
+  ['/me', 'Mon espace', 'Tes activités et ta connexion Strava'],
+  ['/confidentialite', 'Confidentialité', 'La page données personnelles'],
+];
 const SPORTS = ['Walk', 'Run', 'TrailRun', 'Hike', 'VirtualRun'];
 const SLOTS = ['Tous', 'Avant 8h', '12h-14h', '19h-22h'];
 const SPORT_FR: Record<string, string> = { Walk: 'Marche', Run: 'Course', TrailRun: 'Trail', Hike: 'Randonnée', VirtualRun: 'Tapis', Wheelchair: 'Fauteuil' };
@@ -26,7 +40,10 @@ const SPORT_FR: Record<string, string> = { Walk: 'Marche', Run: 'Course', TrailR
 export default async function Admin({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   if (!(await isAdmin())) redirect('/admin/login');
   const sp = await searchParams;
-  const tab = sp.tab || 'participants';
+  // Anciennes adresses /admin?tab=… (et redirections des actions) : un onglet RunZ ouvre la saison 1
+  const section: 'general' | '1' | '2' = sp.s === '2' ? '2' : sp.s === '1' || S1_KEYS.includes(sp.tab ?? '') ? '1' : 'general';
+  const tab = section === '1' ? (S1_KEYS.includes(sp.tab ?? '') ? sp.tab : 'activites') : section === 'general' ? 'participants' : 'bingoz';
+  const [seasons, current] = section === 'general' ? await Promise.all([loadSeasons(), currentSeasonId()]) : [[], 1];
   const d = await loadAll();
   const bb = battleBoost(d.boosts);
   const battle = bb && tab === 'mvp' ? await (async () => {
@@ -64,8 +81,61 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         </div>
       </div>
       <nav className="tabs">
-        {TABS.map(([k, label]) => <Link key={k} href={`/admin?tab=${k}`} className={tab === k ? 'on' : ''}>{label}</Link>)}
+        {SECTIONS.map(([k, label]) => <Link key={k} href={k === 'general' ? '/admin' : `/admin?s=${k}`} className={section === k ? 'on' : ''}>{label}</Link>)}
       </nav>
+      {section === '1' && (
+        <nav className="tabs sub">
+          {S1_TABS.map(([k, label]) => <Link key={k} href={`/admin?s=1&tab=${k}`} className={tab === k ? 'on' : ''}>{label}</Link>)}
+        </nav>
+      )}
+
+      {section === 'general' && (
+        <>
+          <h2>Liens utiles</h2>
+          <div className="admin-links">
+            {LINKS.map(([href, label, hint]) => (
+              <Link key={href} href={href} className="admin-link"><b>{label}</b><span>{hint}</span><code>{href}</code></Link>
+            ))}
+            <a href="/api/export" download className="admin-link"><b>Export Excel</b><span>Les km au format « Saisie km »</span><code>/api/export</code></a>
+          </div>
+          <h2>Saisons</h2>
+          <div className="card" style={{ overflowX: 'auto' }}>
+            <table>
+              <thead><tr><th>Saison</th><th>Jeu</th><th>Dates</th><th>Statut</th><th></th></tr></thead>
+              <tbody>
+                {seasons.map((x) => (
+                  <tr key={x.id}>
+                    <td>Saison {x.id}{x.id === current ? <span className="pill" style={{ marginLeft: 8 }}>sur l’accueil</span> : null}</td>
+                    <td>{x.name}</td>
+                    <td>{x.starts_on ? `${fmtDate(x.starts_on)} → ${fmtDate(x.ends_on ?? x.starts_on)}` : 'à définir'}</td>
+                    <td>{x.status === 'done' ? 'Terminée' : x.status === 'live' ? 'En cours' : 'En préparation'}</td>
+                    <td><Link href={`/admin?s=${x.id}`}>Gérer →</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {section === '2' && (
+        <>
+          <h2>BingoZ · en préparation</h2>
+          <p className="muted small">Aperçu : <Link href="/bingoz">/bingoz</Link> (visible par toi seul). Les équipes de la saison, les validations (photo #BINGOZ, tracés, Hyrox), le défi imposé et les réglages arriveront ici avec la V1 du jeu.</p>
+          <h3>Défis · {DEFIS.length} validés sur {BINGO_CELLS - 1}</h3>
+          <div className="card" style={{ overflowX: 'auto' }}>
+            <table>
+              <thead><tr><th>N°</th><th>Famille</th><th>Défi</th><th>Niveau</th><th>Validation</th></tr></thead>
+              <tbody>
+                {DEFIS.map((x) => (
+                  <tr key={x.id}><td>{x.id}</td><td>{x.family}</td><td>{x.label}</td><td>{x.level}</td><td>{x.check === 'strava' ? 'Strava' : x.check === 'photo' ? 'Photo + admin' : 'Admin'}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted small">{BINGO_CELLS - 1 - DEFIS.length} cases restent en « ? ». La liste se modifie dans <code>lib/bingo-defis.ts</code>.</p>
+        </>
+      )}
       {sp.msg && <div className="alert ok">{sp.msg}</div>}
 
       {tab === 'participants' && (

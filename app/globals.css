@@ -367,3 +367,11 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .season-name { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; }
 .season-dates { font-size: 14px; }
 .season-cta { margin-top: 8px; font-size: 14px; font-weight: 600; }
+
+/* Admin · liens utiles */
+.admin-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.admin-link { display: grid; gap: 4px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; background: var(--card); }
+.admin-link:hover { border-color: var(--ink); }
+.admin-link b { font-size: 15px; }
+.admin-link span { font-size: 13px; color: var(--muted); }
+.admin-link code { font-size: 12px; color: var(--muted); }

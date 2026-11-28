@@ -21,7 +21,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     .then((s) => `du ${longDate(s.start_date)} au ${longDate(s.end_date)}`)
     .catch(() => '');
   // Rewind : réservé aux admins jusqu'à l'heure des résultats (RESULTS_AT)
-  const showRewind = rewindPublic(nowParis()) || (await isAdmin().catch(() => false));
+  const isAdminUser = await isAdmin().catch(() => false);
+  const showRewind = rewindPublic(nowParis()) || isAdminUser;
   // suppressHydrationWarning : des extensions (LanguageTool…) ajoutent des attributs à <html> avant React
   return (
     <html lang="fr" suppressHydrationWarning>
@@ -34,6 +35,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span aria-hidden="true" />
           <Link href="/" className="brand" aria-label="RunZ by Colorz, accueil"><img src="/logo.svg" alt="RunZ by Colorz" /></Link>
           <div className="top-actions">
+            {isAdminUser && (
+              <Link href="/admin" className="top-right" aria-label="Admin">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
+                </svg>
+                Admin
+              </Link>
+            )}
             {showRewind && (
               <Link href="/rewind" className="top-right rewind-btn" aria-label="Mon Rewind">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
