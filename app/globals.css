@@ -310,6 +310,7 @@ label.inline-check { flex-direction: row; align-items: center; gap: 6px; white-s
 .se-stats div { display: flex; flex-direction: column; gap: 2px; }
 .se-stats b { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .se-stats span { font-size: 12px; color: #d6d6d6; }
+.se-stats div:nth-child(odd) b { color: var(--strava); } /* km et participants en orange, sorties et dénivelé en blanc */
 .se-rewind { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 32px 48px;
   background: #EEEFE8; color: var(--ink); border-radius: var(--radius); text-decoration: none; overflow: hidden; animation: page-enter .35s .05s ease-out both; }
 .se-rw-text { display: flex; flex-direction: column; gap: 6px; }
