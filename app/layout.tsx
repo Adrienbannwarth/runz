@@ -7,6 +7,9 @@ import './globals.css';
 import { getSettings } from '@/lib/data';
 import { isAdmin } from '@/lib/session';
 
+/** Bandeau rose en haut du site (dates du challenge) : désactivé depuis la fin de RunZ, à rallumer pour la saison suivante. */
+const SHOW_ANNOUNCE = false;
+
 const longDate = (d: string) =>
   new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
 
@@ -16,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const dates = await getSettings()
+  const dates = !SHOW_ANNOUNCE ? '' : await getSettings()
     .then((s) => `du ${longDate(s.start_date)} au ${longDate(s.end_date)}`)
     .catch(() => '');
   const isAdminUser = await isAdmin().catch(() => false);
@@ -25,9 +28,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="fr" suppressHydrationWarning>
       <body>
         <Suspense fallback={null}><NavProgress /></Suspense>
-        <div className="announce">
-          RunZ Challenge{dates && <> {dates}</>}
-        </div>
+        {SHOW_ANNOUNCE && (
+          <div className="announce">
+            RunZ Challenge{dates && <> {dates}</>}
+          </div>
+        )}
         <header className="top">
           <span aria-hidden="true" />
           <Link href="/" className="brand" aria-label="RunZ by Colorz, accueil"><img src="/logo.svg" alt="RunZ by Colorz" /></Link>
