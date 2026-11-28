@@ -31,6 +31,7 @@ export default function BingoGrid({ cells, dates }: { cells: GridCell[]; dates: 
       </motion.div>
 
       <aside className="bz-side">
+        <BingoRules dates={dates} />
         <AnimatePresence mode="wait">
           <motion.div key={sel ?? 'none'} className="bz-detail"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
@@ -41,7 +42,6 @@ export default function BingoGrid({ cells, dates }: { cells: GridCell[]; dates: 
               <p className="bz-detail-text">{cur.check === 'strava' ? 'Validé automatiquement avec Strava.' : cur.check === 'photo' ? 'Photo sur l’activité Strava avec #BINGOZ dans le titre, puis validation par un admin.' : 'Validé par un admin.'}</p></>}
           </motion.div>
         </AnimatePresence>
-        <BingoRules dates={dates} />
       </aside>
     </div>
   );
